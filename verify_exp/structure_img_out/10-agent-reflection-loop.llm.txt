@@ -1,0 +1,81 @@
+Here is an academic-minimal SVG architecture diagram for the “Agent Memory and Reflection Loop,” showing the plan–act–observe–reflect–memory cycle with two dashed containers and editable text labels.
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="620" viewBox="0 0 820 620" font-family="sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#2563eb" stroke="none"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="620" fill="#ffffff"/>
+
+  <!-- Group: Loop -->
+  <rect x="60" y="60" width="560" height="480" rx="12" ry="12" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="75" y="82" font-size="12" fill="#6b7280" font-weight="bold">Loop</text>
+
+  <!-- Group: Boundary -->
+  <rect x="640" y="60" width="150" height="480" rx="12" ry="12" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="655" y="82" font-size="12" fill="#6b7280" font-weight="bold">Boundary</text>
+
+  <!-- Node: Task (inbox) -->
+  <rect x="670" y="120" width="90" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="715" y="141" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Task</text>
+  <text x="715" y="157" font-size="10" fill="#6b7280" text-anchor="middle">inbox</text>
+
+  <!-- Node: Planner (plan) -->
+  <rect x="270" y="120" width="90" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="315" y="141" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Planner</text>
+  <text x="315" y="157" font-size="10" fill="#6b7280" text-anchor="middle">plan</text>
+
+  <!-- Node: Executor (gear) -->
+  <rect x="270" y="230" width="90" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="315" y="251" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Executor</text>
+  <text x="315" y="267" font-size="10" fill="#6b7280" text-anchor="middle">gear</text>
+
+  <!-- Node: Observation (eye) -->
+  <rect x="270" y="340" width="90" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="315" y="361" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Observation</text>
+  <text x="315" y="377" font-size="10" fill="#6b7280" text-anchor="middle">eye</text>
+
+  <!-- Node: Reflection (mirror) -->
+  <rect x="270" y="450" width="90" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="315" y="471" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Reflection</text>
+  <text x="315" y="487" font-size="10" fill="#6b7280" text-anchor="middle">mirror</text>
+
+  <!-- Node: Memory (database) -->
+  <rect x="100" y="450" width="90" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="145" y="471" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Memory</text>
+  <text x="145" y="487" font-size="10" fill="#6b7280" text-anchor="middle">database</text>
+
+  <!-- Node: Next Action (loop) -->
+  <rect x="670" y="450" width="90" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="715" y="471" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Next Action</text>
+  <text x="715" y="487" font-size="10" fill="#6b7280" text-anchor="middle">loop</text>
+
+  <!-- Edge: Task -> Planner -->
+  <path d="M670,145 L360,145" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Planner -> Executor -->
+  <path d="M315,170 L315,230" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Executor -> Observation -->
+  <path d="M315,280 L315,340" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Observation -> Reflection -->
+  <path d="M315,390 L315,450" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Reflection -> Memory -->
+  <path d="M270,475 L190,475" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Memory -> Planner (cyclic back) -->
+  <path d="M145,450 L145,145 L270,145" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Planner -> Next Action -->
+  <path d="M360,145 L670,145 L670,450" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Annotation: Reflection -->
+  <text x="315" y="515" font-size="10" fill="#6b7280" text-anchor="middle" font-style="italic">verbal self-critique written to memory</text>
+</svg>
+```
+The diagram places Task and Next Action in a separate boundary group, while Planner, Executor, Observation, Reflection, and Memory form the central loop. Blue orthogonal arrows trace the workflow from task intake through planning, execution, observation, reflection, memory, and back to planning, with a brief annotation under Reflection.

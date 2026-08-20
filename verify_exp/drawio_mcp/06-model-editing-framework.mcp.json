@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "build_id": null,
+  "error": null,
+  "shapes": {
+    "_mcp_error": {
+      "error": "ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)"
+    }
+  }
+}

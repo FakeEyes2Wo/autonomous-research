@@ -1,0 +1,45 @@
+{
+  "verdict": "REVISE",
+  "issues": [
+    "Group overlap: 'Edit Pipeline' group (x=420, w=520) and 'Verification' group (x=80, w=300) do not overlap, but the edge from Null-Space Projection (inside Edit Pipeline) to Edited LLM (inside Verification) crosses the group boundary without visual distinction; consider a connector label or re-layout to reduce ambiguity.",
+    "Base LLM is grouped under 'Verification' but also feeds the edit pipeline; this dual role is not visually represented. Consider placing Base LLM outside both groups or adding a note.",
+    "Edge from Base LLM to Key-Value Mapping crosses the 'Verification' group boundary and the 'Edit Pipeline' boundary; orthogonal routing may create unnecessary bends. Consider reordering nodes or using a shared input lane.",
+    "Null-Space Projection uses a hexagon shape, which is inconsistent with the rounded-rectangle visual language used for all other nodes. Use a rectangle or a distinct but consistent shape (e.g., parallelogram) if a matrix-style node is intended.",
+    "Annotation 'preserves unrelated knowledge' is placed below the Null-Space Projection node but may overlap the edge from Null-Space Projection to Edited LLM; verify spacing.",
+    "No edge labels or data-flow annotations; for a paper figure, consider labeling edges (e.g., 'weights', 'edit delta') to clarify what is transferred.",
+    "The 'Verification' group contains Base LLM, Edited LLM, and Preservation Check, but the edge from Base LLM to Preservation Check is dashed while other edges are solid; dashed style is not explained in the legend or caption.",
+    "The 'Edit Pipeline' group does not include the Base LLM, yet the pipeline logically starts from Base LLM; grouping may mislead readers about pipeline boundaries."
+  ],
+  "icon_feedback": [
+    {
+      "node": "Base LLM",
+      "verdict": "keep",
+      "why": "Rounded rectangle with LLM label is appropriate for an architecture diagram; no icon is used, which is acceptable for academic-minimal style."
+    },
+    {
+      "node": "Edit Request",
+      "verdict": "keep",
+      "why": "Rounded rectangle is consistent and appropriate; no misleading icon."
+    },
+    {
+      "node": "Key-Value Mapping",
+      "verdict": "keep",
+      "why": "Rounded rectangle is consistent; no icon used."
+    },
+    {
+      "node": "Null-Space Projection",
+      "verdict": "replace",
+      "why": "Hexagon shape is inconsistent with the rounded-rectangle visual language and does not clearly convey a matrix-style node. Use a rectangle with a matrix label or a parallelogram to indicate transformation."
+    },
+    {
+      "node": "Edited LLM",
+      "verdict": "keep",
+      "why": "Rounded rectangle is consistent and appropriate."
+    },
+    {
+      "node": "Preservation Check",
+      "verdict": "keep",
+      "why": "Rounded rectangle is consistent and appropriate."
+    }
+  ]
+}

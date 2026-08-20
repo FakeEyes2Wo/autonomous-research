@@ -1,0 +1,84 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Agent Memory and Reflection Loop" id="agent-memory-reflection-loop">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="loop-container" value="Loop" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 4;fillColor=none;strokeColor=#5B6770;strokeWidth=1.5;verticalAlign=top;fontStyle=1;fontSize=13;fontColor=#5B6770;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="130" width="420" height="560" as="geometry" />
+        </mxCell>
+
+        <mxCell id="boundary-container" value="Boundary" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 4;fillColor=none;strokeColor=#8A9BA8;strokeWidth=1.2;verticalAlign=top;fontStyle=2;fontSize=12;fontColor=#8A9BA8;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="140" y="60" width="820" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="task-node" value="Task" style="verticalLabelPosition=bottom;aspect=fixed;html=1;shape=mxgraph.salesforce.inbox;fillColorStyles=fillColor2,fillColor3,fillColor4;fillColor2=#4A6FA5;fillColor3=#6B8DB8;fillColor4=#FFFFFF;fillColor=none;strokeColor=none;fontSize=13;fontStyle=1;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="250" y="80" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="next-action-node" value="Next Action" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.loop;fillColor=#E8EDF2;strokeColor=#4A6FA5;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#2C3E50;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="760" y="80" width="100" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="planner-node" value="Planner" style="sketch=0;outlineConnect=0;fontColor=#2C3E50;gradientColor=none;fillColor=#7AA116;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=13;fontStyle=1;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.backup_plan;" vertex="1" parent="1">
+          <mxGeometry x="470" y="170" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="executor-node" value="Executor" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#5B8DB8;shape=mxgraph.azure.automation;pointerEvents=1;fontSize=13;fontStyle=1;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="470" y="290" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="observation-node" value="Observation" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=none;verticalAlign=top;strokeWidth=2;strokeColor=#4A6FA5;shadow=0;dashed=0;shape=mxgraph.ios7.icons.eye;fillColor=#FFFFFF;fontSize=13;fontStyle=1;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="470" y="410" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="reflection-node" value="Reflection" style="sketch=0;shadow=0;dashed=0;html=1;strokeColor=#4A6FA5;strokeWidth=2;fillColor=#E8EDF2;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.databases.database_mirror;fontSize=13;fontStyle=1;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="470" y="530" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="memory-node" value="Memory" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#D6E4F0;strokeColor=#4A6FA5;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#2C3E50;" vertex="1" parent="1">
+          <mxGeometry x="470" y="650" width="80" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-task-planner" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6770;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="task-node" target="planner-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-planner-executor" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6770;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="planner-node" target="executor-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-executor-observation" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6770;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="executor-node" target="observation-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-observation-reflection" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6770;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="observation-node" target="reflection-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-reflection-memory" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6770;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="reflection-node" target="memory-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-memory-planner" value="replan" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C0504D;strokeWidth=2.5;endArrow=block;endFill=1;dashed=1;dashPattern=6 3;fontSize=11;fontStyle=2;fontColor=#C0504D;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="memory-node" target="planner-node">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="390" y="680" />
+              <mxPoint x="390" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="edge-planner-next-action" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6770;strokeWidth=1.5;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="planner-node" target="next-action-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="annotation-reflection" value="verbal self-critique&#10;written to memory" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=2;fontColor=#6B7B8C;spacingLeft=4;" vertex="1" parent="1">
+          <mxGeometry x="570" y="545" width="150" height="40" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

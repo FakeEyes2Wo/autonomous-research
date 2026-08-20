@@ -1,0 +1,75 @@
+<mxfile host="app.diagrams.net" agent="draw.io" version="24.7.17">
+  <diagram id="rlhf-pipeline" name="RLHF Pipeline">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="group-data" value="Data" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#9CA3AF;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=13;fontColor=#6B7280;arcSize=8;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="260" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="group-training" value="Training Loop" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#9CA3AF;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=13;fontColor=#6B7280;arcSize=8;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="420" y="80" width="560" height="480" as="geometry" />
+        </mxCell>
+
+        <mxCell id="group-eval" value="Evaluation" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#9CA3AF;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=13;fontColor=#6B7280;arcSize=8;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="80" width="240" height="160" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-sft" value="SFT Model" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light.svg;fontSize=13;fontStyle=1;fontColor=#1F2937;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="520" y="180" width="120" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-sampling" value="Sampling" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Bijou-2801/Dice-985.png;fontSize=13;fontStyle=1;fontColor=#1F2937;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="740" y="180" width="120" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-reward" value="Reward Model" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/CSS_Vol_1-2664/dice-5-1244.svg;fontSize=13;fontStyle=1;fontColor=#1F2937;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="740" y="360" width="120" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-policy" value="Policy Update" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.loop;fontSize=13;fontStyle=1;fontColor=#1F2937;fillColor=#F3F4F6;strokeColor=#4B5563;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="520" y="360" width="120" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-data" value="Preference Data" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#F3F4F6;strokeColor=#4B5563;fontSize=13;fontStyle=1;fontColor=#1F2937;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="140" y="130" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-eval" value="Evaluation" style="verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.mockup.graphics.barChart;strokeColor=none;strokeColor2=none;strokeColor3=#666666;fillColor2=#008cff;fillColor3=#dddddd;fontSize=13;fontStyle=1;fontColor=#1F2937;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="130" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-sft-sampling" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9CA3AF;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-sft" target="node-sampling">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-sampling-reward" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9CA3AF;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-sampling" target="node-reward">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-data-reward" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9CA3AF;strokeWidth=1.5;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="node-data" target="node-reward">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-reward-policy" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9CA3AF;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-reward" target="node-policy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-policy-sft" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9CA3AF;strokeWidth=1.5;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="node-policy" target="node-sft">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-sft-eval" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9CA3AF;strokeWidth=1.5;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="node-sft" target="node-eval">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="annotation-policy" value="PPO / DPO / GRPO" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#6B7280;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="500" y="460" width="160" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

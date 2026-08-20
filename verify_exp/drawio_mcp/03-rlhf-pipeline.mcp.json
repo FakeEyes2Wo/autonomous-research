@@ -1,0 +1,115 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shapes": {
+    "llm": [
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light.svg",
+        "title": "Light (Material Symbols)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light_Mode.svg",
+        "title": "Light Mode (Material Symbols)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Basic-2519/lightning-823.svg",
+        "title": "lightning (Basic)"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.a7_power",
+        "title": "A7 Power"
+      }
+    ],
+    "dice": [
+      {
+        "style": "verticalLabelPosition=bottom;align=center;dashed=0;html=1;verticalAlign=top;shape=mxgraph.pid.fittings.blind_disc2;",
+        "title": "Blind Disc"
+      },
+      {
+        "style": "sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#005F4B;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam2.cd;",
+        "title": "CD"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Bijou-2801/Dice-985.png",
+        "title": "Dice (Bijou)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/CSS_Vol_1-2664/dice-5-1244.svg",
+        "title": "dice 5 (CSS Vol.1)"
+      }
+    ],
+    "scale": [
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.bucket_scale",
+        "title": "Bucket Scale"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.scale",
+        "title": "Check"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.check_scale",
+        "title": "Check Scale"
+      },
+      {
+        "style": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/azure2/other/Defender_Industrial_Scale_System.svg;",
+        "title": "Defender Industrial Scale System"
+      }
+    ],
+    "database": [
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToOne;endFill=1;",
+        "title": "0 to 1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;",
+        "title": "0 to Many Optional"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERone;endFill=1;",
+        "title": "1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;",
+        "title": "1 Mandatory"
+      }
+    ],
+    "loop": [
+      {
+        "style": "html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.loop",
+        "title": "Loop"
+      },
+      {
+        "style": "points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;isLoopComp=1;isLoopStandard=1;",
+        "title": "Loop and Compensation"
+      },
+      {
+        "style": "points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;isLoopComp=1;isLoopStandard=1;isLoopSub=1;",
+        "title": "Loop and Compensation"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.radio.loop_antenna;",
+        "title": "Loop Antenna"
+      }
+    ],
+    "chart": [
+      {
+        "style": "html=1;dashed=0;whiteSpace=wrap;",
+        "title": "Activity / Process / Entity / External Interactor"
+      },
+      {
+        "style": "strokeWidth=2;html=1;shape=mxgraph.flowchart.annotation_1;align=left;pointerEvents=1;",
+        "title": "Annotation"
+      },
+      {
+        "style": "strokeWidth=2;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;",
+        "title": "Annotation"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.mockup.graphics.barChart;strokeColor=none;strokeColor2=none;strokeColor3=#666666;fillColor2=#008cff;fillColor3=#dddddd;",
+        "title": "Bar Chart"
+      }
+    ]
+  }
+}

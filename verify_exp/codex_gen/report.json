@@ -1,0 +1,896 @@
+{
+  "total": 10,
+  "passed": 10,
+  "failed": 0,
+  "mcp_passed": 10,
+  "files": [
+    {
+      "stem": "01-candidate-to-paper-pipeline",
+      "prompt": "01-candidate-to-paper-pipeline.md",
+      "title": "Candidate-to-Paper Autonomous Research Pipeline",
+      "status": "PASS",
+      "drawio": "01-candidate-to-paper-pipeline.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": true,
+          "shapes": {
+            "person": [
+              {
+                "title": "Actor",
+                "style": "shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;"
+              },
+              {
+                "title": "Androgenous Person",
+                "style": "strokeColor=#ffffff;sketch=0;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.cisco.people.androgenous_person;"
+              },
+              {
+                "title": "User",
+                "style": "shape=actor;whiteSpace=wrap;html=1;"
+              },
+              {
+                "title": "User",
+                "style": "image;sketch=0;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/mscae/Person.svg;"
+              }
+            ]
+          },
+          "error": null
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 15,
+        "edges": 9,
+        "editable_labels": 15,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "01-candidate-to-paper-pipeline.svg",
+          "png": "01-candidate-to-paper-pipeline.png",
+          "pdf": "01-candidate-to-paper-pipeline.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "01-candidate-to-paper-pipeline.svg",
+            "bytes": 10149,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "01-candidate-to-paper-pipeline.png",
+            "bytes": 75383,
+            "dimensions": [
+              2400,
+              1600
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "75383 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\01-candidate-to-paper-pipeline.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "01-candidate-to-paper-pipeline.pdf",
+            "bytes": 131277,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              600.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "131277 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\01-candidate-to-paper-pipeline.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "02-rag-system",
+      "prompt": "02-rag-system.md",
+      "title": "Retrieval-Augmented Generation System",
+      "status": "PASS",
+      "drawio": "02-rag-system.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": true,
+          "shapes": {
+            "text": [
+              {
+                "title": "Alphanumeric",
+                "style": "strokeWidth=1;shadow=0;dashed=0;align=center;html=1;shape=mxgraph.mockup.text.alphanumeric;linkText=;html=1;fontStyle=4;fontSize=17;fontColor=#0000ff;"
+              },
+              {
+                "title": "Autosize Text",
+                "style": "text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;autosize=1;resizable=0;"
+              },
+              {
+                "title": "Autosize Title",
+                "style": "text;strokeColor=none;fillColor=none;html=1;fontSize=25;fontStyle=1;verticalAlign=middle;align=center;autosizeText=1;"
+              },
+              {
+                "title": "Bulleted List",
+                "style": "strokeWidth=1;shadow=0;dashed=0;align=center;html=1;shape=mxgraph.mockup.text.bulletedList;textColor=#666666;mainText=,,,,;textSize=17;bulletStyle=none;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=17;fontColor=#666666;"
+              }
+            ]
+          },
+          "error": null
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 12,
+        "edges": 8,
+        "editable_labels": 12,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "02-rag-system.svg",
+          "png": "02-rag-system.png",
+          "pdf": "02-rag-system.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "02-rag-system.svg",
+            "bytes": 8212,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "02-rag-system.png",
+            "bytes": 62761,
+            "dimensions": [
+              2400,
+              1600
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "62761 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\02-rag-system.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "02-rag-system.pdf",
+            "bytes": 108477,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              600.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "108477 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\02-rag-system.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "03-rlhf-pipeline",
+      "prompt": "03-rlhf-pipeline.md",
+      "title": "RLHF Preference Optimization Pipeline",
+      "status": "PASS",
+      "drawio": "03-rlhf-pipeline.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": true,
+          "shapes": {
+            "llm": [
+              {
+                "title": "Light (Material Symbols)",
+                "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light.svg"
+              },
+              {
+                "title": "Light Mode (Material Symbols)",
+                "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light_Mode.svg"
+              },
+              {
+                "title": "lightning (Basic)",
+                "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Basic-2519/lightning-823.svg"
+              }
+            ]
+          },
+          "error": null
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 11,
+        "edges": 6,
+        "editable_labels": 11,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "03-rlhf-pipeline.svg",
+          "png": "03-rlhf-pipeline.png",
+          "pdf": "03-rlhf-pipeline.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "03-rlhf-pipeline.svg",
+            "bytes": 7316,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "03-rlhf-pipeline.png",
+            "bytes": 69342,
+            "dimensions": [
+              2400,
+              1600
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "69342 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\03-rlhf-pipeline.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "03-rlhf-pipeline.pdf",
+            "bytes": 94301,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              600.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "94301 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\03-rlhf-pipeline.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "04-diffusion-llm-training",
+      "prompt": "04-diffusion-llm-training.md",
+      "title": "Diffusion Language Model Training and Reasoning",
+      "status": "PASS",
+      "drawio": "04-diffusion-llm-training.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": false,
+          "shapes": {},
+          "error": "ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)"
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 10,
+        "edges": 5,
+        "editable_labels": 10,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "04-diffusion-llm-training.svg",
+          "png": "04-diffusion-llm-training.png",
+          "pdf": "04-diffusion-llm-training.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "04-diffusion-llm-training.svg",
+            "bytes": 6758,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "04-diffusion-llm-training.png",
+            "bytes": 70573,
+            "dimensions": [
+              2400,
+              1600
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "70573 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\04-diffusion-llm-training.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "04-diffusion-llm-training.pdf",
+            "bytes": 99430,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              600.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "99430 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\04-diffusion-llm-training.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "05-multiturn-eval-harness",
+      "prompt": "05-multiturn-eval-harness.md",
+      "title": "Multi-Turn LLM Evaluation Harness",
+      "status": "PASS",
+      "drawio": "05-multiturn-eval-harness.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": true,
+          "shapes": {
+            "database": [
+              {
+                "title": "0 to 1",
+                "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToOne;endFill=1;"
+              },
+              {
+                "title": "0 to Many Optional",
+                "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;"
+              },
+              {
+                "title": "1",
+                "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERone;endFill=1;"
+              },
+              {
+                "title": "1 Mandatory",
+                "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;"
+              }
+            ]
+          },
+          "error": null
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 11,
+        "edges": 7,
+        "editable_labels": 11,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "05-multiturn-eval-harness.svg",
+          "png": "05-multiturn-eval-harness.png",
+          "pdf": "05-multiturn-eval-harness.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "05-multiturn-eval-harness.svg",
+            "bytes": 7749,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "05-multiturn-eval-harness.png",
+            "bytes": 70812,
+            "dimensions": [
+              2400,
+              1600
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "70812 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\05-multiturn-eval-harness.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "05-multiturn-eval-harness.pdf",
+            "bytes": 102880,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              600.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "102880 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\05-multiturn-eval-harness.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "06-model-editing-framework",
+      "prompt": "06-model-editing-framework.md",
+      "title": "Null-Space Constrained Model Editing Framework",
+      "status": "PASS",
+      "drawio": "06-model-editing-framework.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": false,
+          "shapes": {},
+          "error": "ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)"
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 10,
+        "edges": 5,
+        "editable_labels": 10,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "06-model-editing-framework.svg",
+          "png": "06-model-editing-framework.png",
+          "pdf": "06-model-editing-framework.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "06-model-editing-framework.svg",
+            "bytes": 6808,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "06-model-editing-framework.png",
+            "bytes": 70700,
+            "dimensions": [
+              2400,
+              1600
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "70700 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\06-model-editing-framework.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "06-model-editing-framework.pdf",
+            "bytes": 104075,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              600.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "104075 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\06-model-editing-framework.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "07-evidential-multiview-learning",
+      "prompt": "07-evidential-multiview-learning.md",
+      "title": "Evidential Conflictive Multi-View Learning",
+      "status": "PASS",
+      "drawio": "07-evidential-multiview-learning.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": true,
+          "shapes": {
+            "image": [
+              {
+                "title": "EC2 Image Builder",
+                "style": "sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2_image_builder;"
+              },
+              {
+                "title": "Icon",
+                "style": "icon;html=1;image=https://app.diagrams.net/img/clipart/Gear_128x128.png"
+              },
+              {
+                "title": "Image",
+                "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;"
+              },
+              {
+                "title": "Image",
+                "style": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/azure2/general/Image.svg;"
+              }
+            ]
+          },
+          "error": null
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 11,
+        "edges": 6,
+        "editable_labels": 11,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "07-evidential-multiview-learning.svg",
+          "png": "07-evidential-multiview-learning.png",
+          "pdf": "07-evidential-multiview-learning.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "07-evidential-multiview-learning.svg",
+            "bytes": 7472,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "07-evidential-multiview-learning.png",
+            "bytes": 82429,
+            "dimensions": [
+              2400,
+              1800
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "82429 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\07-evidential-multiview-learning.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "07-evidential-multiview-learning.pdf",
+            "bytes": 109080,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              675.12
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "109080 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\07-evidential-multiview-learning.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "08-transformer-succinctness",
+      "prompt": "08-transformer-succinctness.md",
+      "title": "Transformer Succinctness Hierarchy",
+      "status": "PASS",
+      "drawio": "08-transformer-succinctness.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": true,
+          "shapes": {
+            "set": [
+              {
+                "title": "Change Set",
+                "style": "outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws3.change_set;fillColor=#759C3E;gradientColor=none;"
+              },
+              {
+                "title": "Change Set",
+                "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=#232F3E;fillColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.change_set;"
+              },
+              {
+                "title": "Change Set",
+                "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.change_set;"
+              },
+              {
+                "title": "Data Set",
+                "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#7AA116;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.data_set;"
+              }
+            ]
+          },
+          "error": null
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 10,
+        "edges": 8,
+        "editable_labels": 10,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "08-transformer-succinctness.svg",
+          "png": "08-transformer-succinctness.png",
+          "pdf": "08-transformer-succinctness.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "08-transformer-succinctness.svg",
+            "bytes": 7394,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "08-transformer-succinctness.png",
+            "bytes": 88965,
+            "dimensions": [
+              1920,
+              2400
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "88965 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\08-transformer-succinctness.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "08-transformer-succinctness.pdf",
+            "bytes": 98011,
+            "dimensions": null,
+            "page_points": [
+              720.0,
+              900.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "98011 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\08-transformer-succinctness.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "09-finetuning-influence-flow",
+      "prompt": "09-finetuning-influence-flow.md",
+      "title": "LLM Finetuning Influence Flow",
+      "status": "PASS",
+      "drawio": "09-finetuning-influence-flow.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": true,
+          "shapes": {
+            "document": [
+              {
+                "title": "Checked doc",
+                "style": "shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#4495D1;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.checked_doc;"
+              },
+              {
+                "title": "Code File",
+                "style": "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.code_file;pointerEvents=1;"
+              },
+              {
+                "title": "Document",
+                "style": "shape=document;whiteSpace=wrap;html=1;boundedLbl=1;"
+              },
+              {
+                "title": "Document",
+                "style": "whiteSpace=wrap;html=1;shape=mxgraph.basic.document"
+              }
+            ]
+          },
+          "error": null
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 10,
+        "edges": 5,
+        "editable_labels": 10,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "09-finetuning-influence-flow.svg",
+          "png": "09-finetuning-influence-flow.png",
+          "pdf": "09-finetuning-influence-flow.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "09-finetuning-influence-flow.svg",
+            "bytes": 6720,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "09-finetuning-influence-flow.png",
+            "bytes": 77219,
+            "dimensions": [
+              2400,
+              1600
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "77219 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\09-finetuning-influence-flow.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "09-finetuning-influence-flow.pdf",
+            "bytes": 98600,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              600.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "98600 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\09-finetuning-influence-flow.pdf\n"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "stem": "10-agent-reflection-loop",
+      "prompt": "10-agent-reflection-loop.md",
+      "title": "Agent Memory and Reflection Loop",
+      "status": "PASS",
+      "drawio": "10-agent-reflection-loop.drawio",
+      "mcp": {
+        "ok": true,
+        "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+        "error": null,
+        "shape_search": {
+          "ok": true,
+          "shapes": {
+            "inbox": [
+              {
+                "title": "Inbox",
+                "style": "verticalLabelPosition=bottom;aspect=fixed;html=1;shape=mxgraph.salesforce.inbox;fillColorStyles=fillColor2,fillColor3,fillColor4;fillColor2=#00857d;fillColor3=#00b2a9;fillColor4=#ffffff;fillColor=none;strokeColor=none;"
+              },
+              {
+                "title": "Inbox",
+                "style": "verticalLabelPosition=bottom;aspect=fixed;html=1;shape=mxgraph.salesforce.inbox2;fillColorStyles=fillColor2,fillColor3;fillColor2=#00857d;fillColor3=#ffffff;fillColor=none;strokeColor=none;"
+              },
+              {
+                "title": "Arc",
+                "style": "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.arc;strokeColor=#10739E;strokeWidth=6;startAngle=0.3;endAngle=0.1;"
+              },
+              {
+                "title": "Banner",
+                "style": "html=1;shape=mxgraph.infographic.banner;dx=32;dy=17;notch=15;fillColor=#10739E;strokeColor=none;align=center;verticalAlign=middle;fontColor=#ffffff;fontSize=14;fontStyle=1;spacingBottom=15;"
+              }
+            ]
+          },
+          "error": null
+        }
+      },
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "vertices": 11,
+        "edges": 7,
+        "editable_labels": 11,
+        "external_urls": [],
+        "node_overlaps": []
+      },
+      "export": {
+        "ok": true,
+        "backend": "native-svg-chrome",
+        "files": {
+          "svg": "10-agent-reflection-loop.svg",
+          "png": "10-agent-reflection-loop.png",
+          "pdf": "10-agent-reflection-loop.pdf"
+        },
+        "formats": {
+          "svg": {
+            "ok": true,
+            "file": "10-agent-reflection-loop.svg",
+            "bytes": 7985,
+            "dimensions": null,
+            "page_points": null,
+            "error": null
+          },
+          "png": {
+            "ok": true,
+            "file": "10-agent-reflection-loop.png",
+            "bytes": 73941,
+            "dimensions": [
+              2400,
+              1600
+            ],
+            "page_points": null,
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "73941 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\10-agent-reflection-loop.png\n"
+          },
+          "pdf": {
+            "ok": true,
+            "file": "10-agent-reflection-loop.pdf",
+            "bytes": 107667,
+            "dimensions": null,
+            "page_points": [
+              900.0,
+              600.0
+            ],
+            "error": null,
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "107667 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\10-agent-reflection-loop.pdf\n"
+          }
+        },
+        "error": null
+      }
+    }
+  ]
+}

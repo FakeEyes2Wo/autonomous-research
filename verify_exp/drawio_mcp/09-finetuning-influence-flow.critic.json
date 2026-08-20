@@ -1,0 +1,47 @@
+{
+  "verdict": "REVISE",
+  "issues": [
+    "Parameter Update uses an AWS Metrics icon (mxgraph.aws4.metrics), which is a cloud-service icon and inappropriate for an academic ML concept. Replace with a plain rounded rectangle or a neutral matrix/parameter symbol.",
+    "Good Outputs uses an iOS checkmark icon (mxgraph.ios7.misc.check), which is a UI/toy-like icon and visually inconsistent with the academic-minimal style. Replace with a plain rounded rectangle with a subtle green fill, or a simple checkmark annotation.",
+    "Bad Outputs uses a bare cross shape (shape=cross), which reads as a medical/error symbol rather than a conceptual output node. Replace with a plain rounded rectangle with a subtle red fill, or a simple cross annotation.",
+    "Probability Mass Shift uses a generic rounded rectangle while other nodes use icons/shapes, creating visual inconsistency. Consider using a neutral flow/process shape (e.g., plain rectangle or parallelogram) for all conceptual nodes.",
+    "The annotation 'influence redistributed across outputs' is placed at x=790, y=140, which overlaps the Probability Mass Shift node (x=610, y=150, width=160) and the Bad Outputs node area. Move it to a clear space or attach it with a connector.",
+    "Group 'Learning' (x=80, y=80, w=360, h=260) and group 'Effect' (x=560, y=80, w=360, h=260) are adjacent but the edge from Parameter Update to Probability Mass Shift crosses the group boundary without visual indication of crossing. Consider adding a small gap or a labeled connector between groups.",
+    "Edge from Parameter Update to Probability Mass Shift crosses the group boundary at an angle; with orthogonal routing it may create an awkward bend. Consider aligning Parameter Update and Probability Mass Shift on the same horizontal axis.",
+    "Node labels are short and readable, but 'Probability Mass Shift' is wider than its node (160px width vs. label length). Increase node width or reduce font size to avoid truncation.",
+    "The diagram lacks a title or legend. For a paper-level figure, add a concise title and optionally a legend explaining the color coding (green=good, red=bad).",
+    "The two document icons for Training Example A and B are acceptable but the fill color #E8F0FE and stroke #3366CC are not consistent with the rest of the palette (green, yellow, red). Consider a neutral gray or blue-gray for all input nodes."
+  ],
+  "icon_feedback": [
+    {
+      "node": "Training Example A",
+      "verdict": "keep",
+      "why": "Document shape is appropriate for a training example; color can be adjusted for consistency."
+    },
+    {
+      "node": "Training Example B",
+      "verdict": "keep",
+      "why": "Document shape is appropriate for a training example; color can be adjusted for consistency."
+    },
+    {
+      "node": "Parameter Update",
+      "verdict": "replace",
+      "why": "AWS Metrics icon is a cloud-service icon and misleading for an academic ML concept. Use a plain rounded rectangle or a neutral matrix symbol."
+    },
+    {
+      "node": "Probability Mass Shift",
+      "verdict": "replace",
+      "why": "Generic rounded rectangle is acceptable but inconsistent with other iconized nodes. Use a neutral flow/process shape (e.g., plain rectangle or parallelogram) for all conceptual nodes."
+    },
+    {
+      "node": "Good Outputs",
+      "verdict": "replace",
+      "why": "iOS checkmark icon is UI/toy-like and inconsistent with academic-minimal style. Use a plain rounded rectangle with a subtle green fill or a simple checkmark annotation."
+    },
+    {
+      "node": "Bad Outputs",
+      "verdict": "replace",
+      "why": "Bare cross shape reads as a medical/error symbol. Use a plain rounded rectangle with a subtle red fill or a simple cross annotation."
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "files": [
+    {
+      "prompt": "01-candidate-to-paper-pipeline.md",
+      "title": "Candidate-to-Paper Autonomous Research Pipeline",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "01-candidate-to-paper-pipeline.svg",
+      "png": "01-candidate-to-paper-pipeline.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 17,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "02-rag-system.md",
+      "title": "Retrieval-Augmented Generation System",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "02-rag-system.svg",
+      "png": "02-rag-system.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 11,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "03-rlhf-pipeline.md",
+      "title": "RLHF Preference Optimization Pipeline",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "03-rlhf-pipeline.svg",
+      "png": "03-rlhf-pipeline.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 16,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "04-diffusion-llm-training.md",
+      "title": "Diffusion Language Model Training and Reasoning",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "04-diffusion-llm-training.svg",
+      "png": "04-diffusion-llm-training.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 11,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "05-multiturn-eval-harness.md",
+      "title": "Multi-Turn LLM Evaluation Harness",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "05-multiturn-eval-harness.svg",
+      "png": "05-multiturn-eval-harness.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 17,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "06-model-editing-framework.md",
+      "title": "Null-Space Constrained Model Editing Framework",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "06-model-editing-framework.svg",
+      "png": "06-model-editing-framework.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 11,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "07-evidential-multiview-learning.md",
+      "title": "Evidential Conflictive Multi-View Learning",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "07-evidential-multiview-learning.svg",
+      "png": "07-evidential-multiview-learning.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 17,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "08-transformer-succinctness.md",
+      "title": "Transformer Succinctness Hierarchy",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "08-transformer-succinctness.svg",
+      "png": "08-transformer-succinctness.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 9,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "09-finetuning-influence-flow.md",
+      "title": "LLM Finetuning Influence Flow",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "09-finetuning-influence-flow.svg",
+      "png": "09-finetuning-influence-flow.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 15,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    },
+    {
+      "prompt": "10-agent-reflection-loop.md",
+      "title": "Agent Memory and Reflection Loop",
+      "style": "academic-minimal",
+      "llm_used": true,
+      "attempts": 1,
+      "model": "deepseek-v4-pro",
+      "llm_error": null,
+      "svg": "10-agent-reflection-loop.svg",
+      "png": "10-agent-reflection-loop.png",
+      "checks": {
+        "xml_ok": true,
+        "viewbox": true,
+        "editable_texts": 17,
+        "external_refs": false,
+        "bounds_ok": true,
+        "error": null
+      },
+      "png_ok": true,
+      "png_error": null,
+      "status": "PASS"
+    }
+  ]
+}

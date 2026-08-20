@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shape_search": {
+    "ok": false,
+    "shapes": {},
+    "error": "ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)"
+  }
+}

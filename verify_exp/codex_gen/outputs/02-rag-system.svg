@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Retrieval-Augmented Generation System">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563EB" />
+    </marker>
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0F172A" flood-opacity="0.09" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <rect x="36" y="175.5" width="820" height="124" rx="14" fill="#DBEAFE" fill-opacity="0.32" stroke="#60A5FA" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Indexing" />
+  <text x="50" y="197.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="50" dy="-0">Indexing</tspan>
+  </text>
+  <rect x="36" y="550.5" width="1128" height="160" rx="14" fill="#CCFBF1" fill-opacity="0.32" stroke="#2DD4BF" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Inference" />
+  <text x="50" y="572.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="50" dy="-0">Inference</tspan>
+  </text>
+  <text x="54" y="46" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0F172A" text-anchor="start">
+    <tspan x="54" dy="-0">Retrieval-Augmented Generation System</tspan>
+  </text>
+  <line x1="54" y1="66" x2="194" y2="66" stroke="#2563EB" stroke-width="3" stroke-linecap="round" />
+  <path d="M 222 620.5 L 292 620.5 L 292 245.5 L 362 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 222 620.5 L 292 620.5 L 292 620.5 L 362 620.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 222 245.5 L 292 245.5 L 292 245.5 L 362 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 530 245.5 L 600 245.5 L 600 245.5 L 670 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 838 245.5 L 858 245.5 L 858 433 L 446 433 L 446 588.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 530 620.5 L 600 620.5 L 600 620.5 L 670 620.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 838 620.5 L 908 620.5 L 908 620.5 L 978 620.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 222 620.5 L 246 620.5 L 246 701 L 954 701 L 954 620.5 L 978 620.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <rect x="54" y="588.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="138" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="138" dy="-0">Query</tspan>
+  </text>
+  <rect x="123" y="631.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="138" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="138" dy="-0">TXT</tspan>
+  </text>
+  <rect x="362" y="213.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="446" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="446" dy="-0">Encoder</tspan>
+  </text>
+  <rect x="431" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="446" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="446" dy="-0">VEC</tspan>
+  </text>
+  <rect x="670" y="213.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="754" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="754" dy="-0">Vector Index</tspan>
+  </text>
+  <rect x="739" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="754" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="754" dy="-0">DB</tspan>
+  </text>
+  <rect x="362" y="588.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="446" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="446" dy="-0">Retriever</tspan>
+  </text>
+  <rect x="428" y="631.5" width="36" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="446" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="446" dy="-0">FIND</tspan>
+  </text>
+  <rect x="670" y="588.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="754" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="754" dy="-0">Reranker</tspan>
+  </text>
+  <rect x="733" y="631.5" width="42" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="754" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="754" dy="-0">SCORE</tspan>
+  </text>
+  <rect x="978" y="588.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="1062" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="1062" dy="-0">Generator</tspan>
+  </text>
+  <rect x="1047" y="631.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="1062" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="1062" dy="-0">AI</tspan>
+  </text>
+  <rect x="54" y="213.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="138" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="138" dy="-0">Corpus</tspan>
+  </text>
+  <rect x="123" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="138" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="138" dy="-0">DOC</tspan>
+  </text>
+  <rect x="362" y="662.5" width="168" height="32" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" data-role="annotation" data-target="Retriever" />
+  <text x="446" y="681.5" font-family="Helvetica, Arial, sans-serif" font-size="8" font-weight="400" fill="#475569" text-anchor="middle">
+    <tspan x="446" dy="-0">top-k candidates</tspan>
+  </text>
+  <rect x="670" y="662.5" width="168" height="32" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" data-role="annotation" data-target="Reranker" />
+  <text x="754" y="681.5" font-family="Helvetica, Arial, sans-serif" font-size="8" font-weight="400" fill="#475569" text-anchor="middle">
+    <tspan x="754" dy="-0">cross-encoder</tspan>
+  </text>
+</svg>

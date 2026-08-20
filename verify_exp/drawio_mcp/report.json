@@ -1,0 +1,644 @@
+{
+  "files": [
+    {
+      "prompt": "01-candidate-to-paper-pipeline.md",
+      "title": "Candidate-to-Paper Autonomous Research Pipeline",
+      "rounds": 3,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "Candidate Intake",
+          "verdict": "replace",
+          "why": "UML actor shape is appropriate for a person but is typically used in use-case diagrams, not pipeline architecture diagrams. Consider using a simpler person icon or a plain rectangle with a label."
+        },
+        {
+          "node": "Brainstorm",
+          "verdict": "keep",
+          "why": "Light bulb is a standard metaphor for brainstorming and the electrical style is acceptable, though it could be simplified for academic-minimal."
+        },
+        {
+          "node": "Ideation",
+          "verdict": "replace",
+          "why": "Flat-color Idea.svg image is visually inconsistent with the monochrome academic-minimal style and may not be editable text. Consider using a monochrome idea icon or a plain shape."
+        },
+        {
+          "node": "Experiment Plan",
+          "verdict": "keep",
+          "why": "Clipboard is appropriate for a plan and the Office clipboard style is monochrome and consistent with the academic-minimal style."
+        },
+        {
+          "node": "Experiment",
+          "verdict": "replace",
+          "why": "Ionicons flask SVG image is visually inconsistent with the monochrome style and may not be editable text. Consider using a monochrome flask icon or a plain shape."
+        },
+        {
+          "node": "Evidence",
+          "verdict": "keep",
+          "why": "Cylinder shape is a standard database representation and is appropriate for evidence storage, though it should be styled consistently with the rest of the diagram."
+        },
+        {
+          "node": "Claims & Outline",
+          "verdict": "replace",
+          "why": "Global address list shape is an Office communications icon that does not clearly convey 'claims and outline' in an academic context. Consider using a list or outline shape."
+        },
+        {
+          "node": "Writing",
+          "verdict": "keep",
+          "why": "Document shape is appropriate for writing and is monochrome and consistent with the academic-minimal style."
+        },
+        {
+          "node": "Review",
+          "verdict": "replace",
+          "why": "Outline icons Magnifier SVG image is visually inconsistent with the monochrome style and may not be editable text. Consider using a monochrome magnifier icon or a plain shape."
+        },
+        {
+          "node": "Packaging",
+          "verdict": "keep",
+          "why": "Box icon is appropriate for packaging and the iOS7 style is acceptable, though the strokeWidth should be consistent with other nodes."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 25,
+        "vertices": 14,
+        "edges": 9
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 10,
+      "drawio": "01-candidate-to-paper-pipeline.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "01-candidate-to-paper-pipeline.png",
+          "svg": "01-candidate-to-paper-pipeline.svg",
+          "pdf": "01-candidate-to-paper-pipeline.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "02-rag-system.md",
+      "title": "Retrieval-Augmented Generation System",
+      "rounds": 2,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "Query",
+          "verdict": "keep",
+          "why": "Plain rounded rectangle is acceptable for a text/query input node in an academic-minimal style; no icon needed."
+        },
+        {
+          "node": "Encoder",
+          "verdict": "replace",
+          "why": "Currently a plain rectangle. The prompt specifies an embedding icon style; use a vector/embedding shape or a simple geometric representation rather than the offered AWS Braket or Caching icons, which are misleading."
+        },
+        {
+          "node": "Vector Index",
+          "verdict": "replace",
+          "why": "Currently a plain rectangle. The prompt specifies a database icon; use a standard cylinder/database shape. The offered ER-relationship edge styles are not applicable to a node."
+        },
+        {
+          "node": "Retriever",
+          "verdict": "replace",
+          "why": "Currently a plain rectangle. The prompt specifies a magnifier icon; use a simple magnifying-glass outline shape. The offered AWS and Veeam magnifying glass icons are acceptable but should be rendered in a neutral monochrome style to match academic-minimal."
+        },
+        {
+          "node": "Reranker",
+          "verdict": "replace",
+          "why": "Currently a plain rectangle. The prompt specifies a scale icon; the offered GCP bucket_scale or check_scale icons are cloud-provider-specific and visually heavy. Use a simple balance/scale outline or a rank/sort glyph instead."
+        },
+        {
+          "node": "Generator",
+          "verdict": "replace",
+          "why": "Currently a plain rectangle. The prompt specifies an LLM icon; the offered Light/lightning/A7 Power icons are irrelevant or toy-like. Use a simple neural-network or model glyph, or keep a plain rectangle with an 'LLM' label."
+        },
+        {
+          "node": "Corpus",
+          "verdict": "replace",
+          "why": "Currently a plain rectangle. The prompt specifies a documents icon; the offered AWS CloudSearch and Active Directory documents icons are cloud-provider-specific. Use a simple stacked-documents outline shape."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 20,
+        "vertices": 11,
+        "edges": 7
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 7,
+      "drawio": "02-rag-system.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "02-rag-system.png",
+          "svg": "02-rag-system.svg",
+          "pdf": "02-rag-system.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "03-rlhf-pipeline.md",
+      "title": "RLHF Preference Optimization Pipeline",
+      "rounds": 3,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "SFT Model",
+          "verdict": "replace",
+          "why": "Lightbulb icon is irrelevant to a language model and looks toy-like; use a neutral geometric shape or a text-only node with a subtle fill."
+        },
+        {
+          "node": "Sampling",
+          "verdict": "replace",
+          "why": "Colorful dice PNG is visually inconsistent with the monochrome academic style; use a simple geometric shape or a monochrome dice SVG."
+        },
+        {
+          "node": "Reward Model",
+          "verdict": "replace",
+          "why": "Dice icon is semantically wrong for a reward model; use a scale icon (e.g., mxgraph.gcp2.scale) or a neutral shape."
+        },
+        {
+          "node": "Policy Update",
+          "verdict": "keep",
+          "why": "Loop shape is appropriate for a policy update step in a training loop, though the fill color could be more muted."
+        },
+        {
+          "node": "Preference Data",
+          "verdict": "keep",
+          "why": "Cylinder shape is a standard database representation and fits the academic context."
+        },
+        {
+          "node": "Evaluation",
+          "verdict": "replace",
+          "why": "Bar chart icon with bright blue fill clashes with the muted palette; use a simpler chart icon or a neutral shape with a muted fill."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 18,
+        "vertices": 10,
+        "edges": 6
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 6,
+      "drawio": "03-rlhf-pipeline.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "03-rlhf-pipeline.png",
+          "svg": "03-rlhf-pipeline.svg",
+          "pdf": "03-rlhf-pipeline.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "04-diffusion-llm-training.md",
+      "title": "Diffusion Language Model Training and Reasoning",
+      "rounds": 3,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "Text Tokens",
+          "verdict": "keep",
+          "why": "Uses a simple rounded rectangle with text, which is appropriate for an academic-minimal architecture diagram. No misleading icon."
+        },
+        {
+          "node": "Noising",
+          "verdict": "keep",
+          "why": "Uses a simple rounded rectangle with text. The candidate 'noise' icons (AWS Braket, 3D arrows) were correctly avoided; they would have been toy-like and irrelevant."
+        },
+        {
+          "node": "Denoiser",
+          "verdict": "keep",
+          "why": "Uses a simple rounded rectangle with text. The candidate 'llm' icons (lightbulb, lightning, power) were correctly avoided; they would have been misleading for a denoiser module."
+        },
+        {
+          "node": "Left-to-Right Decoder",
+          "verdict": "keep",
+          "why": "Uses a simple rounded rectangle with text. The candidate 'arrow' icons were correctly avoided; a directional arrow icon would have been redundant with the edge arrows and visually noisy."
+        },
+        {
+          "node": "Reasoning Trace",
+          "verdict": "keep",
+          "why": "Uses a simple rounded rectangle with text. The candidate 'path' icons (Archimate comm path, curved text) were correctly avoided; they would have introduced an inconsistent visual language."
+        },
+        {
+          "node": "Answer",
+          "verdict": "keep",
+          "why": "Uses a simple rounded rectangle with text. The candidate 'check' icons (hexagon, iOS check, GCP check) were correctly avoided; a checkmark icon would have been overly literal and broken the minimal aesthetic."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 16,
+        "vertices": 9,
+        "edges": 5
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 6,
+      "drawio": "04-diffusion-llm-training.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "04-diffusion-llm-training.png",
+          "svg": "04-diffusion-llm-training.svg",
+          "pdf": "04-diffusion-llm-training.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "05-multiturn-eval-harness.md",
+      "title": "Multi-Turn LLM Evaluation Harness",
+      "rounds": 3,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "Single-Turn Benchmarks",
+          "verdict": "keep",
+          "why": "The cylinder/database shape is appropriate for a data store of benchmarks, but ensure it is clear that these are not stored in a database if that is not the case."
+        },
+        {
+          "node": "Sharding",
+          "verdict": "replace",
+          "why": "The scissors icon is a literal, toy-like metaphor that does not match the academic-minimal style or the semantic meaning of sharding. Replace with a simple rectangle or rounded rectangle with a text label."
+        },
+        {
+          "node": "Conversation Simulator",
+          "verdict": "replace",
+          "why": "The iOS7 chat icon is acceptable but visually inconsistent with the other nodes' styles. Consider using a consistent shape (e.g., rounded rectangle) for all core nodes."
+        },
+        {
+          "node": "User Model",
+          "verdict": "keep",
+          "why": "The UML actor icon is appropriate for a user model, but consider using a consistent visual language across all nodes."
+        },
+        {
+          "node": "LLM Under Test",
+          "verdict": "replace",
+          "why": "The GCP 'A7 Power' icon is a power/lightning symbol that is misleading for an LLM. Replace with a neutral rectangle or a more appropriate AI/LLM icon if available."
+        },
+        {
+          "node": "Aptitude Metric",
+          "verdict": "keep",
+          "why": "The bar chart icon is appropriate for a metric, but consider using a simple rectangle with a text label for a cleaner academic look."
+        },
+        {
+          "node": "Reliability Metric",
+          "verdict": "keep",
+          "why": "The bar chart icon is appropriate for a metric, but consider using a simple rectangle with a text label for a cleaner academic look."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 19,
+        "vertices": 10,
+        "edges": 7
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 6,
+      "drawio": "05-multiturn-eval-harness.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "05-multiturn-eval-harness.png",
+          "svg": "05-multiturn-eval-harness.svg",
+          "pdf": "05-multiturn-eval-harness.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "06-model-editing-framework.md",
+      "title": "Null-Space Constrained Model Editing Framework",
+      "rounds": 2,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "Base LLM",
+          "verdict": "keep",
+          "why": "Rounded rectangle with LLM label is appropriate for an architecture diagram; no icon is used, which is acceptable for academic-minimal style."
+        },
+        {
+          "node": "Edit Request",
+          "verdict": "keep",
+          "why": "Rounded rectangle is consistent and appropriate; no misleading icon."
+        },
+        {
+          "node": "Key-Value Mapping",
+          "verdict": "keep",
+          "why": "Rounded rectangle is consistent; no icon used."
+        },
+        {
+          "node": "Null-Space Projection",
+          "verdict": "replace",
+          "why": "Hexagon shape is inconsistent with the rounded-rectangle visual language and does not clearly convey a matrix-style node. Use a rectangle with a matrix label or a parallelogram to indicate transformation."
+        },
+        {
+          "node": "Edited LLM",
+          "verdict": "keep",
+          "why": "Rounded rectangle is consistent and appropriate."
+        },
+        {
+          "node": "Preservation Check",
+          "verdict": "keep",
+          "why": "Rounded rectangle is consistent and appropriate."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 18,
+        "vertices": 10,
+        "edges": 6
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 5,
+      "drawio": "06-model-editing-framework.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "06-model-editing-framework.png",
+          "svg": "06-model-editing-framework.svg",
+          "pdf": "06-model-editing-framework.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "07-evidential-multiview-learning.md",
+      "title": "Evidential Conflictive Multi-View Learning",
+      "rounds": 3,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "View 1",
+          "verdict": "replace",
+          "why": "Currently a plain rounded rectangle. Should use an image-related icon (e.g., the Azure Image style or a simple image glyph) to visually indicate this is an image view. Avoid the AWS EC2 Image Builder icon as it is too cloud-specific and toy-like for an academic architecture diagram."
+        },
+        {
+          "node": "View 2",
+          "verdict": "replace",
+          "why": "Currently a plain rounded rectangle. The available audio icons (2-conductor jack/plug) are electrical-engineering symbols and inappropriate for an academic ML diagram. Use a simple speaker or waveform glyph instead, or drop the icon and use a text label with a small audio symbol."
+        },
+        {
+          "node": "View 3",
+          "verdict": "replace",
+          "why": "Currently a plain rounded rectangle. The available text icons (Alphanumeric, Bulleted List) are mockup/UI elements and not suitable for a data-modality indicator. Use a simple 'T' or document glyph, or drop the icon and rely on the label."
+        },
+        {
+          "node": "View-Specific Evidence",
+          "verdict": "replace",
+          "why": "Currently a plain rounded rectangle. The available scale icons (GCP Bucket Scale, Check Scale, Defender Industrial Scale System) are cloud-provider-specific and visually heavy. A simple balance/scale glyph or a bar-chart icon would better convey 'evidence' in an academic context."
+        },
+        {
+          "node": "Opinion Construction",
+          "verdict": "replace",
+          "why": "Currently a plain rounded rectangle. The available chat icons (iOS chat, AWS chat, sitemap chat) are messaging-oriented and misleading for 'opinion construction' in a multi-view learning context. Use a thought-bubble or document-with-pen glyph, or drop the icon."
+        },
+        {
+          "node": "Conflictive Aggregation",
+          "verdict": "replace",
+          "why": "Currently a plain rounded rectangle. The available merge icons include a UML decision rhombus and a flowchart merge/storage shape, which are semantically closer but still generic. A custom conflict/merge glyph (e.g., two arrows converging with a lightning bolt) would be more appropriate. The Azure Defender Marquee is irrelevant."
+        },
+        {
+          "node": "Decision + Reliability",
+          "verdict": "replace",
+          "why": "Currently a plain rounded rectangle. The available check icons (iOS check, GCP check, hexagon check) are too simplistic and imply a boolean yes/no rather than a decision with reliability. Use a gauge or confidence-meter glyph, or a checkmark combined with a percentage indicator."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 18,
+        "vertices": 10,
+        "edges": 6
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 7,
+      "drawio": "07-evidential-multiview-learning.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "07-evidential-multiview-learning.png",
+          "svg": "07-evidential-multiview-learning.svg",
+          "pdf": "07-evidential-multiview-learning.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "08-transformer-succinctness.md",
+      "title": "Transformer Succinctness Hierarchy",
+      "rounds": 3,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "Language Family",
+          "verdict": "replace",
+          "why": "AWS Data Set icon is a cloud service symbol, not a mathematical set or language family; use a simple circle or rounded rectangle with a label, or a generic set notation symbol."
+        },
+        {
+          "node": "Transformer",
+          "verdict": "replace",
+          "why": "GCP A7 Power icon is a power/energy symbol, unrelated to Transformer architecture; use a simple rectangle with 'T' or a neural network layer icon, or no icon at all."
+        },
+        {
+          "node": "LTL Formula",
+          "verdict": "keep",
+          "why": "Math Formula icon from Fluent UI is appropriate for a logical formula representation, though it could be simplified to a plain rectangle with 'φ' for a more academic look."
+        },
+        {
+          "node": "RNN",
+          "verdict": "replace",
+          "why": "Antenna icon implies wireless communication, not a recurrent neural network; use a simple rectangle with 'RNN' or a generic network node icon."
+        },
+        {
+          "node": "Finite Automaton",
+          "verdict": "replace",
+          "why": "Veeam failover orchestration icon is a proprietary IT operations symbol, completely unrelated to finite automata; use a simple circle or state diagram icon."
+        },
+        {
+          "node": "Verification Problem",
+          "verdict": "keep",
+          "why": "Gavel icon is a reasonable metaphor for verification/decision, but consider a checkmark or shield icon for a more technical academic style."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 23,
+        "vertices": 13,
+        "edges": 8
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 6,
+      "drawio": "08-transformer-succinctness.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "08-transformer-succinctness.png",
+          "svg": "08-transformer-succinctness.svg",
+          "pdf": "08-transformer-succinctness.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "09-finetuning-influence-flow.md",
+      "title": "LLM Finetuning Influence Flow",
+      "rounds": 2,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "Training Example A",
+          "verdict": "keep",
+          "why": "Document shape is appropriate for a training example; color can be adjusted for consistency."
+        },
+        {
+          "node": "Training Example B",
+          "verdict": "keep",
+          "why": "Document shape is appropriate for a training example; color can be adjusted for consistency."
+        },
+        {
+          "node": "Parameter Update",
+          "verdict": "replace",
+          "why": "AWS Metrics icon is a cloud-service icon and misleading for an academic ML concept. Use a plain rounded rectangle or a neutral matrix symbol."
+        },
+        {
+          "node": "Probability Mass Shift",
+          "verdict": "replace",
+          "why": "Generic rounded rectangle is acceptable but inconsistent with other iconized nodes. Use a neutral flow/process shape (e.g., plain rectangle or parallelogram) for all conceptual nodes."
+        },
+        {
+          "node": "Good Outputs",
+          "verdict": "replace",
+          "why": "iOS checkmark icon is UI/toy-like and inconsistent with academic-minimal style. Use a plain rounded rectangle with a subtle green fill or a simple checkmark annotation."
+        },
+        {
+          "node": "Bad Outputs",
+          "verdict": "replace",
+          "why": "Bare cross shape reads as a medical/error symbol. Use a plain rounded rectangle with a subtle red fill or a simple cross annotation."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 20,
+        "vertices": 13,
+        "edges": 5
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 5,
+      "drawio": "09-finetuning-influence-flow.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "09-finetuning-influence-flow.png",
+          "svg": "09-finetuning-influence-flow.svg",
+          "pdf": "09-finetuning-influence-flow.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    },
+    {
+      "prompt": "10-agent-reflection-loop.md",
+      "title": "Agent Memory and Reflection Loop",
+      "rounds": 3,
+      "critic_verdict": "REVISE",
+      "icon_feedback": [
+        {
+          "node": "Task",
+          "verdict": "replace",
+          "why": "Salesforce inbox icon is vendor-specific and toy-like; replace with a simple rounded rectangle or a neutral document/inbox shape in the academic-minimal palette."
+        },
+        {
+          "node": "Planner",
+          "verdict": "replace",
+          "why": "AWS Backup Plan icon is cloud-vendor-specific and semantically wrong for a generic planner; replace with a neutral gear or document shape, or a simple rounded rectangle with a 'plan' label."
+        },
+        {
+          "node": "Executor",
+          "verdict": "replace",
+          "why": "Azure Automation icon is vendor-specific and visually heavy; replace with a neutral gear or action symbol consistent with the academic-minimal style."
+        },
+        {
+          "node": "Observation",
+          "verdict": "keep",
+          "why": "Eye icon is conceptually appropriate for observation, but adjust fill/stroke to match the palette and ensure consistent sizing with other nodes."
+        },
+        {
+          "node": "Reflection",
+          "verdict": "replace",
+          "why": "Database mirror icon implies database replication, not self-reflection; replace with a neutral mirror-like shape or a simple rounded rectangle with a reflection label."
+        },
+        {
+          "node": "Memory",
+          "verdict": "keep",
+          "why": "Cylinder shape is appropriate for a database/memory store, but adjust fill color and stroke to match the palette and ensure consistent visual weight."
+        },
+        {
+          "node": "Next Action",
+          "verdict": "replace",
+          "why": "DFD loop shape implies a looping process, but Next Action is a terminal/output node; replace with a simple rounded rectangle or a terminal symbol."
+        }
+      ],
+      "check": {
+        "xml_ok": true,
+        "reason": null,
+        "cells": 19,
+        "vertices": 10,
+        "edges": 7
+      },
+      "mcp_ok": true,
+      "mcp_error": null,
+      "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+      "shapes_queried": 7,
+      "drawio": "10-agent-reflection-loop.drawio",
+      "export": {
+        "ok": true,
+        "files": {
+          "png": "10-agent-reflection-loop.png",
+          "svg": "10-agent-reflection-loop.svg",
+          "pdf": "10-agent-reflection-loop.pdf"
+        },
+        "error": null
+      },
+      "status": "PASS"
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shapes": {
+    "person": [
+      {
+        "style": "shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;",
+        "title": "Actor"
+      },
+      {
+        "style": "strokeColor=#ffffff;sketch=0;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.cisco.people.androgenous_person;",
+        "title": "Androgenous Person"
+      },
+      {
+        "style": "shape=actor;whiteSpace=wrap;html=1;",
+        "title": "User"
+      },
+      {
+        "style": "image;sketch=0;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/mscae/Person.svg;",
+        "title": "User"
+      }
+    ],
+    "lightbulb": [
+      {
+        "style": "pointerEvents=1;verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.miscellaneous.illuminating_bulb;",
+        "title": "Illuminating Bulb"
+      },
+      {
+        "style": "pointerEvents=1;verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.miscellaneous.light_bulb;",
+        "title": "Light Bulb"
+      },
+      {
+        "style": "html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.lightbulb;",
+        "title": "Lightbulb"
+      },
+      {
+        "style": "outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws3.lightbulb;fillColor=#5294CF;gradientColor=none;",
+        "title": "Lightbulb"
+      }
+    ],
+    "idea": [
+      {
+        "style": "sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.iot_1click;",
+        "title": "1Click"
+      },
+      {
+        "style": "outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws3.action;fillColor=#5294CF;gradientColor=none;",
+        "title": "Action"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/flat-color-icons/1/Idea.svg",
+        "title": "Idea (Flat Color Icons)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Bunch_of_Bluish_Icons-2402/idea-1307.png",
+        "title": "idea (Bunch of Bluish Icons)"
+      }
+    ],
+    "clipboard": [
+      {
+        "style": "sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.concepts.clipboard;",
+        "title": "Clipboard"
+      },
+      {
+        "style": "sketch=0;points=[[0.015,0.015,0],[0.985,0.015,0],[0.985,0.985,0],[0.015,0.985,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=ad_decoder;fillColor=#FAFAFA;strokeColor=#005073;",
+        "title": "AD Decoder"
+      },
+      {
+        "style": "sketch=0;points=[[0.015,0.015,0],[0.985,0.015,0],[0.985,0.985,0],[0.015,0.985,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=ad_encoder;fillColor=#FAFAFA;strokeColor=#005073;",
+        "title": "AD Encoder"
+      },
+      {
+        "style": "html=1;outlineConnect=0;whiteSpace=wrap;fillColor=#99ffff;shape=mxgraph.archimate3.application;appType=collab;archiType=square;",
+        "title": "Application Collaboration"
+      }
+    ],
+    "flask": [
+      {
+        "style": "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.banner",
+        "title": "Banner"
+      },
+      {
+        "style": "html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.flag;",
+        "title": "Flag"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Ionicons-2627/icon-flask-1163.svg",
+        "title": "icon flask (Ionicons)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Phosphor_Fill_Vol_2-2936/flask-fill-1016.svg",
+        "title": "flask fill (Phosphor Fill Vol.2)"
+      }
+    ],
+    "database": [
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToOne;endFill=1;",
+        "title": "0 to 1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;",
+        "title": "0 to Many Optional"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERone;endFill=1;",
+        "title": "1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;",
+        "title": "1 Mandatory"
+      }
+    ],
+    "list": [
+      {
+        "style": "verticalLabelPosition=bottom;verticalAlign=top;html=1;shadow=0;dashed=0;strokeWidth=1;shape=mxgraph.ios.iAlphaList;fontSize=7.5;",
+        "title": "Alphabet list"
+      },
+      {
+        "style": "strokeWidth=1;shadow=0;dashed=0;align=center;html=1;shape=mxgraph.mockup.text.bulletedList;textColor=#666666;mainText=,,,,;textSize=17;bulletStyle=none;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=17;fontColor=#666666;",
+        "title": "Bulleted List"
+      },
+      {
+        "style": "sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.communications.global_address_list;",
+        "title": "Global Address List"
+      },
+      {
+        "style": "image;aspect=fixed;perimeter=ellipsePerimeter;html=1;align=center;shadow=0;dashed=0;spacingTop=3;image=https://app.diagrams.net/img/lib/active_directory/list.svg;",
+        "title": "List"
+      }
+    ],
+    "document": [
+      {
+        "style": "shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#4495D1;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.checked_doc;",
+        "title": "Checked doc"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.code_file;pointerEvents=1;",
+        "title": "Code File"
+      },
+      {
+        "style": "shape=document;whiteSpace=wrap;html=1;boundedLbl=1;",
+        "title": "Document"
+      },
+      {
+        "style": "whiteSpace=wrap;html=1;shape=mxgraph.basic.document",
+        "title": "Document"
+      }
+    ],
+    "magnifier": [
+      {
+        "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.magnifying_glass_2;",
+        "title": "Magnifying Glass"
+      },
+      {
+        "style": "shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#4495D1;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.magnifying_glass;pointerEvents=1;",
+        "title": "Magnifying Glass"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Outline_icons-2638/Magnifier-521.svg",
+        "title": "Magnifier (Outline icons)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/bitsies_-2960/Magnifier-1450.svg",
+        "title": "Magnifier (bitsies!)"
+      }
+    ],
+    "box": [
+      {
+        "style": "html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.bag;",
+        "title": "Bag"
+      },
+      {
+        "style": "html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.box;",
+        "title": "Box"
+      },
+      {
+        "style": "dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.box;fillColor=#4CDFEF;gradientColor=#153EA0",
+        "title": "Box"
+      },
+      {
+        "style": "dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.weblogos.box;fillColor=#2771B9;strokeColor=none",
+        "title": "Box"
+      }
+    ]
+  }
+}

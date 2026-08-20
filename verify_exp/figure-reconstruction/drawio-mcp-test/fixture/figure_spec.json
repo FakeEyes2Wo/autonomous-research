@@ -1,0 +1,19 @@
+{
+  "name": "candidate_to_paper_architecture",
+  "kind": "architecture",
+  "estimated_elements": 12,
+  "needs_icons": true,
+  "caption_src": "E:overview",
+  "constraints": {
+    "format": "svg",
+    "max_width_px": 1600,
+    "max_height_px": 1200,
+    "palette": ["#ffffff", "#333333", "#2563eb", "#6b7280"],
+    "no_external_assets": true,
+    "labels_editable": true,
+    "background": "#ffffff",
+    "text_color": "#333333",
+    "accent_color": "#2563eb"
+  },
+  "description_file": "../fixture.md"
+}

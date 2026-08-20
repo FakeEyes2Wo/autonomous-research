@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="520" viewBox="0 0 820 520" font-family="sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#2563eb" stroke="none"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="520" fill="#ffffff"/>
+
+  <!-- Inputs Group -->
+  <rect x="30" y="30" width="240" height="200" rx="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="40" y="52" font-size="11" fill="#6b7280" font-weight="bold">Inputs</text>
+
+  <!-- View 1 -->
+  <rect x="60" y="70" width="180" height="40" rx="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="150" y="95" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">View 1</text>
+  <text x="150" y="112" font-size="10" fill="#6b7280" text-anchor="middle">image</text>
+
+  <!-- View 2 -->
+  <rect x="60" y="125" width="180" height="40" rx="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="150" y="150" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">View 2</text>
+  <text x="150" y="167" font-size="10" fill="#6b7280" text-anchor="middle">audio</text>
+
+  <!-- View 3 -->
+  <rect x="60" y="180" width="180" height="40" rx="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="150" y="205" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">View 3</text>
+  <text x="150" y="222" font-size="10" fill="#6b7280" text-anchor="middle">text</text>
+
+  <!-- Fusion Group -->
+  <rect x="330" y="30" width="460" height="460" rx="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="340" y="52" font-size="11" fill="#6b7280" font-weight="bold">Fusion</text>
+
+  <!-- View-Specific Evidence -->
+  <rect x="370" y="80" width="380" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="560" y="102" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">View-Specific Evidence</text>
+  <text x="560" y="120" font-size="10" fill="#6b7280" text-anchor="middle">scale</text>
+
+  <!-- Opinion Construction -->
+  <rect x="370" y="200" width="380" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="560" y="222" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Opinion Construction</text>
+  <text x="560" y="240" font-size="10" fill="#6b7280" text-anchor="middle">chat</text>
+
+  <!-- Conflictive Aggregation -->
+  <rect x="370" y="320" width="380" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="560" y="342" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Conflictive Aggregation</text>
+  <text x="560" y="360" font-size="10" fill="#6b7280" text-anchor="middle">merge</text>
+  <text x="560" y="385" font-size="9" fill="#6b7280" text-anchor="middle" font-style="italic">common vs view-specific reliability</text>
+
+  <!-- Decision + Reliability -->
+  <rect x="370" y="430" width="380" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="560" y="452" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Decision + Reliability</text>
+  <text x="560" y="470" font-size="10" fill="#6b7280" text-anchor="middle">check</text>
+
+  <!-- Edges: View 1 -> View-Specific Evidence -->
+  <path d="M240,90 L300,90 L340,105 L370,105" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edges: View 2 -> View-Specific Evidence -->
+  <path d="M240,145 L300,145 L340,105 L370,105" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edges: View 3 -> View-Specific Evidence -->
+  <path d="M240,200 L300,200 L340,105 L370,105" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge: View-Specific Evidence -> Opinion Construction -->
+  <path d="M560,130 L560,200" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Opinion Construction -> Conflictive Aggregation -->
+  <path d="M560,250 L560,320" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Conflictive Aggregation -> Decision + Reliability -->
+  <path d="M560,370 L560,430" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+</svg>

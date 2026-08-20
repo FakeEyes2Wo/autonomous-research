@@ -1,0 +1,133 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shapes": {
+    "image": [
+      {
+        "style": "sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2_image_builder;",
+        "title": "EC2 Image Builder"
+      },
+      {
+        "style": "icon;html=1;image=https://app.diagrams.net/img/clipart/Gear_128x128.png",
+        "title": "Icon"
+      },
+      {
+        "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;",
+        "title": "Image"
+      },
+      {
+        "style": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/azure2/general/Image.svg;",
+        "title": "Image"
+      }
+    ],
+    "audio": [
+      {
+        "style": "pointerEvents=1;verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.miscellaneous.2_conductor_jack",
+        "title": "2-Conductor Jack"
+      },
+      {
+        "style": "pointerEvents=1;verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.miscellaneous.2_conductor_plug",
+        "title": "2-Conductor Plug"
+      },
+      {
+        "style": "pointerEvents=1;verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.miscellaneous.3_conductor_plug",
+        "title": "3 Conductor Plug"
+      },
+      {
+        "style": "pointerEvents=1;verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.miscellaneous.3_conductor_jack",
+        "title": "3-Conductor Jack"
+      }
+    ],
+    "text": [
+      {
+        "style": "strokeWidth=1;shadow=0;dashed=0;align=center;html=1;shape=mxgraph.mockup.text.alphanumeric;linkText=;html=1;fontStyle=4;fontSize=17;fontColor=#0000ff;",
+        "title": "Alphanumeric"
+      },
+      {
+        "style": "text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;autosize=1;resizable=0;",
+        "title": "Autosize Text"
+      },
+      {
+        "style": "text;strokeColor=none;fillColor=none;html=1;fontSize=25;fontStyle=1;verticalAlign=middle;align=center;autosizeText=1;",
+        "title": "Autosize Title"
+      },
+      {
+        "style": "strokeWidth=1;shadow=0;dashed=0;align=center;html=1;shape=mxgraph.mockup.text.bulletedList;textColor=#666666;mainText=,,,,;textSize=17;bulletStyle=none;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=17;fontColor=#666666;",
+        "title": "Bulleted List"
+      }
+    ],
+    "scale": [
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.bucket_scale",
+        "title": "Bucket Scale"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.scale",
+        "title": "Check"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.check_scale",
+        "title": "Check Scale"
+      },
+      {
+        "style": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/azure2/other/Defender_Industrial_Scale_System.svg;",
+        "title": "Defender Industrial Scale System"
+      }
+    ],
+    "chat": [
+      {
+        "style": "shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;",
+        "title": "Callout"
+      },
+      {
+        "style": "html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.chat;",
+        "title": "Chat"
+      },
+      {
+        "style": "html=1;whiteSpace=wrap;strokeColor=none;fillColor=#0079D6;labelPosition=center;verticalLabelPosition=middle;verticalAlign=top;align=center;fontSize=12;outlineConnect=0;spacingTop=-6;fontColor=#FFFFFF;sketch=0;shape=mxgraph.sitemap.chat;",
+        "title": "Chat"
+      },
+      {
+        "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.chat;",
+        "title": "Chat"
+      }
+    ],
+    "merge": [
+      {
+        "style": "rhombus;",
+        "title": "Choice / Merge Node / Decision Node"
+      },
+      {
+        "style": "endArrow=open;startArrow=none;endFill=0;startFill=0;endSize=8;html=1;verticalAlign=bottom;dashed=1;labelBackgroundColor=none;",
+        "title": "Element / Package Merge / Package Import, Substitution"
+      },
+      {
+        "style": "strokeWidth=2;html=1;shape=mxgraph.flowchart.merge_or_storage;whiteSpace=wrap;",
+        "title": "Merge or Storage"
+      },
+      {
+        "style": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/azure2/other/Defender_Marquee.svg;",
+        "title": "Defender Marquee"
+      }
+    ],
+    "check": [
+      {
+        "style": "shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;size=0.25",
+        "title": "Check"
+      },
+      {
+        "style": "html=1;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;shadow=0;dashed=0;strokeWidth=2;shape=mxgraph.ios7.misc.check;strokeColor=#0080f0;",
+        "title": "Check"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;verticalAlign=top;html=1;shadow=0;dashed=0;strokeWidth=1;shape=mxgraph.ios.iCheckIcon;fillColor=#e8878E;fillColor2=#BD1421;strokeColor=#ffffff;sketch=0;",
+        "title": "Check"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.check",
+        "title": "Check"
+      }
+    ]
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shapes": {
+    "inbox": [
+      {
+        "style": "verticalLabelPosition=bottom;aspect=fixed;html=1;shape=mxgraph.salesforce.inbox;fillColorStyles=fillColor2,fillColor3,fillColor4;fillColor2=#00857d;fillColor3=#00b2a9;fillColor4=#ffffff;fillColor=none;strokeColor=none;",
+        "title": "Inbox"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;aspect=fixed;html=1;shape=mxgraph.salesforce.inbox2;fillColorStyles=fillColor2,fillColor3;fillColor2=#00857d;fillColor3=#ffffff;fillColor=none;strokeColor=none;",
+        "title": "Inbox"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.arc;strokeColor=#10739E;strokeWidth=6;startAngle=0.3;endAngle=0.1;",
+        "title": "Arc"
+      },
+      {
+        "style": "html=1;shape=mxgraph.infographic.banner;dx=32;dy=17;notch=15;fillColor=#10739E;strokeColor=none;align=center;verticalAlign=middle;fontColor=#ffffff;fontSize=14;fontStyle=1;spacingBottom=15;",
+        "title": "Banner"
+      }
+    ],
+    "plan": [
+      {
+        "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#7AA116;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.backup_plan;",
+        "title": "Backup Plan"
+      },
+      {
+        "style": "sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#005F4B;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam2.dr_plan;",
+        "title": "DR Plan"
+      },
+      {
+        "style": "shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#4495D1;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.failover_plan;",
+        "title": "Failover plan"
+      },
+      {
+        "style": "sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#434445;aspect=fixed;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.vvd.recovery_plan;",
+        "title": "Recovery Plan"
+      }
+    ],
+    "gear": [
+      {
+        "style": "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.automation;pointerEvents=1;",
+        "title": "Automation"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.autoscale;",
+        "title": "AutoScale"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.capabilities",
+        "title": "Capabilities"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.cloud_service;",
+        "title": "Cloud Service"
+      }
+    ],
+    "eye": [
+      {
+        "style": "html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.eye;",
+        "title": "Eye"
+      },
+      {
+        "style": "points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.eais_elastic_accelerated_computing_instances;",
+        "title": "EAIS Elastic Accelerated Computing Instances"
+      },
+      {
+        "style": "points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.ess_elastic_scaling_service;",
+        "title": "ESS Elastic Scaling Service"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;sketch=0;html=1;fillColor=#F06650;strokeColor=#ffffff;verticalAlign=top;align=center;points=[];pointerEvents=1;shape=mxgraph.cisco_safe.compositeIcon;bgIcon=threat5;resIcon=mxgraph.cisco_safe.threat.threat_e1;",
+        "title": "Threat E1"
+      }
+    ],
+    "mirror": [
+      {
+        "style": "sketch=0;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.databases.database_mirror;",
+        "title": "Database Mirror"
+      },
+      {
+        "style": "sketch=0;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.databases.database_mirror_witness_node;",
+        "title": "Database Mirror Witness Node"
+      },
+      {
+        "style": "sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.servers.skype_for_business_back_end_server_mirror;",
+        "title": "Skype for Business Back End Server Mirror"
+      },
+      {
+        "style": "sketch=0;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeColor=#ffffff;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.cisco.misc.cs-mars;",
+        "title": "CS-MARS"
+      }
+    ],
+    "database": [
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToOne;endFill=1;",
+        "title": "0 to 1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;",
+        "title": "0 to Many Optional"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERone;endFill=1;",
+        "title": "1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;",
+        "title": "1 Mandatory"
+      }
+    ],
+    "loop": [
+      {
+        "style": "html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.loop",
+        "title": "Loop"
+      },
+      {
+        "style": "points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;isLoopComp=1;isLoopStandard=1;",
+        "title": "Loop and Compensation"
+      },
+      {
+        "style": "points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];shape=mxgraph.bpmn.task2;whiteSpace=wrap;rectStyle=rounded;size=10;html=1;container=1;expand=0;collapsible=0;taskMarker=abstract;isLoopComp=1;isLoopStandard=1;isLoopSub=1;",
+        "title": "Loop and Compensation"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.radio.loop_antenna;",
+        "title": "Loop Antenna"
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "xml": {
+    "xml_ok": true,
+    "reason": null,
+    "vertices": 12,
+    "edges": 8,
+    "editable_labels": 12,
+    "external_urls": [],
+    "node_overlaps": []
+  },
+  "export": {
+    "ok": true,
+    "backend": "native-svg-chrome",
+    "files": {
+      "svg": "02-rag-system.svg",
+      "png": "02-rag-system.png",
+      "pdf": "02-rag-system.pdf"
+    },
+    "formats": {
+      "svg": {
+        "ok": true,
+        "file": "02-rag-system.svg",
+        "bytes": 8212,
+        "dimensions": null,
+        "page_points": null,
+        "error": null
+      },
+      "png": {
+        "ok": true,
+        "file": "02-rag-system.png",
+        "bytes": 62761,
+        "dimensions": [
+          2400,
+          1600
+        ],
+        "page_points": null,
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "62761 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\02-rag-system.png\n"
+      },
+      "pdf": {
+        "ok": true,
+        "file": "02-rag-system.pdf",
+        "bytes": 108477,
+        "dimensions": null,
+        "page_points": [
+          900.0,
+          600.0
+        ],
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "108477 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\02-rag-system.pdf\n"
+      }
+    },
+    "error": null
+  }
+}

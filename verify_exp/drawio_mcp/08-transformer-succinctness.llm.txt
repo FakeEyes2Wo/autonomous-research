@@ -1,0 +1,95 @@
+<mxfile host="app.diagrams.net" agent="draw.io" version="24.7.17">
+  <diagram id="transformer-succinctness" name="Transformer Succinctness Hierarchy">
+    <mxGraphModel dx="1200" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="group-equivalent" value="Equivalent Representations" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=5 3;strokeColor=#5B6163;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=13;fontColor=#5B6163;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="120" width="760" height="260" as="geometry" />
+        </mxCell>
+
+        <mxCell id="group-consequences" value="Consequences" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=5 3;strokeColor=#C0392B;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=13;fontColor=#C0392B;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="440" width="760" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-language-family" value="Language Family" style="shape=mxgraph.aws4.data_set;sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#7AA116;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=13;fontStyle=1;aspect=fixed;pointerEvents=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="20" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-transformer" value="Transformer" style="shape=mxgraph.gcp2.a7_power;sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;fontSize=13;fontStyle=1;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="120" y="180" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-ltl-formula" value="LTL Formula" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/fluent-regular/1/Math_Formula.svg;fontSize=13;fontStyle=1;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="300" y="180" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-rnn" value="RNN" style="shape=mxgraph.networks2.icon;aspect=fixed;fillColor=#EDEDED;strokeColor=#000000;gradientColor=#5B6163;network2IconShadow=1;network2bgFillColor=none;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;network2Icon=mxgraph.networks2.antenna;network2IconYOffset=0.0004;network2IconW=0.508;network2IconH=0.9997;fontSize=13;fontStyle=1;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="480" y="180" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-finite-automaton" value="Finite Automaton" style="shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#EF8F21;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.2d.1_click_failover_orchestration;fontSize=13;fontStyle=1;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="660" y="180" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-verification-problem" value="Verification Problem" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/font-awesome/1/Gavel.svg;fontSize=13;fontStyle=1;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="360" y="500" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-lf-transformer" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6163;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-language-family" target="node-transformer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-lf-ltl" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6163;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-language-family" target="node-ltl-formula">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-lf-rnn" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6163;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-language-family" target="node-rnn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-lf-fa" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B6163;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-language-family" target="node-finite-automaton">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-transformer-vp" value="decides" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C0392B;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;fontColor=#C0392B;fontStyle=2;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="node-transformer" target="node-verification-problem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-ltl-vp" value="decides" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C0392B;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;fontColor=#C0392B;fontStyle=2;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="node-ltl-formula" target="node-verification-problem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-rnn-vp" value="decides" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C0392B;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;fontColor=#C0392B;fontStyle=2;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="node-rnn" target="node-verification-problem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-fa-vp" value="decides" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C0392B;strokeWidth=1.5;endArrow=block;endFill=1;fontSize=11;fontColor=#C0392B;fontStyle=2;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="node-finite-automaton" target="node-verification-problem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="annotation-transformer" value="exponentially more succinct" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=2;fontColor=#3B8DF1;" vertex="1" parent="1">
+          <mxGeometry x="90" y="270" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="annotation-ltl" value="succinct" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=2;fontColor=#5B6163;" vertex="1" parent="1">
+          <mxGeometry x="270" y="270" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="annotation-rnn" value="succinct" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=2;fontColor=#5B6163;" vertex="1" parent="1">
+          <mxGeometry x="450" y="270" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="annotation-fa" value="baseline" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=2;fontColor=#5B6163;" vertex="1" parent="1">
+          <mxGeometry x="630" y="270" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend" value="Legend:&#10;Green = Language Family (set)&#10;Blue = Transformer (LLM)&#10;Gray = LTL Formula / RNN&#10;Orange = Finite Automaton&#10;Red = Verification Problem (gavel)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#5B6163;fontSize=11;fontColor=#5B6163;align=left;verticalAlign=top;spacingTop=8;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="880" y="180" width="220" height="140" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

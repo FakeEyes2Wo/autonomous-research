@@ -1,0 +1,133 @@
+{
+  "ok": false,
+  "build_id": null,
+  "error": null,
+  "shapes": {
+    "text": [
+      {
+        "style": "strokeWidth=1;shadow=0;dashed=0;align=center;html=1;shape=mxgraph.mockup.text.alphanumeric;linkText=;html=1;fontStyle=4;fontSize=17;fontColor=#0000ff;",
+        "title": "Alphanumeric"
+      },
+      {
+        "style": "text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;autosize=1;resizable=0;",
+        "title": "Autosize Text"
+      },
+      {
+        "style": "text;strokeColor=none;fillColor=none;html=1;fontSize=25;fontStyle=1;verticalAlign=middle;align=center;autosizeText=1;",
+        "title": "Autosize Title"
+      },
+      {
+        "style": "strokeWidth=1;shadow=0;dashed=0;align=center;html=1;shape=mxgraph.mockup.text.bulletedList;textColor=#666666;mainText=,,,,;textSize=17;bulletStyle=none;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=17;fontColor=#666666;",
+        "title": "Bulleted List"
+      }
+    ],
+    "embedding": [
+      {
+        "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.braket_embedded_simulator;",
+        "title": "Braket Embedded Simulator"
+      },
+      {
+        "style": "image;aspect=fixed;perimeter=ellipsePerimeter;html=1;align=center;fontSize=12;verticalAlign=top;fontColor=#364149;shadow=0;dashed=0;image=https://app.diagrams.net/img/lib/cumulus/chassis_bare_metal_empty.svg;",
+        "title": "Chassis - Bare Metal Empty"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/integration/1/Caching-79.svg",
+        "title": "Caching (Integration)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/integration/1/Caching.svg",
+        "title": "Caching (Integration)"
+      }
+    ],
+    "database": [
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToOne;endFill=1;",
+        "title": "0 to 1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;",
+        "title": "0 to Many Optional"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERone;endFill=1;",
+        "title": "1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;",
+        "title": "1 Mandatory"
+      }
+    ],
+    "magnifier": [
+      {
+        "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.magnifying_glass_2;",
+        "title": "Magnifying Glass"
+      },
+      {
+        "style": "shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#4495D1;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.magnifying_glass;pointerEvents=1;",
+        "title": "Magnifying Glass"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Outline_icons-2638/Magnifier-521.svg",
+        "title": "Magnifier (Outline icons)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/bitsies_-2960/Magnifier-1450.svg",
+        "title": "Magnifier (bitsies!)"
+      }
+    ],
+    "scale": [
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.bucket_scale",
+        "title": "Bucket Scale"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.scale",
+        "title": "Check"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.check_scale",
+        "title": "Check Scale"
+      },
+      {
+        "style": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/azure2/other/Defender_Industrial_Scale_System.svg;",
+        "title": "Defender Industrial Scale System"
+      }
+    ],
+    "llm": [
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light.svg",
+        "title": "Light (Material Symbols)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light_Mode.svg",
+        "title": "Light Mode (Material Symbols)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Basic-2519/lightning-823.svg",
+        "title": "lightning (Basic)"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.a7_power",
+        "title": "A7 Power"
+      }
+    ],
+    "documents": [
+      {
+        "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.search_documents;",
+        "title": "CloudSearch Search Documents"
+      },
+      {
+        "style": "image;aspect=fixed;perimeter=ellipsePerimeter;html=1;align=center;shadow=0;dashed=0;spacingTop=3;image=https://app.diagrams.net/img/lib/active_directory/documents.svg;",
+        "title": "Documents"
+      },
+      {
+        "style": "html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.documents;",
+        "title": "Documents"
+      },
+      {
+        "style": "outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws3.documents;fillColor=#759C3E;gradientColor=none;",
+        "title": "Documents"
+      }
+    ]
+  }
+}

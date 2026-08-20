@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="LLM Finetuning Influence Flow">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563EB" />
+    </marker>
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0F172A" flood-opacity="0.09" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <rect x="36" y="175.5" width="512" height="499" rx="14" fill="#DBEAFE" fill-opacity="0.32" stroke="#60A5FA" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Learning" />
+  <text x="50" y="197.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="50" dy="-0">Learning</tspan>
+  </text>
+  <rect x="652" y="175.5" width="512" height="499" rx="14" fill="#CCFBF1" fill-opacity="0.32" stroke="#2DD4BF" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Effect" />
+  <text x="666" y="197.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="666" dy="-0">Effect</tspan>
+  </text>
+  <text x="54" y="46" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0F172A" text-anchor="start">
+    <tspan x="54" dy="-0">LLM Finetuning Influence Flow</tspan>
+  </text>
+  <line x1="54" y1="66" x2="194" y2="66" stroke="#2563EB" stroke-width="3" stroke-linecap="round" />
+  <path d="M 222 245.5 L 292 245.5 L 292 433 L 362 433" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 222 620.5 L 292 620.5 L 292 433 L 362 433" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 530 433 L 600 433 L 600 433 L 670 433" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 838 433 L 908 433 L 908 245.5 L 978 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 838 433 L 908 433 L 908 620.5 L 978 620.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <rect x="54" y="213.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="138" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="138" dy="-0">Training Example A</tspan>
+  </text>
+  <rect x="123" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="138" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="138" dy="-0">DOC</tspan>
+  </text>
+  <rect x="54" y="588.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="138" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="138" dy="-0">Training Example B</tspan>
+  </text>
+  <rect x="123" y="631.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="138" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="138" dy="-0">DOC</tspan>
+  </text>
+  <rect x="362" y="401" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="446" y="430" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="446" dy="-0">Parameter Update</tspan>
+  </text>
+  <rect x="422" y="444" width="48" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="446" y="455" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="446" dy="-0">MATRIX</tspan>
+  </text>
+  <rect x="670" y="401" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="754" y="430" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="754" dy="-0">Probability Mass Shift</tspan>
+  </text>
+  <rect x="733" y="444" width="42" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="754" y="455" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="754" dy="-0">SHIFT</tspan>
+  </text>
+  <rect x="978" y="213.5" width="168" height="64" rx="11" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="1062" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="1062" dy="-0">Good Outputs</tspan>
+  </text>
+  <rect x="1047" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="1062" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="1062" dy="-0">OK</tspan>
+  </text>
+  <rect x="978" y="588.5" width="168" height="64" rx="11" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="1062" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="1062" dy="-0">Bad Outputs</tspan>
+  </text>
+  <rect x="1044" y="631.5" width="36" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="1062" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="1062" dy="-0">RISK</tspan>
+  </text>
+  <rect x="670" y="475" width="168" height="32" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" data-role="annotation" data-target="Probability Mass Shift" />
+  <text x="754" y="494" font-family="Helvetica, Arial, sans-serif" font-size="8" font-weight="400" fill="#475569" text-anchor="middle">
+    <tspan x="754" dy="-4.72">influence redistributed</tspan>
+    <tspan x="754" dy="9.44">across outputs</tspan>
+  </text>
+</svg>

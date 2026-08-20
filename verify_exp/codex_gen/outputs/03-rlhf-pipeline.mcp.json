@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shape_search": {
+    "ok": true,
+    "shapes": {
+      "llm": [
+        {
+          "title": "Light (Material Symbols)",
+          "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light.svg"
+        },
+        {
+          "title": "Light Mode (Material Symbols)",
+          "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light_Mode.svg"
+        },
+        {
+          "title": "lightning (Basic)",
+          "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Basic-2519/lightning-823.svg"
+        }
+      ]
+    },
+    "error": null
+  }
+}

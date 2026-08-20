@@ -1,0 +1,67 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Diffusion Language Model Training and Reasoning" id="diffusion-lm">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="training-group" value="Training" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#5B9BD5;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#2C3E50;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="420" height="260" as="geometry" />
+        </mxCell>
+
+        <mxCell id="inference-group" value="Inference" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#ED7D31;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#2C3E50;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="620" y="80" width="420" height="260" as="geometry" />
+        </mxCell>
+
+        <mxCell id="text-tokens" value="Text Tokens" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DEEBF7;strokeColor=#5B9BD5;strokeWidth=1.5;fontSize=13;fontColor=#1F4E79;fontStyle=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="140" y="140" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="noising" value="Noising" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4D6;strokeColor=#ED7D31;strokeWidth=1.5;fontSize=13;fontColor=#833C00;fontStyle=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="320" y="140" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="denoiser" value="Denoiser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E2EFDA;strokeColor=#70AD47;strokeWidth=1.5;fontSize=13;fontColor=#375623;fontStyle=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="230" y="230" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="decoder" value="Left-to-Right Decoder" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DEEBF7;strokeColor=#5B9BD5;strokeWidth=1.5;fontSize=13;fontColor=#1F4E79;fontStyle=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="680" y="140" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="reasoning-trace" value="Reasoning Trace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4D6;strokeColor=#ED7D31;strokeWidth=1.5;fontSize=13;fontColor=#833C00;fontStyle=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="860" y="140" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="answer" value="Answer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E2EFDA;strokeColor=#70AD47;strokeWidth=1.5;fontSize=13;fontColor=#375623;fontStyle=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="770" y="230" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="annotation-denoiser" value="fixed-order vs arbitrary-order" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=11;fontColor=#7F7F7F;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="210" y="285" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B9BD5;strokeWidth=2;endArrow=blockThin;endFill=1;" edge="1" parent="1" source="text-tokens" target="noising">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ED7D31;strokeWidth=2;endArrow=blockThin;endFill=1;" edge="1" parent="1" source="noising" target="denoiser">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B9BD5;strokeWidth=2;endArrow=blockThin;endFill=1;" edge="1" parent="1" source="decoder" target="reasoning-trace">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ED7D31;strokeWidth=2;endArrow=blockThin;endFill=1;" edge="1" parent="1" source="reasoning-trace" target="answer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#70AD47;strokeWidth=2;endArrow=blockThin;endFill=1;dashed=1;" edge="1" parent="1" source="denoiser" target="decoder">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

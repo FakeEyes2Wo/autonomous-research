@@ -1,0 +1,73 @@
+{
+  "verdict": "REVISE",
+  "issues": [
+    "The 'Evidence' node uses a generic cylinder3 shape, which is acceptable for a database, but the candidate icon styles for 'database' were all ER-relationship edge styles—none were used. The cylinder is a reasonable fallback but should be styled consistently with the rest of the diagram.",
+    "The 'Ideation' node uses a flat-color Idea.svg image icon, which is visually inconsistent with the otherwise monochrome, academic-minimal style of the other nodes.",
+    "The 'Experiment' node uses an Ionicons flask SVG image, which is also visually inconsistent with the monochrome style and may render with unexpected colors.",
+    "The 'Review' node uses an Outline icons Magnifier SVG image, which is inconsistent with the monochrome style of the other nodes.",
+    "The 'Packaging' node uses an iOS7 box icon with a strokeWidth of 2 and a white fill, which is acceptable but the strokeWidth differs from other nodes (most use default strokeWidth).",
+    "The 'Candidate Intake' node uses a UML actor shape, which is appropriate for a person, but the actor shape is typically used in use-case diagrams and may look out of place in a pipeline architecture diagram.",
+    "The 'Brainstorm' node uses an electrical light bulb shape, which is appropriate for brainstorming, but the electrical style may look slightly out of place in an academic-minimal context.",
+    "The 'Claims & Outline' node uses a 'global_address_list' shape, which is an Office communications icon and may not clearly convey 'claims and outline' in an academic context.",
+    "The annotation 'Athena / external / none' is placed at x=560, y=360, which is below the 'Experiment' node but may overlap with the group boundary or other elements.",
+    "The annotation 'verify-trace + 3 audits' is placed at x=1240, y=360, which is below the 'Review' node but may overlap with the group boundary or other elements.",
+    "The group containers are dashed, which is good, but the group labels are placed at the top of the containers and may be partially obscured by the nodes.",
+    "The edge from 'Experiment' to 'Evidence' crosses the boundary between the two groups, which is expected, but the edge routing may not be perfectly orthogonal.",
+    "The diagram uses a mix of icon styles (UML actor, electrical bulb, flat-color image, Ionicons image, Office clipboard, cylinder, Office list, document, Outline image, iOS7 box), which violates the 'one visual language' consistency requirement.",
+    "The 'Ideation' node uses an image-based icon, which may not be editable text as required by the prompt ('every label must be editable text').",
+    "The 'Experiment' node uses an image-based icon, which may not be editable text as required by the prompt.",
+    "The 'Review' node uses an image-based icon, which may not be editable text as required by the prompt."
+  ],
+  "icon_feedback": [
+    {
+      "node": "Candidate Intake",
+      "verdict": "replace",
+      "why": "UML actor shape is appropriate for a person but is typically used in use-case diagrams, not pipeline architecture diagrams. Consider using a simpler person icon or a plain rectangle with a label."
+    },
+    {
+      "node": "Brainstorm",
+      "verdict": "keep",
+      "why": "Light bulb is a standard metaphor for brainstorming and the electrical style is acceptable, though it could be simplified for academic-minimal."
+    },
+    {
+      "node": "Ideation",
+      "verdict": "replace",
+      "why": "Flat-color Idea.svg image is visually inconsistent with the monochrome academic-minimal style and may not be editable text. Consider using a monochrome idea icon or a plain shape."
+    },
+    {
+      "node": "Experiment Plan",
+      "verdict": "keep",
+      "why": "Clipboard is appropriate for a plan and the Office clipboard style is monochrome and consistent with the academic-minimal style."
+    },
+    {
+      "node": "Experiment",
+      "verdict": "replace",
+      "why": "Ionicons flask SVG image is visually inconsistent with the monochrome style and may not be editable text. Consider using a monochrome flask icon or a plain shape."
+    },
+    {
+      "node": "Evidence",
+      "verdict": "keep",
+      "why": "Cylinder shape is a standard database representation and is appropriate for evidence storage, though it should be styled consistently with the rest of the diagram."
+    },
+    {
+      "node": "Claims & Outline",
+      "verdict": "replace",
+      "why": "Global address list shape is an Office communications icon that does not clearly convey 'claims and outline' in an academic context. Consider using a list or outline shape."
+    },
+    {
+      "node": "Writing",
+      "verdict": "keep",
+      "why": "Document shape is appropriate for writing and is monochrome and consistent with the academic-minimal style."
+    },
+    {
+      "node": "Review",
+      "verdict": "replace",
+      "why": "Outline icons Magnifier SVG image is visually inconsistent with the monochrome style and may not be editable text. Consider using a monochrome magnifier icon or a plain shape."
+    },
+    {
+      "node": "Packaging",
+      "verdict": "keep",
+      "why": "Box icon is appropriate for packaging and the iOS7 style is acceptable, though the strokeWidth should be consistent with other nodes."
+    }
+  ]
+}

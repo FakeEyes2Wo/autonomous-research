@@ -1,0 +1,115 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shapes": {
+    "database": [
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToOne;endFill=1;",
+        "title": "0 to 1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;",
+        "title": "0 to Many Optional"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERone;endFill=1;",
+        "title": "1"
+      },
+      {
+        "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;",
+        "title": "1 Mandatory"
+      }
+    ],
+    "scissors": [
+      {
+        "style": "pointerEvents=1;verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.waveforms.slow_square_wave;",
+        "title": "Chopped Square Wave"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;outlineConnect=0;align=center;dashed=0;html=1;verticalAlign=top;shape=mxgraph.pid.misc.conveyor_(screw,_closed);",
+        "title": "Conveyor (Screw, Closed)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Heroicons_-_Solid-2547/scissors-862.svg",
+        "title": "scissors (Heroicons - Solid)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/font-awesome/1/Scissors.svg",
+        "title": "Scissors (Font Awesome)"
+      }
+    ],
+    "chat": [
+      {
+        "style": "shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;",
+        "title": "Callout"
+      },
+      {
+        "style": "html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.chat;",
+        "title": "Chat"
+      },
+      {
+        "style": "html=1;whiteSpace=wrap;strokeColor=none;fillColor=#0079D6;labelPosition=center;verticalLabelPosition=middle;verticalAlign=top;align=center;fontSize=12;outlineConnect=0;spacingTop=-6;fontColor=#FFFFFF;sketch=0;shape=mxgraph.sitemap.chat;",
+        "title": "Chat"
+      },
+      {
+        "style": "sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.chat;",
+        "title": "Chat"
+      }
+    ],
+    "person": [
+      {
+        "style": "shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;",
+        "title": "Actor"
+      },
+      {
+        "style": "strokeColor=#ffffff;sketch=0;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.cisco.people.androgenous_person;",
+        "title": "Androgenous Person"
+      },
+      {
+        "style": "shape=actor;whiteSpace=wrap;html=1;",
+        "title": "User"
+      },
+      {
+        "style": "image;sketch=0;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/mscae/Person.svg;",
+        "title": "User"
+      }
+    ],
+    "llm": [
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light.svg",
+        "title": "Light (Material Symbols)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/assets/material-symbols/1/Light_Mode.svg",
+        "title": "Light Mode (Material Symbols)"
+      },
+      {
+        "style": "shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Basic-2519/lightning-823.svg",
+        "title": "lightning (Basic)"
+      },
+      {
+        "style": "sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.a7_power",
+        "title": "A7 Power"
+      }
+    ],
+    "chart": [
+      {
+        "style": "html=1;dashed=0;whiteSpace=wrap;",
+        "title": "Activity / Process / Entity / External Interactor"
+      },
+      {
+        "style": "strokeWidth=2;html=1;shape=mxgraph.flowchart.annotation_1;align=left;pointerEvents=1;",
+        "title": "Annotation"
+      },
+      {
+        "style": "strokeWidth=2;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;",
+        "title": "Annotation"
+      },
+      {
+        "style": "verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.mockup.graphics.barChart;strokeColor=none;strokeColor2=none;strokeColor3=#666666;fillColor2=#008cff;fillColor3=#dddddd;",
+        "title": "Bar Chart"
+      }
+    ]
+  }
+}

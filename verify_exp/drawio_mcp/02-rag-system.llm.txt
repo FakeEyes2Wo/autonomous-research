@@ -1,0 +1,101 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="rag-arch" name="RAG Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Group: Indexing (Offline) -->
+        <mxCell id="grp-indexing" value="Indexing (Offline)" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#5B9BD5;fillColor=#EAF1F8;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#2E5A87;arcSize=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="420" height="620" as="geometry" />
+        </mxCell>
+
+        <!-- Group: Inference (Online) -->
+        <mxCell id="grp-inference" value="Inference (Online)" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#E8A33D;fillColor=#FDF6EC;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#A66A00;arcSize=8;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="560" y="80" width="560" height="620" as="geometry" />
+        </mxCell>
+
+        <!-- Corpus node -->
+        <mxCell id="corpus" value="Corpus" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#DCE9F7;strokeColor=#5B9BD5;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#2E5A87;verticalAlign=bottom;verticalLabelPosition=bottom;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="120" y="180" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Encoder node (Indexing) -->
+        <mxCell id="encoder-idx" value="Encoder" style="shape=mxgraph.electrical.logic_gates.logic_gate;operation=sum;fillColor=#DCE9F7;strokeColor=#5B9BD5;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#2E5A87;verticalAlign=bottom;verticalLabelPosition=bottom;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="270" y="180" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Vector Index node -->
+        <mxCell id="vector-index" value="Vector Index" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;sizeY=0.3;fillColor=#DCE9F7;strokeColor=#5B9BD5;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#2E5A87;verticalAlign=bottom;verticalLabelPosition=bottom;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="270" y="380" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Query node -->
+        <mxCell id="query" value="Query" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDEBD3;strokeColor=#E8A33D;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#A66A00;" vertex="1" parent="1">
+          <mxGeometry x="620" y="180" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Retriever node -->
+        <mxCell id="retriever" value="Retriever" style="shape=mxgraph.basic.magnifying_glass;whiteSpace=wrap;html=1;fillColor=#FDEBD3;strokeColor=#E8A33D;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#A66A00;verticalAlign=bottom;verticalLabelPosition=bottom;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="620" y="380" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Reranker node -->
+        <mxCell id="reranker" value="Reranker" style="shape=mxgraph.basic.scale;whiteSpace=wrap;html=1;fillColor=#FDEBD3;strokeColor=#E8A33D;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#A66A00;verticalAlign=bottom;verticalLabelPosition=bottom;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="820" y="380" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Generator node -->
+        <mxCell id="generator" value="Generator&#10;(LLM)" style="shape=mxgraph.basic.rect;whiteSpace=wrap;html=1;fillColor=#FDEBD3;strokeColor=#E8A33D;strokeWidth=1.5;fontSize=13;fontStyle=1;fontColor=#A66A00;rounded=1;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="380" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Annotation: Retriever -->
+        <mxCell id="ann-retriever" value="top-k candidates" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="620" y="490" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Annotation: Reranker -->
+        <mxCell id="ann-reranker" value="cross-encoder" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="820" y="490" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Corpus -> Encoder (Indexing) -->
+        <mxCell id="e-corpus-encoder" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B9BD5;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="corpus" target="encoder-idx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Encoder -> Vector Index (Indexing) -->
+        <mxCell id="e-encoder-vector" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5B9BD5;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="encoder-idx" target="vector-index">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Query -> Retriever (Inference) -->
+        <mxCell id="e-query-retriever" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E8A33D;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="query" target="retriever">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Vector Index -> Retriever (cross-group, inference color) -->
+        <mxCell id="e-vector-retriever" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E8A33D;strokeWidth=1.5;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="vector-index" target="retriever">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Retriever -> Reranker (Inference) -->
+        <mxCell id="e-retriever-reranker" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E8A33D;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="retriever" target="reranker">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Reranker -> Generator (Inference) -->
+        <mxCell id="e-reranker-generator" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E8A33D;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="reranker" target="generator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Query -> Generator (direct context) -->
+        <mxCell id="e-query-generator" value="direct context" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E8A33D;strokeWidth=1.5;endArrow=block;endFill=1;dashed=1;fontSize=11;fontColor=#A66A00;fontStyle=2;" edge="1" parent="1" source="query" target="generator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

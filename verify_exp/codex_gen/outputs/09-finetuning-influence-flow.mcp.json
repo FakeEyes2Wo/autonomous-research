@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shape_search": {
+    "ok": true,
+    "shapes": {
+      "document": [
+        {
+          "title": "Checked doc",
+          "style": "shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#4495D1;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.veeam.checked_doc;"
+        },
+        {
+          "title": "Code File",
+          "style": "verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.code_file;pointerEvents=1;"
+        },
+        {
+          "title": "Document",
+          "style": "shape=document;whiteSpace=wrap;html=1;boundedLbl=1;"
+        },
+        {
+          "title": "Document",
+          "style": "whiteSpace=wrap;html=1;shape=mxgraph.basic.document"
+        }
+      ]
+    },
+    "error": null
+  }
+}

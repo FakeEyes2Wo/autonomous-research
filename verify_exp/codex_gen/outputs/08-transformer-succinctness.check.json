@@ -1,0 +1,59 @@
+{
+  "xml": {
+    "xml_ok": true,
+    "reason": null,
+    "vertices": 10,
+    "edges": 8,
+    "editable_labels": 10,
+    "external_urls": [],
+    "node_overlaps": []
+  },
+  "export": {
+    "ok": true,
+    "backend": "native-svg-chrome",
+    "files": {
+      "svg": "08-transformer-succinctness.svg",
+      "png": "08-transformer-succinctness.png",
+      "pdf": "08-transformer-succinctness.pdf"
+    },
+    "formats": {
+      "svg": {
+        "ok": true,
+        "file": "08-transformer-succinctness.svg",
+        "bytes": 7394,
+        "dimensions": null,
+        "page_points": null,
+        "error": null
+      },
+      "png": {
+        "ok": true,
+        "file": "08-transformer-succinctness.png",
+        "bytes": 88965,
+        "dimensions": [
+          1920,
+          2400
+        ],
+        "page_points": null,
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "88965 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\08-transformer-succinctness.png\n"
+      },
+      "pdf": {
+        "ok": true,
+        "file": "08-transformer-succinctness.pdf",
+        "bytes": 98011,
+        "dimensions": null,
+        "page_points": [
+          720.0,
+          900.0
+        ],
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "98011 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\08-transformer-succinctness.pdf\n"
+      }
+    },
+    "error": null
+  }
+}

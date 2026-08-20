@@ -1,0 +1,91 @@
+<mxfile host="app.diagrams.net" agent="draw.io" version="24.7.17">
+  <diagram id="null-space-editing" name="Null-Space Editing Framework">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Shared Input Lane (Base LLM outside both groups) -->
+        <mxCell id="base-llm" value="Base LLM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EAF6;strokeColor=#3F51B5;fontColor=#1A237E;fontSize=14;fontStyle=1;arcSize=12;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="560" y="40" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Edit Pipeline Group -->
+        <mxCell id="grp-edit" value="Edit Pipeline" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 4;fillColor=#F5F5F5;strokeColor=#9E9E9E;fontColor=#424242;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;arcSize=8;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="420" y="140" width="440" height="300" as="geometry" />
+        </mxCell>
+
+        <!-- Verification Group -->
+        <mxCell id="grp-verify" value="Verification" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 4;fillColor=#FAFAFA;strokeColor=#9E9E9E;fontColor=#424242;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;arcSize=8;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="80" y="500" width="1120" height="260" as="geometry" />
+        </mxCell>
+
+        <!-- Edit Request -->
+        <mxCell id="edit-request" value="Edit Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;fontColor=#E65100;fontSize=13;fontStyle=1;arcSize=12;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="460" y="180" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Key-Value Mapping -->
+        <mxCell id="kv-mapping" value="Key-Value Mapping" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontColor=#0D47A1;fontSize=13;fontStyle=1;arcSize=12;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="660" y="180" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Null-Space Projection (parallelogram for matrix/transformation) -->
+        <mxCell id="null-proj" value="Null-Space&#10;Projection" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontColor=#4A148C;fontSize=13;fontStyle=1;strokeWidth=2;size=0.15;" vertex="1" parent="1">
+          <mxGeometry x="640" y="300" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Annotation for Null-Space Projection -->
+        <mxCell id="ann-null" value="preserves unrelated knowledge" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#6A1B9A;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="620" y="380" width="220" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Edited LLM -->
+        <mxCell id="edited-llm" value="Edited LLM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#388E3C;fontColor=#1B5E20;fontSize=14;fontStyle=1;arcSize=12;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="560" y="560" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Preservation Check -->
+        <mxCell id="pres-check" value="Preservation Check" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;fontColor=#F57F17;fontSize=13;fontStyle=1;arcSize=12;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="920" y="560" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Base LLM -> Key-Value Mapping -->
+        <mxCell id="e-base-kv" value="weights" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=1.5;fontColor=#424242;fontSize=11;fontStyle=2;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="base-llm" target="kv-mapping">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Edit Request -> Key-Value Mapping -->
+        <mxCell id="e-edit-kv" value="edit delta" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=1.5;fontColor=#424242;fontSize=11;fontStyle=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="edit-request" target="kv-mapping">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Key-Value Mapping -> Null-Space Projection -->
+        <mxCell id="e-kv-null" value="key-value pairs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=1.5;fontColor=#424242;fontSize=11;fontStyle=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="kv-mapping" target="null-proj">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Null-Space Projection -> Edited LLM -->
+        <mxCell id="e-null-edited" value="projected weights" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=1.5;fontColor=#424242;fontSize=11;fontStyle=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="null-proj" target="edited-llm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Edited LLM -> Preservation Check -->
+        <mxCell id="e-edited-check" value="evaluation" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=1.5;fontColor=#424242;fontSize=11;fontStyle=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="edited-llm" target="pres-check">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edge: Base LLM -> Preservation Check (baseline comparison) -->
+        <mxCell id="e-base-check" value="baseline" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#616161;strokeWidth=1.5;fontColor=#424242;fontSize=11;fontStyle=2;dashed=1;dashPattern=6 4;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="base-llm" target="pres-check">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend for dashed line -->
+        <mxCell id="legend" value="Legend:&#10;— solid: data flow&#10;-- dashed: baseline comparison" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fontColor=#616161;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="80" y="780" width="260" height="60" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shape_search": {
+    "ok": true,
+    "shapes": {
+      "person": [
+        {
+          "title": "Actor",
+          "style": "shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;"
+        },
+        {
+          "title": "Androgenous Person",
+          "style": "strokeColor=#ffffff;sketch=0;html=1;pointerEvents=1;dashed=0;fillColor=#036897;strokeWidth=2;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.cisco.people.androgenous_person;"
+        },
+        {
+          "title": "User",
+          "style": "shape=actor;whiteSpace=wrap;html=1;"
+        },
+        {
+          "title": "User",
+          "style": "image;sketch=0;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=https://app.diagrams.net/img/lib/mscae/Person.svg;"
+        }
+      ]
+    },
+    "error": null
+  }
+}

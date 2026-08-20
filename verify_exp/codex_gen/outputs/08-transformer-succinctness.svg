@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1200" viewBox="0 0 960 1200" role="img" aria-label="Transformer Succinctness Hierarchy">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563EB" />
+    </marker>
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0F172A" flood-opacity="0.09" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <rect x="378" y="131.75" width="204" height="986.5" rx="14" fill="#DBEAFE" fill-opacity="0.32" stroke="#60A5FA" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Equivalent Representations" />
+  <text x="392" y="153.75" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="392" dy="-0">Equivalent Representations</tspan>
+  </text>
+  <rect x="722" y="568.75" width="204" height="124" rx="14" fill="#CCFBF1" fill-opacity="0.32" stroke="#2DD4BF" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Consequences" />
+  <text x="736" y="590.75" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="736" dy="-0">Consequences</tspan>
+  </text>
+  <text x="54" y="46" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0F172A" text-anchor="start">
+    <tspan x="54" dy="-0">Transformer Succinctness Hierarchy</tspan>
+  </text>
+  <line x1="54" y1="66" x2="194" y2="66" stroke="#2563EB" stroke-width="3" stroke-linecap="round" />
+  <path d="M 220 638.75 L 308 638.75 L 308 201.75 L 396 201.75" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 220 638.75 L 308 638.75 L 308 489.25 L 396 489.25" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 220 638.75 L 308 638.75 L 308 776.75 L 396 776.75" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 220 638.75 L 308 638.75 L 308 1064.25 L 396 1064.25" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 564 201.75 L 652 201.75 L 652 638.75 L 740 638.75" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 564 489.25 L 652 489.25 L 652 638.75 L 740 638.75" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 564 776.75 L 652 776.75 L 652 638.75 L 740 638.75" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 564 1064.25 L 652 1064.25 L 652 638.75 L 740 638.75" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <rect x="52" y="606.75" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#64748B" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="136" y="635.75" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="136" dy="-0">Language Family</tspan>
+  </text>
+  <rect x="121" y="649.75" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="136" y="660.75" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="136" dy="-0">SET</tspan>
+  </text>
+  <rect x="396" y="169.75" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="480" y="198.75" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="480" dy="-0">Transformer</tspan>
+  </text>
+  <rect x="465" y="212.75" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="480" y="223.75" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="480" dy="-0">AI</tspan>
+  </text>
+  <rect x="396" y="457.25" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="480" y="486.25" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="480" dy="-0">LTL Formula</tspan>
+  </text>
+  <rect x="465" y="500.25" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="480" y="511.25" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="480" dy="-0">LTL</tspan>
+  </text>
+  <rect x="396" y="744.75" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="480" y="773.75" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="480" dy="-0">RNN</tspan>
+  </text>
+  <rect x="465" y="787.75" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="480" y="798.75" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="480" dy="-0">RNN</tspan>
+  </text>
+  <rect x="396" y="1032.25" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="480" y="1061.25" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="480" dy="-0">Finite Automaton</tspan>
+  </text>
+  <rect x="465" y="1075.25" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="480" y="1086.25" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="480" dy="-0">FSM</tspan>
+  </text>
+  <rect x="740" y="606.75" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="824" y="635.75" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="824" dy="-0">Verification Problem</tspan>
+  </text>
+  <rect x="800" y="649.75" width="48" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="824" y="660.75" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="824" dy="-0">VERIFY</tspan>
+  </text>
+  <rect x="396" y="243.75" width="168" height="32" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" data-role="annotation" data-target="Transformer" />
+  <text x="480" y="262.75" font-family="Helvetica, Arial, sans-serif" font-size="8" font-weight="400" fill="#475569" text-anchor="middle">
+    <tspan x="480" dy="-4.72">exponentially more</tspan>
+    <tspan x="480" dy="9.44">succinct</tspan>
+  </text>
+</svg>

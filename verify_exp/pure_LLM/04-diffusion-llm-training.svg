@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" font-family="sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#2563eb" stroke="none"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="520" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="450" y="32" text-anchor="middle" font-size="14" font-weight="bold" fill="#333333">Diffusion Language Model Training and Reasoning</text>
+
+  <!-- Training Group -->
+  <rect x="40" y="60" width="380" height="200" rx="8" ry="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="52" y="82" font-size="11" fill="#6b7280">Training</text>
+
+  <!-- Inference Group -->
+  <rect x="480" y="60" width="380" height="200" rx="8" ry="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="492" y="82" font-size="11" fill="#6b7280">Inference</text>
+
+  <!-- Training Nodes -->
+  <rect x="70" y="110" width="140" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.5"/>
+  <text x="140" y="140" text-anchor="middle" font-size="12" fill="#333333">Text Tokens</text>
+
+  <rect x="250" y="110" width="140" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.5"/>
+  <text x="320" y="140" text-anchor="middle" font-size="12" fill="#333333">Noising</text>
+
+  <rect x="160" y="190" width="140" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.5"/>
+  <text x="230" y="220" text-anchor="middle" font-size="12" fill="#333333">Denoiser</text>
+
+  <!-- Annotation for Denoiser -->
+  <text x="230" y="255" text-anchor="middle" font-size="10" fill="#6b7280">fixed-order vs arbitrary-order</text>
+
+  <!-- Inference Nodes -->
+  <rect x="510" y="110" width="160" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.5"/>
+  <text x="590" y="140" text-anchor="middle" font-size="12" fill="#333333">Left-to-Right Decoder</text>
+
+  <rect x="710" y="110" width="120" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.5"/>
+  <text x="770" y="140" text-anchor="middle" font-size="12" fill="#333333">Reasoning Trace</text>
+
+  <rect x="710" y="190" width="120" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.5"/>
+  <text x="770" y="220" text-anchor="middle" font-size="12" fill="#333333">Answer</text>
+
+  <!-- Training Edges -->
+  <path d="M210,135 L250,135" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M320,160 L320,175 L230,175 L230,190" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Inference Edges -->
+  <path d="M670,135 L710,135" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M770,160 L770,190" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Cross-phase arrow (Denoiser to Left-to-Right Decoder) -->
+  <path d="M300,215 L400,215 L480,215 L510,135" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Phase transition label -->
+  <text x="440" y="208" text-anchor="middle" font-size="10" fill="#6b7280">trained model</text>
+</svg>

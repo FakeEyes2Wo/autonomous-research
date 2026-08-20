@@ -1,0 +1,79 @@
+<mxfile>
+  <diagram name="Multi-Turn LLM Evaluation Harness" id="diagram-1">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="group-env" value="Environment" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#666666;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#333333;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="620" height="440" as="geometry" />
+        </mxCell>
+
+        <mxCell id="group-metrics" value="Metrics" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#666666;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#333333;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="60" width="300" height="440" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-benchmarks" value="Single-Turn Benchmarks" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="120" y="130" width="160" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-sharding" value="Sharding" style="shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;labelBackgroundColor=default;imageAspect=0;aspect=fixed;image=https://icons.diagrams.net/icon-cache1/Heroicons_-_Solid-2547/scissors-862.svg;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="360" y="130" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-simulator" value="Conversation Simulator" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#0080F0;shadow=0;dashed=0;shape=mxgraph.ios7.icons.chat;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="300" y="280" width="120" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-user" value="User Model" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=13;fontColor=#333333;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="120" y="280" width="60" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-llm" value="LLM Under Test" style="sketch=0;html=1;aspect=fixed;strokeColor=none;shadow=0;fillColor=#3B8DF1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;shape=mxgraph.gcp2.a7_power;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="540" y="280" width="90" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-aptitude" value="Aptitude Metric" style="verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.mockup.graphics.barChart;strokeColor=none;strokeColor2=none;strokeColor3=#666666;fillColor2=#008cff;fillColor3=#dddddd;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="820" y="130" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="node-reliability" value="Reliability Metric" style="verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.mockup.graphics.barChart;strokeColor=none;strokeColor2=none;strokeColor3=#666666;fillColor2=#008cff;fillColor3=#dddddd;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="820" y="300" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-bench-shard" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-benchmarks" target="node-sharding">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-shard-sim" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-sharding" target="node-simulator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-user-sim" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-user" target="node-simulator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-sim-llm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-simulator" target="node-llm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-llm-sim" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1.5;endArrow=block;endFill=1;dashed=1;" edge="1" parent="1" source="node-llm" target="node-simulator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-sim-apt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-simulator" target="node-aptitude">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-sim-rel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1.5;endArrow=block;endFill=1;" edge="1" parent="1" source="node-simulator" target="node-reliability">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="annotation-sharding" value="at most one requirement per turn" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#555555;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="330" y="210" width="140" height="30" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

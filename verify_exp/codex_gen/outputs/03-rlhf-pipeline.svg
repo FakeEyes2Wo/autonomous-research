@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="RLHF Preference Optimization Pipeline">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563EB" />
+    </marker>
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0F172A" flood-opacity="0.09" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <rect x="382.5" y="550.5" width="204" height="124" rx="14" fill="#DBEAFE" fill-opacity="0.32" stroke="#60A5FA" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Data" />
+  <text x="396.5" y="572.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="396.5" dy="-0">Data</tspan>
+  </text>
+  <rect x="36" y="175.5" width="897" height="160" rx="14" fill="#CCFBF1" fill-opacity="0.32" stroke="#2DD4BF" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Training Loop" />
+  <text x="50" y="197.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="50" dy="-0">Training Loop</tspan>
+  </text>
+  <rect x="960" y="175.5" width="204" height="124" rx="14" fill="#FEF3C7" fill-opacity="0.32" stroke="#F59E0B" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Evaluation" />
+  <text x="974" y="197.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="974" dy="-0">Evaluation</tspan>
+  </text>
+  <text x="54" y="46" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0F172A" text-anchor="start">
+    <tspan x="54" dy="-0">RLHF Preference Optimization Pipeline</tspan>
+  </text>
+  <line x1="54" y1="66" x2="194" y2="66" stroke="#2563EB" stroke-width="3" stroke-linecap="round" />
+  <path d="M 222 245.5 L 253.5 245.5 L 253.5 245.5 L 285 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 453 245.5 L 484.5 245.5 L 484.5 245.5 L 516 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 568.5 620.5 L 542.25 620.5 L 542.25 245.5 L 516 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 684 245.5 L 715.5 245.5 L 715.5 245.5 L 747 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 831 277.5 L 831 730 L 138 730 L 138 277.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 222 245.5 L 246 245.5 L 246 323 L 954 323 L 954 245.5 L 978 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <rect x="54" y="213.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="138" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="138" dy="-0">SFT Model</tspan>
+  </text>
+  <rect x="123" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="138" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="138" dy="-0">AI</tspan>
+  </text>
+  <rect x="285" y="213.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="369" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="369" dy="-0">Sampling</tspan>
+  </text>
+  <rect x="345" y="256.5" width="48" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="369" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="369" dy="-0">SAMPLE</tspan>
+  </text>
+  <rect x="516" y="213.5" width="168" height="64" rx="11" fill="#FFFBEB" stroke="#D97706" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="600" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="600" dy="-0">Reward Model</tspan>
+  </text>
+  <rect x="579" y="256.5" width="42" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="600" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="600" dy="-0">SCORE</tspan>
+  </text>
+  <rect x="400.5" y="588.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="484.5" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="484.5" dy="-0">Preference Data</tspan>
+  </text>
+  <rect x="469.5" y="631.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="484.5" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="484.5" dy="-0">DB</tspan>
+  </text>
+  <rect x="747" y="213.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="831" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="831" dy="-0">Policy Update</tspan>
+  </text>
+  <rect x="813" y="256.5" width="36" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="831" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="831" dy="-0">LOOP</tspan>
+  </text>
+  <rect x="978" y="213.5" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#F59E0B" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="1062" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="1062" dy="-0">Evaluation</tspan>
+  </text>
+  <rect x="1038" y="256.5" width="48" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="1062" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="1062" dy="-0">METRIC</tspan>
+  </text>
+  <rect x="747" y="287.5" width="168" height="32" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" data-role="annotation" data-target="Policy Update" />
+  <text x="831" y="306.5" font-family="Helvetica, Arial, sans-serif" font-size="8" font-weight="400" fill="#475569" text-anchor="middle">
+    <tspan x="831" dy="-0">PPO / DPO / GRPO</tspan>
+  </text>
+</svg>

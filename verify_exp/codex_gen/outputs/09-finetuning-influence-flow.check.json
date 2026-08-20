@@ -1,0 +1,59 @@
+{
+  "xml": {
+    "xml_ok": true,
+    "reason": null,
+    "vertices": 10,
+    "edges": 5,
+    "editable_labels": 10,
+    "external_urls": [],
+    "node_overlaps": []
+  },
+  "export": {
+    "ok": true,
+    "backend": "native-svg-chrome",
+    "files": {
+      "svg": "09-finetuning-influence-flow.svg",
+      "png": "09-finetuning-influence-flow.png",
+      "pdf": "09-finetuning-influence-flow.pdf"
+    },
+    "formats": {
+      "svg": {
+        "ok": true,
+        "file": "09-finetuning-influence-flow.svg",
+        "bytes": 6720,
+        "dimensions": null,
+        "page_points": null,
+        "error": null
+      },
+      "png": {
+        "ok": true,
+        "file": "09-finetuning-influence-flow.png",
+        "bytes": 77219,
+        "dimensions": [
+          2400,
+          1600
+        ],
+        "page_points": null,
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "77219 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\09-finetuning-influence-flow.png\n"
+      },
+      "pdf": {
+        "ok": true,
+        "file": "09-finetuning-influence-flow.pdf",
+        "bytes": 98600,
+        "dimensions": null,
+        "page_points": [
+          900.0,
+          600.0
+        ],
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "98600 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\09-finetuning-influence-flow.pdf\n"
+      }
+    },
+    "error": null
+  }
+}

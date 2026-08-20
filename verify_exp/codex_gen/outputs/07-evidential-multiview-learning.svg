@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-label="Evidential Conflictive Multi-View Learning">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563EB" />
+    </marker>
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0F172A" flood-opacity="0.09" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <rect x="36" y="92" width="204" height="766" rx="14" fill="#DBEAFE" fill-opacity="0.32" stroke="#60A5FA" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Inputs" />
+  <text x="50" y="114" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="50" dy="-0">Inputs</tspan>
+  </text>
+  <rect x="267" y="413" width="666" height="160" rx="14" fill="#CCFBF1" fill-opacity="0.32" stroke="#2DD4BF" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Fusion" />
+  <text x="281" y="435" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="281" dy="-0">Fusion</tspan>
+  </text>
+  <text x="54" y="46" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0F172A" text-anchor="start">
+    <tspan x="54" dy="-0">Evidential Conflictive Multi-View Learning</tspan>
+  </text>
+  <line x1="54" y1="66" x2="194" y2="66" stroke="#2563EB" stroke-width="3" stroke-linecap="round" />
+  <path d="M 222 162 L 253.5 162 L 253.5 483 L 285 483" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 222 483 L 253.5 483 L 253.5 483 L 285 483" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 222 804 L 253.5 804 L 253.5 483 L 285 483" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 453 483 L 484.5 483 L 484.5 483 L 516 483" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 684 483 L 715.5 483 L 715.5 483 L 747 483" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 915 483 L 946.5 483 L 946.5 483 L 978 483" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <rect x="54" y="130" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="138" y="159" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="138" dy="-0">View 1</tspan>
+  </text>
+  <rect x="123" y="173" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="138" y="184" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="138" dy="-0">IMG</tspan>
+  </text>
+  <rect x="54" y="451" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="138" y="480" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="138" dy="-0">View 2</tspan>
+  </text>
+  <rect x="117" y="494" width="42" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="138" y="505" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="138" dy="-0">AUDIO</tspan>
+  </text>
+  <rect x="54" y="772" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="138" y="801" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="138" dy="-0">View 3</tspan>
+  </text>
+  <rect x="123" y="815" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="138" y="826" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="138" dy="-0">TXT</tspan>
+  </text>
+  <rect x="285" y="451" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="369" y="480" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="369" dy="-0">View-Specific Evidence</tspan>
+  </text>
+  <rect x="348" y="494" width="42" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="369" y="505" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="369" dy="-0">SCORE</tspan>
+  </text>
+  <rect x="516" y="451" width="168" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="600" y="480" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="600" dy="-0">Opinion Construction</tspan>
+  </text>
+  <rect x="582" y="494" width="36" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="600" y="505" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="600" dy="-0">CHAT</tspan>
+  </text>
+  <rect x="747" y="451" width="168" height="64" rx="11" fill="#FFFBEB" stroke="#D97706" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="831" y="480" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="831" dy="-0">Conflictive Aggregation</tspan>
+  </text>
+  <rect x="813" y="494" width="36" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="831" y="505" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="831" dy="-0">FUSE</tspan>
+  </text>
+  <rect x="978" y="451" width="168" height="64" rx="11" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="1062" y="480" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="1062" dy="-0">Decision + Reliability</tspan>
+  </text>
+  <rect x="1047" y="494" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="1062" y="505" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="1062" dy="-0">OK</tspan>
+  </text>
+  <rect x="747" y="525" width="168" height="32" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" data-role="annotation" data-target="Conflictive Aggregation" />
+  <text x="831" y="544" font-family="Helvetica, Arial, sans-serif" font-size="8" font-weight="400" fill="#475569" text-anchor="middle">
+    <tspan x="831" dy="-4.72">common vs view-specific</tspan>
+    <tspan x="831" dy="9.44">reliability</tspan>
+  </text>
+</svg>

@@ -1,0 +1,69 @@
+Here is an academic-minimal SVG diagram for the “LLM Finetuning Influence Flow” figure, showing how training examples feed into a parameter update and then split into good and bad output effects.
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="520" viewBox="0 0 820 520" font-family="sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#2563eb" stroke="none"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="520" fill="#ffffff"/>
+
+  <!-- Group: Learning -->
+  <rect x="30" y="30" width="340" height="460" rx="8" ry="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="45" y="55" font-size="12" fill="#6b7280" font-weight="bold">Learning</text>
+
+  <!-- Group: Effect -->
+  <rect x="430" y="30" width="360" height="460" rx="8" ry="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="445" y="55" font-size="12" fill="#6b7280" font-weight="bold">Effect</text>
+
+  <!-- Node: Training Example A -->
+  <rect x="70" y="100" width="180" height="60" rx="4" ry="4" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="160" y="126" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Training Example A</text>
+  <text x="160" y="144" font-size="11" fill="#6b7280" text-anchor="middle">document</text>
+
+  <!-- Node: Training Example B -->
+  <rect x="70" y="220" width="180" height="60" rx="4" ry="4" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="160" y="246" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Training Example B</text>
+  <text x="160" y="264" font-size="11" fill="#6b7280" text-anchor="middle">document</text>
+
+  <!-- Node: Parameter Update -->
+  <rect x="70" y="360" width="180" height="60" rx="4" ry="4" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="160" y="386" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Parameter Update</text>
+  <text x="160" y="404" font-size="11" fill="#6b7280" text-anchor="middle">matrix</text>
+
+  <!-- Node: Probability Mass Shift -->
+  <rect x="480" y="210" width="200" height="70" rx="4" ry="4" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="580" y="240" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Probability Mass Shift</text>
+  <text x="580" y="258" font-size="11" fill="#6b7280" text-anchor="middle">flow</text>
+  <!-- Annotation -->
+  <text x="580" y="296" font-size="10" fill="#6b7280" text-anchor="middle" font-style="italic">influence redistributed across outputs</text>
+
+  <!-- Node: Good Outputs -->
+  <rect x="480" y="370" width="160" height="55" rx="4" ry="4" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="560" y="394" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Good Outputs</text>
+  <text x="560" y="412" font-size="11" fill="#6b7280" text-anchor="middle">check</text>
+
+  <!-- Node: Bad Outputs -->
+  <rect x="670" y="370" width="160" height="55" rx="4" ry="4" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="750" y="394" font-size="13" fill="#333333" text-anchor="middle" font-weight="bold">Bad Outputs</text>
+  <text x="750" y="412" font-size="11" fill="#6b7280" text-anchor="middle">cross</text>
+
+  <!-- Edge: Training Example A -> Parameter Update -->
+  <path d="M160,160 L160,360" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Training Example B -> Parameter Update -->
+  <path d="M160,280 L160,360" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Parameter Update -> Probability Mass Shift -->
+  <path d="M250,390 L480,245" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Probability Mass Shift -> Good Outputs -->
+  <path d="M560,280 L560,370" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Probability Mass Shift -> Bad Outputs -->
+  <path d="M680,245 L750,370" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+</svg>
+```
+The layout uses two labeled groups, “Learning” and “Effect,” with clean rectangular nodes and blue orthogonal connectors. It clearly separates the two training examples, the parameter update, the probability mass shift, and the resulting good and bad outputs, while keeping the style minimal and publication-oriented.

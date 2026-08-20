@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#2563eb">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="620" fill="#ffffff"/>
+
+  <!-- Group: Equivalent Representations -->
+  <rect x="60" y="180" width="780" height="220" rx="8" ry="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="75" y="200" font-family="sans-serif" font-size="12" fill="#6b7280" font-weight="bold">Equivalent Representations</text>
+
+  <!-- Group: Consequences -->
+  <rect x="60" y="460" width="780" height="100" rx="8" ry="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="75" y="480" font-family="sans-serif" font-size="12" fill="#6b7280" font-weight="bold">Consequences</text>
+
+  <!-- Node: Language Family -->
+  <rect x="330" y="60" width="240" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="450" y="90" font-family="sans-serif" font-size="14" fill="#333333" text-anchor="middle" font-weight="bold">Language Family</text>
+
+  <!-- Node: Transformer -->
+  <rect x="100" y="250" width="160" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="180" y="280" font-family="sans-serif" font-size="13" fill="#333333" text-anchor="middle">Transformer</text>
+  <text x="180" y="315" font-family="sans-serif" font-size="10" fill="#6b7280" text-anchor="middle">exponentially more succinct</text>
+
+  <!-- Node: LTL Formula -->
+  <rect x="290" y="250" width="160" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="370" y="280" font-family="sans-serif" font-size="13" fill="#333333" text-anchor="middle">LTL Formula</text>
+
+  <!-- Node: RNN -->
+  <rect x="480" y="250" width="160" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="560" y="280" font-family="sans-serif" font-size="13" fill="#333333" text-anchor="middle">RNN</text>
+
+  <!-- Node: Finite Automaton -->
+  <rect x="670" y="250" width="160" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="750" y="280" font-family="sans-serif" font-size="13" fill="#333333" text-anchor="middle">Finite Automaton</text>
+
+  <!-- Node: Verification Problem -->
+  <rect x="300" y="490" width="300" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="450" y="520" font-family="sans-serif" font-size="14" fill="#333333" text-anchor="middle" font-weight="bold">Verification Problem</text>
+
+  <!-- Edges from Language Family to representations -->
+  <!-- Language Family to Transformer -->
+  <path d="M 390 110 L 390 140 L 180 140 L 180 245" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Language Family to LTL Formula -->
+  <path d="M 420 110 L 420 140 L 370 140 L 370 245" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Language Family to RNN -->
+  <path d="M 480 110 L 480 140 L 560 140 L 560 245" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Language Family to Finite Automaton -->
+  <path d="M 510 110 L 510 140 L 750 140 L 750 245" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Edges from representations to Verification Problem -->
+  <!-- Transformer to Verification Problem -->
+  <path d="M 180 305 L 180 420 L 390 420 L 390 485" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- LTL Formula to Verification Problem -->
+  <path d="M 370 305 L 370 420 L 410 420 L 410 485" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- RNN to Verification Problem -->
+  <path d="M 560 305 L 560 420 L 490 420 L 490 485" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Finite Automaton to Verification Problem -->
+  <path d="M 750 305 L 750 420 L 510 420 L 510 485" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)"/>
+</svg>

@@ -1,0 +1,45 @@
+{
+  "verdict": "REVISE",
+  "issues": [
+    "The 'Denoiser -> Left-to-Right Decoder' edge crosses the boundary between the Training and Inference groups without any visual distinction (e.g., a phase-transition label or different arrowhead), making the training-to-inference handoff ambiguous.",
+    "The 'Denoiser' node is positioned below and between 'Text Tokens' and 'Noising', creating a non-linear flow that forces edge2 to bend awkwardly; consider aligning the three training nodes horizontally or vertically for cleaner orthogonal routing.",
+    "The 'Answer' node is positioned below and between 'Left-to-Right Decoder' and 'Reasoning Trace', mirroring the training layout but creating an inconsistent visual rhythm; align inference nodes in the same orientation as training nodes for symmetry.",
+    "The annotation 'fixed-order vs arbitrary-order' is placed directly below the Denoiser but is not visually anchored to it (no connector or bracket), making it unclear whether it annotates the Denoiser or the edge.",
+    "The two group containers have identical heights but the internal node layouts differ (training has 2 top + 1 bottom, inference has 2 top + 1 bottom), yet the vertical spacing is inconsistent: Denoiser at y=230 vs Answer at y=230, but the top rows are at y=140 in both, leaving uneven whitespace below the top row in training.",
+    "Edge colors are inconsistent: edge1 and edge3 use blue (#5B9BD5), edge2 and edge4 use orange (#ED7D31), and edge5 uses green (#70AD47). The color changes do not encode any meaningful semantic distinction and violate the 'one accent color' requirement from the prompt.",
+    "The cross-group edge (edge5) is dashed while all intra-group edges are solid, but no legend or annotation explains the dashed convention.",
+    "The 'Left-to-Right Decoder' node label is truncated in the 160px-wide box at fontSize=13; 'Left-to-Right Decoder' likely wraps awkwardly or overflows. Increase width or reduce font size."
+  ],
+  "icon_feedback": [
+    {
+      "node": "Text Tokens",
+      "verdict": "keep",
+      "why": "Uses a simple rounded rectangle with text, which is appropriate for an academic-minimal architecture diagram. No misleading icon."
+    },
+    {
+      "node": "Noising",
+      "verdict": "keep",
+      "why": "Uses a simple rounded rectangle with text. The candidate 'noise' icons (AWS Braket, 3D arrows) were correctly avoided; they would have been toy-like and irrelevant."
+    },
+    {
+      "node": "Denoiser",
+      "verdict": "keep",
+      "why": "Uses a simple rounded rectangle with text. The candidate 'llm' icons (lightbulb, lightning, power) were correctly avoided; they would have been misleading for a denoiser module."
+    },
+    {
+      "node": "Left-to-Right Decoder",
+      "verdict": "keep",
+      "why": "Uses a simple rounded rectangle with text. The candidate 'arrow' icons were correctly avoided; a directional arrow icon would have been redundant with the edge arrows and visually noisy."
+    },
+    {
+      "node": "Reasoning Trace",
+      "verdict": "keep",
+      "why": "Uses a simple rounded rectangle with text. The candidate 'path' icons (Archimate comm path, curved text) were correctly avoided; they would have introduced an inconsistent visual language."
+    },
+    {
+      "node": "Answer",
+      "verdict": "keep",
+      "why": "Uses a simple rounded rectangle with text. The candidate 'check' icons (hexagon, iOS check, GCP check) were correctly avoided; a checkmark icon would have been overly literal and broken the minimal aesthetic."
+    }
+  ]
+}

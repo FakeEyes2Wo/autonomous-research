@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shape_search": {
+    "ok": true,
+    "shapes": {
+      "inbox": [
+        {
+          "title": "Inbox",
+          "style": "verticalLabelPosition=bottom;aspect=fixed;html=1;shape=mxgraph.salesforce.inbox;fillColorStyles=fillColor2,fillColor3,fillColor4;fillColor2=#00857d;fillColor3=#00b2a9;fillColor4=#ffffff;fillColor=none;strokeColor=none;"
+        },
+        {
+          "title": "Inbox",
+          "style": "verticalLabelPosition=bottom;aspect=fixed;html=1;shape=mxgraph.salesforce.inbox2;fillColorStyles=fillColor2,fillColor3;fillColor2=#00857d;fillColor3=#ffffff;fillColor=none;strokeColor=none;"
+        },
+        {
+          "title": "Arc",
+          "style": "verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.basic.arc;strokeColor=#10739E;strokeWidth=6;startAngle=0.3;endAngle=0.1;"
+        },
+        {
+          "title": "Banner",
+          "style": "html=1;shape=mxgraph.infographic.banner;dx=32;dy=17;notch=15;fillColor=#10739E;strokeColor=none;align=center;verticalAlign=middle;fontColor=#ffffff;fontSize=14;fontStyle=1;spacingBottom=15;"
+        }
+      ]
+    },
+    "error": null
+  }
+}

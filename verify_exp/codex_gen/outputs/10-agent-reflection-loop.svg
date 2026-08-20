@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Agent Memory and Reflection Loop">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563EB" />
+    </marker>
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0F172A" flood-opacity="0.09" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <rect x="223.096" y="175.5" width="940.904" height="160" rx="14" fill="#DBEAFE" fill-opacity="0.32" stroke="#60A5FA" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Loop" />
+  <text x="237.096" y="197.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="237.096" dy="-0">Loop</tspan>
+  </text>
+  <rect x="36" y="550.5" width="566.712" height="124" rx="14" fill="#CCFBF1" fill-opacity="0.32" stroke="#2DD4BF" stroke-width="1.3" stroke-dasharray="7 6" data-role="group" data-label="Boundary" />
+  <text x="50" y="572.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#334155" text-anchor="start">
+    <tspan x="50" dy="-0">Boundary</tspan>
+  </text>
+  <text x="54" y="46" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0F172A" text-anchor="start">
+    <tspan x="54" dy="-0">Agent Memory and Reflection Loop</tspan>
+  </text>
+  <line x1="54" y1="66" x2="194" y2="66" stroke="#2563EB" stroke-width="3" stroke-linecap="round" />
+  <path d="M 210.52 620.5 L 225.808 620.5 L 225.808 245.5 L 241.096 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 397.616 245.5 L 412.904 245.5 L 412.904 245.5 L 428.192 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 584.712 245.5 L 600 245.5 L 600 245.5 L 615.288 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 771.808 245.5 L 787.096 245.5 L 787.096 245.5 L 802.384 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 958.904 245.5 L 974.192 245.5 L 974.192 245.5 L 989.48 245.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 1067.74 277.5 L 1067.74 730 L 319.356 730 L 319.356 277.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <path d="M 397.616 245.5 L 412.904 245.5 L 412.904 620.5 L 428.192 620.5" fill="none" stroke="#2563EB" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+  <rect x="54" y="588.5" width="156.52" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="132.26" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="132.26" dy="-0">Task</tspan>
+  </text>
+  <rect x="114.26" y="631.5" width="36" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="132.26" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="132.26" dy="-0">TASK</tspan>
+  </text>
+  <rect x="241.096" y="213.5" width="156.52" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="319.356" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="319.356" dy="-0">Planner</tspan>
+  </text>
+  <rect x="301.356" y="256.5" width="36" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="319.356" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="319.356" dy="-0">PLAN</tspan>
+  </text>
+  <rect x="428.192" y="213.5" width="156.52" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="506.452" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="506.452" dy="-0">Executor</tspan>
+  </text>
+  <rect x="491.452" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="506.452" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="506.452" dy="-0">ACT</tspan>
+  </text>
+  <rect x="615.288" y="213.5" width="156.52" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="693.548" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="693.548" dy="-0">Observation</tspan>
+  </text>
+  <rect x="678.548" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="693.548" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="693.548" dy="-0">OBS</tspan>
+  </text>
+  <rect x="802.384" y="213.5" width="156.52" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="880.644" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="880.644" dy="-0">Reflection</tspan>
+  </text>
+  <rect x="853.644" y="256.5" width="54" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="880.644" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="880.644" dy="-0">REFLECT</tspan>
+  </text>
+  <rect x="989.48" y="213.5" width="156.52" height="64" rx="11" fill="#FFFFFF" stroke="#60A5FA" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="1067.74" y="242.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="1067.74" dy="-0">Memory</tspan>
+  </text>
+  <rect x="1052.74" y="256.5" width="30" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="1067.74" y="267.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="1067.74" dy="-0">DB</tspan>
+  </text>
+  <rect x="428.192" y="588.5" width="156.52" height="64" rx="11" fill="#FFFFFF" stroke="#2DD4BF" stroke-width="1.8" filter="url(#soft-shadow)" />
+  <text x="506.452" y="617.5" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">
+    <tspan x="506.452" dy="-0">Next Action</tspan>
+  </text>
+  <rect x="488.452" y="631.5" width="36" height="15" rx="7.5" fill="#F1F5F9" />
+  <text x="506.452" y="642.5" font-family="Helvetica, Arial, sans-serif" font-size="7" font-weight="600" fill="#64748B" text-anchor="middle">
+    <tspan x="506.452" dy="-0">LOOP</tspan>
+  </text>
+  <rect x="802.384" y="287.5" width="156.52" height="32" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" data-role="annotation" data-target="Reflection" />
+  <text x="880.644" y="306.5" font-family="Helvetica, Arial, sans-serif" font-size="8" font-weight="400" fill="#475569" text-anchor="middle">
+    <tspan x="880.644" dy="-4.72">verbal self-critique</tspan>
+    <tspan x="880.644" dy="9.44">written to memory</tspan>
+  </text>
+</svg>

@@ -1,0 +1,79 @@
+Here is an academic-minimal SVG architecture diagram for the RLHF preference optimization pipeline, following your layout and palette constraints.
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" font-family="sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#2563eb" stroke="none"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="620" fill="#ffffff"/>
+
+  <!-- Group: Data -->
+  <rect x="40" y="40" width="200" height="180" rx="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="52" y="62" font-size="12" fill="#6b7280" font-weight="bold">Data</text>
+
+  <!-- Group: Training Loop -->
+  <rect x="280" y="40" width="420" height="420" rx="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="292" y="62" font-size="12" fill="#6b7280" font-weight="bold">Training Loop</text>
+
+  <!-- Group: Evaluation -->
+  <rect x="740" y="40" width="140" height="180" rx="8" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="752" y="62" font-size="12" fill="#6b7280" font-weight="bold">Evaluation</text>
+
+  <!-- Node: Preference Data -->
+  <rect x="70" y="100" width="140" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="140" y="130" font-size="13" fill="#333333" text-anchor="middle" dominant-baseline="middle">Preference Data</text>
+
+  <!-- Node: SFT Model -->
+  <rect x="310" y="100" width="140" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="380" y="130" font-size="13" fill="#333333" text-anchor="middle" dominant-baseline="middle">SFT Model</text>
+
+  <!-- Node: Sampling -->
+  <rect x="520" y="100" width="140" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="590" y="130" font-size="13" fill="#333333" text-anchor="middle" dominant-baseline="middle">Sampling</text>
+
+  <!-- Node: Reward Model -->
+  <rect x="520" y="240" width="140" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="590" y="270" font-size="13" fill="#333333" text-anchor="middle" dominant-baseline="middle">Reward Model</text>
+
+  <!-- Node: Policy Update -->
+  <rect x="310" y="240" width="140" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="380" y="270" font-size="13" fill="#333333" text-anchor="middle" dominant-baseline="middle">Policy Update</text>
+
+  <!-- Node: Evaluation -->
+  <rect x="760" y="100" width="100" height="50" rx="6" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+  <text x="810" y="130" font-size="13" fill="#333333" text-anchor="middle" dominant-baseline="middle">Evaluation</text>
+
+  <!-- Edge: SFT Model -> Sampling -->
+  <path d="M450,125 L520,125" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Sampling -> Reward Model -->
+  <path d="M590,150 L590,240" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Preference Data -> Reward Model -->
+  <path d="M210,125 L210,265 L520,265" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Reward Model -> Policy Update -->
+  <path d="M520,265 L450,265" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: Policy Update -> SFT Model (cyclic) -->
+  <path d="M380,240 L380,150" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Edge: SFT Model -> Evaluation -->
+  <path d="M450,125 L760,125" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Annotation: Policy Update -->
+  <text x="380" y="310" font-size="10" fill="#6b7280" text-anchor="middle">PPO / DPO / GRPO</text>
+
+  <!-- Small labels for icons (optional, but keep minimal) -->
+  <text x="380" y="92" font-size="10" fill="#6b7280" text-anchor="middle">llm</text>
+  <text x="590" y="92" font-size="10" fill="#6b7280" text-anchor="middle">dice</text>
+  <text x="590" y="232" font-size="10" fill="#6b7280" text-anchor="middle">scale</text>
+  <text x="380" y="232" font-size="10" fill="#6b7280" text-anchor="middle">loop</text>
+  <text x="810" y="92" font-size="10" fill="#6b7280" text-anchor="middle">chart</text>
+  <text x="140" y="92" font-size="10" fill="#6b7280" text-anchor="middle">database</text>
+</svg>
+```
+The figure uses dashed group containers for Data, Training Loop, and Evaluation, with clear orthogonal edges connecting the SFT Model, Sampling, Reward Model, Policy Update, and Evaluation nodes. The cyclic update path back to the SFT Model is emphasized, and the Policy Update node includes the PPO/DPO/GRPO annotation.

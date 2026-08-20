@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "build_id": "42835e3@2026-08-02T20:17:10.515Z",
+  "error": null,
+  "shape_search": {
+    "ok": true,
+    "shapes": {
+      "database": [
+        {
+          "title": "0 to 1",
+          "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToOne;endFill=1;"
+        },
+        {
+          "title": "0 to Many Optional",
+          "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;"
+        },
+        {
+          "title": "1",
+          "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERone;endFill=1;"
+        },
+        {
+          "title": "1 Mandatory",
+          "style": "edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;"
+        }
+      ]
+    },
+    "error": null
+  }
+}

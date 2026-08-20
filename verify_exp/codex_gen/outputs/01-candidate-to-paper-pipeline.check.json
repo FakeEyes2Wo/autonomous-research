@@ -1,0 +1,59 @@
+{
+  "xml": {
+    "xml_ok": true,
+    "reason": null,
+    "vertices": 15,
+    "edges": 9,
+    "editable_labels": 15,
+    "external_urls": [],
+    "node_overlaps": []
+  },
+  "export": {
+    "ok": true,
+    "backend": "native-svg-chrome",
+    "files": {
+      "svg": "01-candidate-to-paper-pipeline.svg",
+      "png": "01-candidate-to-paper-pipeline.png",
+      "pdf": "01-candidate-to-paper-pipeline.pdf"
+    },
+    "formats": {
+      "svg": {
+        "ok": true,
+        "file": "01-candidate-to-paper-pipeline.svg",
+        "bytes": 10149,
+        "dimensions": null,
+        "page_points": null,
+        "error": null
+      },
+      "png": {
+        "ok": true,
+        "file": "01-candidate-to-paper-pipeline.png",
+        "bytes": 75383,
+        "dimensions": [
+          2400,
+          1600
+        ],
+        "page_points": null,
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "75383 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\01-candidate-to-paper-pipeline.png\n"
+      },
+      "pdf": {
+        "ok": true,
+        "file": "01-candidate-to-paper-pipeline.pdf",
+        "bytes": 131277,
+        "dimensions": null,
+        "page_points": [
+          900.0,
+          600.0
+        ],
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "131277 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\01-candidate-to-paper-pipeline.pdf\n"
+      }
+    },
+    "error": null
+  }
+}

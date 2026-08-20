@@ -1,0 +1,59 @@
+{
+  "xml": {
+    "xml_ok": true,
+    "reason": null,
+    "vertices": 11,
+    "edges": 6,
+    "editable_labels": 11,
+    "external_urls": [],
+    "node_overlaps": []
+  },
+  "export": {
+    "ok": true,
+    "backend": "native-svg-chrome",
+    "files": {
+      "svg": "07-evidential-multiview-learning.svg",
+      "png": "07-evidential-multiview-learning.png",
+      "pdf": "07-evidential-multiview-learning.pdf"
+    },
+    "formats": {
+      "svg": {
+        "ok": true,
+        "file": "07-evidential-multiview-learning.svg",
+        "bytes": 7472,
+        "dimensions": null,
+        "page_points": null,
+        "error": null
+      },
+      "png": {
+        "ok": true,
+        "file": "07-evidential-multiview-learning.png",
+        "bytes": 82429,
+        "dimensions": [
+          2400,
+          1800
+        ],
+        "page_points": null,
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "82429 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\07-evidential-multiview-learning.png\n"
+      },
+      "pdf": {
+        "ok": true,
+        "file": "07-evidential-multiview-learning.pdf",
+        "bytes": 109080,
+        "dimensions": null,
+        "page_points": [
+          900.0,
+          675.12
+        ],
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "109080 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\07-evidential-multiview-learning.pdf\n"
+      }
+    },
+    "error": null
+  }
+}

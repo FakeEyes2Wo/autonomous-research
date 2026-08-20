@@ -1,0 +1,50 @@
+{
+  "verdict": "REVISE",
+  "issues": [
+    "Query -> Encoder edge crosses the Indexing group boundary and spans the entire diagram width, creating a long, confusing orthogonal route that violates the offline/online separation.",
+    "Query -> Encoder edge is semantically wrong for a RAG pipeline: the query is encoded at inference time, not sent to the offline indexing Encoder. This edge should be removed or replaced with a separate inference-time encoder node.",
+    "Vector Index -> Retriever edge crosses the group boundary with an orange stroke, breaking the color convention where indexing edges are blue and inference edges are orange.",
+    "All nodes use identical plain rounded rectangles; the prompt explicitly requested icon/shape styles for Encoder (embedding), Vector Index (database), Retriever (magnifier), Reranker (scale), Generator (llm), and Corpus (documents).",
+    "The two group containers are vertically stacked columns, but the prompt asks for indexing offline on the left and inference online on the right; the current layout is acceptable but the cross-group edges undermine the separation.",
+    "Annotation text boxes are placed at fixed coordinates that may overlap or detach from their target nodes if the diagram is edited.",
+    "No edge labels are present; the prompt does not require them, but the Query -> Generator direct edge would benefit from a label like 'direct context' to clarify its purpose.",
+    "The Generator node is positioned at x=980 while the Inference group extends to x=1240, leaving excessive unused whitespace on the right side of the group."
+  ],
+  "icon_feedback": [
+    {
+      "node": "Query",
+      "verdict": "keep",
+      "why": "Plain rounded rectangle is acceptable for a text/query input node in an academic-minimal style; no icon needed."
+    },
+    {
+      "node": "Encoder",
+      "verdict": "replace",
+      "why": "Currently a plain rectangle. The prompt specifies an embedding icon style; use a vector/embedding shape or a simple geometric representation rather than the offered AWS Braket or Caching icons, which are misleading."
+    },
+    {
+      "node": "Vector Index",
+      "verdict": "replace",
+      "why": "Currently a plain rectangle. The prompt specifies a database icon; use a standard cylinder/database shape. The offered ER-relationship edge styles are not applicable to a node."
+    },
+    {
+      "node": "Retriever",
+      "verdict": "replace",
+      "why": "Currently a plain rectangle. The prompt specifies a magnifier icon; use a simple magnifying-glass outline shape. The offered AWS and Veeam magnifying glass icons are acceptable but should be rendered in a neutral monochrome style to match academic-minimal."
+    },
+    {
+      "node": "Reranker",
+      "verdict": "replace",
+      "why": "Currently a plain rectangle. The prompt specifies a scale icon; the offered GCP bucket_scale or check_scale icons are cloud-provider-specific and visually heavy. Use a simple balance/scale outline or a rank/sort glyph instead."
+    },
+    {
+      "node": "Generator",
+      "verdict": "replace",
+      "why": "Currently a plain rectangle. The prompt specifies an LLM icon; the offered Light/lightning/A7 Power icons are irrelevant or toy-like. Use a simple neural-network or model glyph, or keep a plain rectangle with an 'LLM' label."
+    },
+    {
+      "node": "Corpus",
+      "verdict": "replace",
+      "why": "Currently a plain rectangle. The prompt specifies a documents icon; the offered AWS CloudSearch and Active Directory documents icons are cloud-provider-specific. Use a simple stacked-documents outline shape."
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" agent="codex-gen-from-scratch" version="26.0.16">
+  <diagram id="03-rlhf-pipeline" name="Page-1">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1306" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="group-1" value="&lt;b&gt;Data&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=6 5;fillColor=#DBEAFE;fillOpacity=28;strokeColor=#60A5FA;strokeWidth=1.4;fontColor=#334155;fontSize=14;fontStyle=1;fontFamily=Helvetica;verticalAlign=top;spacingTop=10;align=left;spacingLeft=12;" vertex="1" parent="1" athenaRole="group">
+          <mxGeometry as="geometry" x="421.5" y="247.5" width="218" height="138" />
+        </mxCell>
+        <mxCell id="group-2" value="&lt;b&gt;Training Loop&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=6 5;fillColor=#CCFBF1;fillOpacity=28;strokeColor=#2DD4BF;strokeWidth=1.4;fontColor=#334155;fontSize=14;fontStyle=1;fontFamily=Helvetica;verticalAlign=top;spacingTop=10;align=left;spacingLeft=12;" vertex="1" parent="1" athenaRole="group">
+          <mxGeometry as="geometry" x="54" y="70" width="953" height="138" />
+        </mxCell>
+        <mxCell id="group-3" value="&lt;b&gt;Evaluation&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=6 5;fillColor=#FEF3C7;fillOpacity=28;strokeColor=#F59E0B;strokeWidth=1.4;fontColor=#334155;fontSize=14;fontStyle=1;fontFamily=Helvetica;verticalAlign=top;spacingTop=10;align=left;spacingLeft=12;" vertex="1" parent="1" athenaRole="group">
+          <mxGeometry as="geometry" x="1034" y="70" width="218" height="138" />
+        </mxCell>
+        <mxCell id="title" value="&lt;b&gt;RLHF Preference Optimization Pipeline&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#0F172A;fontSize=20;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="1" athenaRole="title">
+          <mxGeometry as="geometry" x="54" y="30" width="1198" height="38" />
+        </mxCell>
+        <mxCell id="edge-1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="node-1" target="node-2" athenaRole="edge">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="node-2" target="node-3" athenaRole="edge">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="node-4" target="node-3" athenaRole="edge">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="node-3" target="node-5" athenaRole="edge">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;endArrow=block;endFill=1;exitY=1;exitX=0.5;entryY=1;entryX=0.5;" edge="1" parent="1" source="node-5" target="node-1" athenaRole="edge">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edge-6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="node-1" target="node-6" athenaRole="edge">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="node-1" value="&lt;b&gt;SFT Model&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#64748B&quot; size=&quot;2&quot;&gt;AI&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2DD4BF;strokeWidth=1.8;fontColor=#1E293B;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;spacing=8;shadow=0;arcSize=14;" vertex="1" parent="1" athenaRole="node" athenaLabel="SFT Model">
+          <mxGeometry as="geometry" x="78" y="112" width="170" height="70" />
+        </mxCell>
+        <mxCell id="node-2" value="&lt;b&gt;Sampling&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#64748B&quot; size=&quot;2&quot;&gt;SAMPLE&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2DD4BF;strokeWidth=1.8;fontColor=#1E293B;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;spacing=8;shadow=0;arcSize=14;" vertex="1" parent="1" athenaRole="node" athenaLabel="Sampling">
+          <mxGeometry as="geometry" x="323" y="112" width="170" height="70" />
+        </mxCell>
+        <mxCell id="node-3" value="&lt;b&gt;Reward Model&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#64748B&quot; size=&quot;2&quot;&gt;SCORE&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2DD4BF;strokeWidth=1.8;fontColor=#1E293B;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;spacing=8;shadow=0;arcSize=14;" vertex="1" parent="1" athenaRole="node" athenaLabel="Reward Model">
+          <mxGeometry as="geometry" x="568" y="112" width="170" height="70" />
+        </mxCell>
+        <mxCell id="node-4" value="&lt;b&gt;Preference Data&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#64748B&quot; size=&quot;2&quot;&gt;DB&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#60A5FA;strokeWidth=1.8;fontColor=#1E293B;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;spacing=8;shadow=0;arcSize=14;" vertex="1" parent="1" athenaRole="node" athenaLabel="Preference Data">
+          <mxGeometry as="geometry" x="445.5" y="289.5" width="170" height="70" />
+        </mxCell>
+        <mxCell id="node-5" value="&lt;b&gt;Policy Update&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#64748B&quot; size=&quot;2&quot;&gt;LOOP&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2DD4BF;strokeWidth=1.8;fontColor=#1E293B;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;spacing=8;shadow=0;arcSize=14;" vertex="1" parent="1" athenaRole="node" athenaLabel="Policy Update">
+          <mxGeometry as="geometry" x="813" y="112" width="170" height="70" />
+        </mxCell>
+        <mxCell id="node-6" value="&lt;b&gt;Evaluation&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#64748B&quot; size=&quot;2&quot;&gt;METRIC&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F59E0B;strokeWidth=1.8;fontColor=#1E293B;fontSize=13;fontFamily=Helvetica;align=center;verticalAlign=middle;spacing=8;shadow=0;arcSize=14;" vertex="1" parent="1" athenaRole="node" athenaLabel="Evaluation">
+          <mxGeometry as="geometry" x="1058" y="112" width="170" height="70" />
+        </mxCell>
+        <mxCell id="note-1" value="PPO / DPO / GRPO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#CBD5E1;dashed=1;fontColor=#475569;fontSize=10;fontFamily=Helvetica;align=center;verticalAlign=middle;" vertex="1" parent="1" athenaRole="annotation">
+          <mxGeometry as="geometry" x="813" y="194" width="170" height="32" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

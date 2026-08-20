@@ -1,0 +1,94 @@
+Here is an academic-minimal SVG architecture diagram for the Candidate-to-Paper Autonomous Research Pipeline, laid out left-to-right with two dashed phase groups and orthogonal connector arrows.
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520" font-family="sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#2563eb" stroke="none"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="520" fill="#ffffff"/>
+
+  <!-- Group 1: Idea & Experiment -->
+  <rect x="20" y="30" width="560" height="460" rx="10" ry="10" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="35" y="55" font-size="12" fill="#6b7280" font-weight="bold">Idea &amp; Experiment</text>
+
+  <!-- Group 2: Paper -->
+  <rect x="600" y="30" width="480" height="460" rx="10" ry="10" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="615" y="55" font-size="12" fill="#6b7280" font-weight="bold">Paper</text>
+
+  <!-- Node 1: Candidate Intake -->
+  <rect x="50" y="100" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="105" y="122" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Candidate</text>
+  <text x="105" y="138" font-size="12" fill="#333333" text-anchor="middle">Intake</text>
+
+  <!-- Node 2: Brainstorm -->
+  <rect x="190" y="100" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="245" y="130" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Brainstorm</text>
+
+  <!-- Node 3: Ideation -->
+  <rect x="330" y="100" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="385" y="130" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Ideation</text>
+
+  <!-- Node 4: Experiment Plan -->
+  <rect x="470" y="100" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="525" y="122" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Experiment</text>
+  <text x="525" y="138" font-size="12" fill="#333333" text-anchor="middle">Plan</text>
+
+  <!-- Node 5: Experiment -->
+  <rect x="470" y="200" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="525" y="230" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Experiment</text>
+  <text x="525" y="260" font-size="10" fill="#6b7280" text-anchor="middle">Athena / external / none</text>
+
+  <!-- Node 6: Evidence -->
+  <rect x="630" y="100" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="685" y="130" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Evidence</text>
+
+  <!-- Node 7: Claims & Outline -->
+  <rect x="770" y="100" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="825" y="122" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Claims &amp;</text>
+  <text x="825" y="138" font-size="12" fill="#333333" text-anchor="middle">Outline</text>
+
+  <!-- Node 8: Writing -->
+  <rect x="910" y="100" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="965" y="130" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Writing</text>
+
+  <!-- Node 9: Review -->
+  <rect x="910" y="200" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="965" y="222" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Review</text>
+  <text x="965" y="240" font-size="10" fill="#6b7280" text-anchor="middle">verify-trace + 3 audits</text>
+
+  <!-- Node 10: Packaging -->
+  <rect x="910" y="310" width="110" height="50" rx="6" ry="6" fill="#ffffff" stroke="#333333" stroke-width="1.8"/>
+  <text x="965" y="340" font-size="12" fill="#333333" text-anchor="middle" font-weight="bold">Packaging</text>
+
+  <!-- Edge 1: Candidate Intake -> Brainstorm -->
+  <path d="M160,125 L185,125" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge 2: Brainstorm -> Ideation -->
+  <path d="M300,125 L325,125" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge 3: Ideation -> Experiment Plan -->
+  <path d="M440,125 L465,125" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge 4: Experiment Plan -> Experiment (vertical) -->
+  <path d="M525,150 L525,195" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge 5: Experiment -> Evidence (horizontal, crossing group boundary) -->
+  <path d="M580,225 L625,225 L625,125 L625,125" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge 6: Evidence -> Claims & Outline -->
+  <path d="M740,125 L765,125" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge 7: Claims & Outline -> Writing -->
+  <path d="M880,125 L905,125" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge 8: Writing -> Review (vertical) -->
+  <path d="M965,150 L965,195" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Edge 9: Review -> Packaging (vertical) -->
+  <path d="M965,250 L965,305" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow)"/>
+</svg>
+```
+The diagram uses ten labeled stage nodes, with the first five stages grouped under “Idea & Experiment” and the remaining five under “Paper.” Arrows follow a clean left-to-right flow, with vertical transitions for Experiment, Review, and Packaging, and the requested annotations are included beneath Experiment and Review.

@@ -1,0 +1,59 @@
+{
+  "xml": {
+    "xml_ok": true,
+    "reason": null,
+    "vertices": 10,
+    "edges": 5,
+    "editable_labels": 10,
+    "external_urls": [],
+    "node_overlaps": []
+  },
+  "export": {
+    "ok": true,
+    "backend": "native-svg-chrome",
+    "files": {
+      "svg": "06-model-editing-framework.svg",
+      "png": "06-model-editing-framework.png",
+      "pdf": "06-model-editing-framework.pdf"
+    },
+    "formats": {
+      "svg": {
+        "ok": true,
+        "file": "06-model-editing-framework.svg",
+        "bytes": 6808,
+        "dimensions": null,
+        "page_points": null,
+        "error": null
+      },
+      "png": {
+        "ok": true,
+        "file": "06-model-editing-framework.png",
+        "bytes": 70700,
+        "dimensions": [
+          2400,
+          1600
+        ],
+        "page_points": null,
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "70700 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\06-model-editing-framework.png\n"
+      },
+      "pdf": {
+        "ok": true,
+        "file": "06-model-editing-framework.pdf",
+        "bytes": 104075,
+        "dimensions": null,
+        "page_points": [
+          900.0,
+          600.0
+        ],
+        "error": null,
+        "returncode": 0,
+        "stdout": "",
+        "stderr": "104075 bytes written to file C:\\Users\\80163\\Desktop\\鎸戞垬鏉痏2026\\Athena\\docs\\autoresearch\\verify_exp\\codex_gen\\outputs\\06-model-editing-framework.pdf\n"
+      }
+    },
+    "error": null
+  }
+}
