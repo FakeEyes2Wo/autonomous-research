@@ -1,0 +1,40 @@
+{
+  "dataset": "examples_articles",
+  "entry": {
+    "arxiv_id": "2407.10490",
+    "arxiv_version": "4",
+    "title": "Learning Dynamics of LLM Finetuning",
+    "authors": [
+      "Yi Ren",
+      "Danica J. Sutherland"
+    ],
+    "venue": "ICLR 2025 Outstanding Paper",
+    "venue_hint": ""
+  },
+  "files": {
+    "paper.pdf": {
+      "sha256": "5676c33392130e43dcf34fb06e8fd84f0ac7de6b19b77f9a2ed6e6cd0f8a6b43",
+      "bytes": 6700833
+    },
+    "paper_text.md": {
+      "sha256": "a9d7e9ba45efa942501398877dd75ca2ac0ce288d5a4fa85f42528dbede6b8ca",
+      "bytes": 150231
+    },
+    "paper_meta.json": {
+      "sha256": "3881168ed4c7c92a4abbbb3d28bdaeaac146a99d473ac7341cfde50d43be565c",
+      "bytes": 1867
+    },
+    "candidate.md": {
+      "sha256": "0fed1a2526be1633a7e198830be09875c2ecdf40e4a458a7a3c810eb9626746b",
+      "bytes": 1177
+    }
+  },
+  "generated_at": "2026-08-19T12:18:32.893283+00:00",
+  "tools": {
+    "crawl_script": "scripts/prepare_examples_article.py",
+    "text_extractor": "PyMuPDF"
+  },
+  "notes": [
+    "candidate.md is written separately by an LLM; it must contain only human-style vague a-priori ideas, with no evidence and no paper conclusions."
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "dataset": "examples_articles",
+  "entry": {
+    "arxiv_id": "2510.19315",
+    "arxiv_version": "3",
+    "title": "Transformers are Inherently Succinct",
+    "authors": [
+      "Pascal Bergsträßer",
+      "Ryan Cotterell",
+      "Anthony W. Lin"
+    ],
+    "venue": "ICLR 2026 Outstanding Paper",
+    "venue_hint": ""
+  },
+  "files": {
+    "paper.pdf": {
+      "sha256": "f4731fe6aef2926e8dcc30955ba77252201fed32a3d52389379255206b1d051b",
+      "bytes": 610833
+    },
+    "paper_text.md": {
+      "sha256": "d6d99e2f65c42e0255090762e8296934c5dac887a274e1f639f9592323e5bcf1",
+      "bytes": 73683
+    },
+    "paper_meta.json": {
+      "sha256": "facb9f34fed889066e5929f80ffab6fcb25ba6be3657f7cebb5fb77c95c96cfb",
+      "bytes": 1631
+    },
+    "candidate.md": {
+      "sha256": "6494507f2c8d3dc4059c8c01a5affe26175905eda48b8f9c63aeca00a6dae4c8",
+      "bytes": 1152
+    }
+  },
+  "generated_at": "2026-08-19T12:18:32.689788+00:00",
+  "tools": {
+    "crawl_script": "scripts/prepare_examples_article.py",
+    "text_extractor": "PyMuPDF"
+  },
+  "notes": [
+    "candidate.md is written separately by an LLM; it must contain only human-style vague a-priori ideas, with no evidence and no paper conclusions."
+  ]
+}

@@ -10,7 +10,7 @@ from unittest import mock
 from unittest.mock import AsyncMock
 
 CODEX_GEN = Path(__file__).resolve().parents[1]
-INPUTS = CODEX_GEN / "inputs"
+INPUTS = CODEX_GEN.parent / "structure_img_data"
 TEST_OUTPUTS = CODEX_GEN / "tests" / "_outputs"
 sys.path.insert(0, str(CODEX_GEN))
 

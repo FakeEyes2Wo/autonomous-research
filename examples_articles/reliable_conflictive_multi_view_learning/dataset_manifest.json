@@ -1,0 +1,44 @@
+{
+  "dataset": "examples_articles",
+  "entry": {
+    "arxiv_id": "2402.16897",
+    "arxiv_version": "2",
+    "title": "Reliable Conflictive Multi-View Learning",
+    "authors": [
+      "Cai Xu",
+      "Jiajun Si",
+      "Ziyu Guan",
+      "Wei Zhao",
+      "Yue Wu",
+      "Xiyue Gao"
+    ],
+    "venue": "AAAI 2024 Outstanding Paper",
+    "venue_hint": "9 pages and to be appeared in AAAI2024"
+  },
+  "files": {
+    "paper.pdf": {
+      "sha256": "43321bc5a12ec752cdf006fbf7634d3f6b364a23973cd97a4d650b4f68f3db72",
+      "bytes": 4818867
+    },
+    "paper_text.md": {
+      "sha256": "c9af72c8e7f1f1f116331ff47308ea2202bc0a2ed2bd7c9a832bdab50a8bb127",
+      "bytes": 46297
+    },
+    "paper_meta.json": {
+      "sha256": "80d58f14438ebe6994ade15e11d000574c720cf9e412f1bbf54b28167dbc68b9",
+      "bytes": 1919
+    },
+    "candidate.md": {
+      "sha256": "f50edd99b9a8054b8b2cc12449c5eb3baf27a15b59305d7a8815181812d623c0",
+      "bytes": 1085
+    }
+  },
+  "generated_at": "2026-08-19T12:18:33.091857+00:00",
+  "tools": {
+    "crawl_script": "scripts/prepare_examples_article.py",
+    "text_extractor": "PyMuPDF"
+  },
+  "notes": [
+    "candidate.md is written separately by an LLM; it must contain only human-style vague a-priori ideas, with no evidence and no paper conclusions."
+  ]
+}

@@ -4,17 +4,16 @@
 
 ## 目标
 
-从零实现一套自包含的 draw.io MCP 图表生成实验，对
+从零实现一套独立的 draw.io MCP 图表生成实验，对
 `structure_img_data/` 中定义的 10 个论文级架构图输入逐一重新生成图表。
-本次新增的程序、输入副本、图表源文件、导出图片、日志和报告全部放在
-`codex_gen/` 中，不修改或复用现有生成脚本和既有生成产物。
+本次新增的程序、图表源文件、导出图片、日志和报告全部放在
+`codex_gen/` 中；固定输入直接复用 `structure_img_data/`，不修改或复用现有生成脚本和既有生成产物。
 
 ## 目录结构
 
 ```text
 codex_gen/
   DESIGN.md
-  inputs/                 # 10 个固定 prompt 的自包含副本
   generate.py             # 从零编写的生成、MCP 验收与导出程序
   outputs/
     <stem>.drawio         # 可编辑 draw.io XML
@@ -31,7 +30,7 @@ codex_gen/
 
 ## 生成流程
 
-1. 将 10 个固定 prompt 复制到 `codex_gen/inputs/`，按文件名排序处理。
+1. 读取 `structure_img_data/` 中的 10 个固定 prompt，按文件名排序处理。
 2. `generate.py` 独立解析每个 prompt 的标题、节点、边、分组和注释。
 3. 对每个输入直接连接 hosted draw.io MCP，调用 `search_shapes` 检索候选形状。
 4. 程序从零构建可编辑 draw.io XML。每张图采用与语义匹配的布局，同时共享统一的论文图视觉规范：克制配色、清晰层级、可读标签、正交连线和充足留白。
@@ -49,8 +48,7 @@ SVG 与 `.drawio` 共享同一规格和位置数据，再由 Chrome Headless 输
 
 - 不导入、复制或修改 `scripts/render_structure_drawio.py`。
 - 不读取 `drawio_mcp/` 或 `structure_img_out/` 的既有图表实现。
-- 允许读取固定输入 `structure_img_data/*.md`，但运行时使用的是复制到
-  `codex_gen/inputs/` 的副本。
+- 允许读取固定输入 `structure_img_data/*.md`，运行时直接使用这些固定输入。
 - 除 `codex_gen/` 外不创建或修改任何文件。
 
 ## 错误处理
@@ -62,7 +60,7 @@ SVG 与 `.drawio` 共享同一规格和位置数据，再由 Chrome Headless 输
 
 ## 验收标准
 
-- `codex_gen/inputs/` 包含 10 个输入文件。
+- `structure_img_data/` 包含 10 个输入文件。
 - `codex_gen/outputs/` 对每个输入包含 `.drawio`、`.png`、`.svg`、`.pdf`、
   `.mcp.json` 和 `.check.json`。
 - 10 个 `.drawio` 文件均为良构 XML，包含可编辑文本节点、至少两个可见顶点和至少一条边，且不引用外部图片 URL。

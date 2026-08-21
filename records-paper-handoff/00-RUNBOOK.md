@@ -1,6 +1,6 @@
 # Records-to-Paper RUNBOOK
 
-已有实验记录 → 论文。01–04 独立可替换；步骤/恢复由 `AutoResearchService` 保存。
+已有实验记录 → 论文。01、02、04 独立可替换，写作复用 `candidate-to-paper-handoff/08-writing.md`；步骤/恢复由 `AutoResearchService` 保存。
 
 ## 常量
 `AUTO_PROCEED=true`；`MAX_PAPER_ROUNDS=5`；`MAX_CONTRACT_ROUNDS=3`；编译修复不限轮（只受时间预算）；论文路径 `overleaf→local→none`。
@@ -19,7 +19,7 @@
 |---|---|---|
 | INTAKE | 01 `extract` | exit 0 + schema 合法 |
 | CLAIMS | 02 | 无 NEEDS_CONFIRMATION；contract accepted/contested |
-| WRITING | 03 | 无 TODO/FIXME/DATA_NEEDED；bib 卫生 |
+| WRITING | candidate 08（复用） | 无 TODO/FIXME/DATA_NEEDED；bib 卫生 |
 | REVIEW | 04 `verify-trace` | PASS/WARN；编译过；三审查无 FAIL |
 | PACKAGING | 04 终检 | PASS/WARN；三审查 JSON 齐全 |
 

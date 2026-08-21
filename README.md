@@ -13,12 +13,17 @@ Autonomous Research System：从 candidate / 实验记录到可追溯论文包�
 | [2026-08-15-hypothesis-local-pool-design.md](2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool 生命周期索引 |
 | [2026-08-15-autoresearch-figures-and-experiment-design.md](2026-08-15-autoresearch-figures-and-experiment-design.md) | 论文图、可信实验、消融规则 |
 
+## 代码实现
+
+- [packages/autoresearch/](packages/autoresearch/)：最小闭环 DSH 插件（TypeScript），实现 `idea → plan → work → evidence → decide → paper | failure report`，复用 DSH Agent/Subagent 系统。
+  - 无头运行：`cd packages/autoresearch && npm run run:headless`
+
 ## Handoff（领域流程执行手册）
 
 | 组 | 文件 |
 |---|---|
 | candidate→paper | [candidate-to-paper-handoff/](candidate-to-paper-handoff/)：00 总控 + 01–10 各阶段 |
-| records→paper | [records-paper-handoff/](records-paper-handoff/)：00 总控 + 01–05（含数据契约） |
+| records→paper | [records-paper-handoff/](records-paper-handoff/)：00 总控 + 01、02、04、05（含数据契约；写作复用 candidate 08） |
 | 最小验证 | [verify_exp/](verify_exp/)：图管线、drawio MCP、pure LLM / drawio 结果 |
 
 ## 历史 / 延期参考（非实现基线）
@@ -27,8 +32,6 @@ Autonomous Research System：从 candidate / 实验记录到可追溯论文包�
 - `2026-08-15-autoresearch-detailed-design.md`：历史实现级设计，保留恢复与质量闸原则。
 - `2026-08-15-autoresearch-protocols-and-paper-engine.md`：Paper Engine 规则仍有效；阶段协议已由 2026-08-20 取代。
 - `2026-08-15-autoresearch-generalization-and-minimalism.md`：M4 泛化参考。
-- `2026-08-15-api-generalization-design.md`：M4 延期参考。
-- `2026-08-15-implementation-draft.md`：已取代的代码草稿。
 
 ## 关键决策
 

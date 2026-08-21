@@ -1,0 +1,39 @@
+{
+  "name": "@athena/autoresearch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "prompts",
+    "docs",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "node C:/Users/80163/Desktop/挑战杯_2026/Athena/athena_ts/node_modules/typescript/lib/tsc.js -p tsconfig.json --noEmit",
+    "test": "npm run build && node --experimental-strip-types scripts/test.mjs",
+    "install:dsh": "node scripts/install-dsh-plugin.mjs",
+    "run:headless": "npm run build && node scripts/run-headless.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-agent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-subagent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=22.19.0",
+    "dsh": ">=0.1.0-rc.5"
+  },
+  "license": "MIT"
+}

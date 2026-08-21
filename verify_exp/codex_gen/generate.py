@@ -1658,6 +1658,19 @@ def _resolve_inside_base(value: str) -> Path:
     return resolved
 
 
+def _resolve_inputs_dir(value: str) -> Path:
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        candidate = BASE_DIR / candidate
+    resolved = candidate.resolve()
+    allowed_roots = [BASE_DIR, BASE_DIR.parent / "structure_img_data"]
+    if not any(resolved == root or root in resolved.parents for root in allowed_roots):
+        raise ValueError(
+            f"path must stay inside {BASE_DIR} or {BASE_DIR.parent / 'structure_img_data'}: {value}"
+        )
+    return resolved
+
+
 def _write_failures(report: dict[str, object], failures_path: Path) -> None:
     failed = [item for item in report.get("files", []) if item.get("status") != "PASS"]
     if not failed:
@@ -1680,7 +1693,7 @@ def _write_failures(report: dict[str, object], failures_path: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--inputs", default="inputs")
+    parser.add_argument("--inputs", default="../structure_img_data")
     parser.add_argument("--outputs", default="outputs")
     parser.add_argument("--report", default="report.json")
     parser.add_argument("--drawio-cli", default=str(DEFAULT_DRAWIO_CLI))
@@ -1694,7 +1707,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        inputs_dir = _resolve_inside_base(args.inputs)
+        inputs_dir = _resolve_inputs_dir(args.inputs)
         outputs_dir = _resolve_inside_base(args.outputs)
         report_path = _resolve_inside_base(args.report)
     except ValueError as exc:

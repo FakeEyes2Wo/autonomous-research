@@ -1,2 +1,22 @@
 __pycache__/
 *.py[cod]
+node_modules/
+dist/
+*.tsbuildinfo
+.runs/
+
+# Generated LaTeX / document artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.pdf
+
+# Hidden target-paper data used only for local benchmark evaluation
+examples_articles/**/paper.pdf
+examples_articles/**/paper_text.md
+examples_articles/**/paper_meta.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
