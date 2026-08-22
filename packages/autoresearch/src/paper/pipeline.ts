@@ -60,6 +60,24 @@ export class PaperPipeline {
     return effort === 'max' || effort === 'beast' ? 'submission' : 'draft'
   }
 
+  /**
+   * Run one phase unless it is already done. The commit callback may persist
+   * phase-specific data and decide whether the phase is done or failed.
+   */
+  private async runPhase<T>(
+    paperDir: string,
+    cp: PaperCheckpoint,
+    id: string,
+    run: () => Promise<T>,
+    commit: (value: T) => void,
+  ): Promise<T | undefined> {
+    if (cp.phases[id] === 'done') return undefined
+    const value = await run()
+    commit(value)
+    await saveCheckpoint(paperDir, cp)
+    return value
+  }
+
   async run(runDir: string, tree: ResearchTree, evidencePath: string, context: RoleExecutionContext): Promise<PaperPipelineResult> {
     const assurance = this.resolveAssurance()
     const paperDir = join(runDir, 'paper')
@@ -131,45 +149,41 @@ export class PaperPipeline {
     }
 
     // Writing.
-    if (cp.phases.writing !== 'done') {
-      await this.write(ctx)
+    await this.runPhase(paperDir, cp, 'writing', () => this.write(ctx), () => {
       cp.phases.writing = 'done'
-      await save()
-    }
+    })
 
     // Compile.
-    let compileOk = cp.data.compileOk ?? false
-    if (cp.phases.compile !== 'done') {
-      compileOk = await runCompileLoop(ctx.paperDir, (feedback) => this.write(ctx, feedback)).then((r) => r.ok)
-      cp.phases.compile = compileOk ? 'done' : 'failed'
-      cp.data.compileOk = compileOk
-      await save()
-    }
+    const compileOk = (await this.runPhase(paperDir, cp, 'compile',
+      () => runCompileLoop(ctx.paperDir, (feedback) => this.write(ctx, feedback)).then((r) => r.ok),
+      (ok) => {
+        cp.phases.compile = ok ? 'done' : 'failed'
+        cp.data.compileOk = ok
+      },
+    )) ?? false
 
     // Audits (parallel inside).
-    let audits = cp.data.audits ?? {}
-    if (cp.phases.audits !== 'done') {
-      audits = await this.audit(ctx)
-      cp.phases.audits = 'done'
-      cp.data.audits = audits
-      await save()
-    }
+    const audits = (await this.runPhase(paperDir, cp, 'audits',
+      () => this.audit(ctx),
+      (value) => {
+        cp.phases.audits = 'done'
+        cp.data.audits = value
+      },
+    )) ?? {}
 
     // Improvement.
-    if (cp.phases.improvement !== 'done') {
-      await this.improve(ctx, cp)
+    await this.runPhase(paperDir, cp, 'improvement', () => this.improve(ctx, cp), () => {
       cp.phases.improvement = 'done'
-      await save()
-    }
+    })
 
     // Final report.
-    let finalReport = cp.data.finalReport ?? ''
-    if (cp.phases.final !== 'done' || !finalReport) {
-      finalReport = await this.report(ctx, assurance, compileOk, audits)
-      cp.phases.final = 'done'
-      cp.data.finalReport = finalReport
-      await save()
-    }
+    const finalReport = (await this.runPhase(paperDir, cp, 'final',
+      () => this.report(ctx, assurance, compileOk, audits),
+      (value) => {
+        cp.phases.final = 'done'
+        cp.data.finalReport = value
+      },
+    )) ?? ''
 
     return {
       planFile: planFile ?? join(paperDir, 'PAPER_PLAN.md'),
