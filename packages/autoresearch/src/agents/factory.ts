@@ -140,7 +140,7 @@ export function outputSchemaFor(role: RoleName): Record<string, unknown> | undef
       })
     case 'figure-generator':
       return objectSchema({
-        scripts: { type: 'object', additionalProperties: { type: 'string' }, required: true },
+        scripts: { type: 'object', additionalProperties: true, required: true },
         latexIncludes: { type: 'string' },
         notes: { type: 'string' },
       })
