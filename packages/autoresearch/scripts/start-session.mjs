@@ -4,17 +4,19 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { readLastRun } from '../dist/session/last-run.js'
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const sessionPromptPath = join(pkgRoot, 'prompts', 'session', 'autoresearch.md')
 
 function parseArgs(argv) {
-  const args = { profile: 'autoresearch', prompt: undefined }
+  const args = { profile: 'autoresearch', prompt: undefined, resume: false }
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
     switch (arg) {
       case '--profile': args.profile = argv[++i]; break
       case '--prompt': args.prompt = argv[++i]; break
+      case '--resume': args.resume = true; break
       default:
         console.error(`Unknown argument: ${arg}`)
         process.exit(2)
@@ -60,7 +62,16 @@ async function ensureProfile(profileName) {
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const profileDir = await ensureProfile(args.profile)
-  const prompt = args.prompt ?? await readFile(sessionPromptPath, 'utf8')
+  let prompt = args.prompt ?? await readFile(sessionPromptPath, 'utf8')
+  if (args.resume) {
+    const last = await readLastRun()
+    if (!last) {
+      console.error('[autoresearch] no last run found; start a new session without --resume')
+      process.exit(1)
+    }
+    console.log(`[autoresearch] resuming last run: ${last.lastRunDir}`)
+    prompt = `${prompt}\n\n立即调用 paper_pipeline_resume，runDir: ${last.lastRunDir}`
+  }
   const nodeDir = dirname(process.execPath)
   const dshBin = join(nodeDir, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
   console.log(`[autoresearch] starting DSH session profile=${args.profile} dir=${profileDir}`)

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { ResearchTree } from '../core/research-tree.js'
 import { isEvidenceVerdict } from '../domain/guards.js'
@@ -201,7 +202,9 @@ export const paperPipelineStatus: ToolDefinitionLike = defineTool({
   async execute(args) {
     const runDir = requireRunDir(args)
     const cp = await loadCheckpoint(join(runDir, 'paper'))
-    return cp ?? { status: 'no_checkpoint' }
+    const warnings: string[] = []
+    if (existsSync(join(runDir, 'RUBRIC_REVIEW_WARNING.md'))) warnings.push('RUBRIC_REVIEW_WARNING.md')
+    return cp ? { ...cp, warnings } : { status: 'no_checkpoint', warnings }
   },
 })
 

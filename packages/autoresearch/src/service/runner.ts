@@ -35,6 +35,12 @@ export class ResearchRunner {
     this.paperOptions = options.paperOptions
   }
 
+  private assurance(): 'draft' | 'submission' {
+    const { assurance, effort } = this.paperOptions ?? {}
+    if (assurance === 'draft' || assurance === 'submission') return assurance
+    return effort === 'max' || effort === 'beast' ? 'submission' : 'draft'
+  }
+
   async run(runDir: string, state: RunState, tree: ResearchTree, context: RoleExecutionContext): Promise<RunState> {
     this.logger = createLogger(runDir)
     this.logger.info(`run started runDir=${runDir} runId=${state.runId} status=${state.status} cycle=${state.cycle}`)
@@ -205,6 +211,9 @@ export class ResearchRunner {
         continue
       }
       break
+    }
+    if (this.assurance() === 'submission') {
+      throw new AutoResearchError('rubric review did not pass after three rounds', 'AGENT_FAILED')
     }
     this.logger.warn('rubric review did not pass after three rounds; continuing with warning')
     await writeText(join(runDir, 'RUBRIC_REVIEW_WARNING.md'), `# Rubric Review Warning\n\nRubric did not pass review after 3 rounds.\n\nFinal rubric:\n\n${rubricText}\n`)
