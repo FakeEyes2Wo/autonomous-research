@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName } from '../agents/types.js'
 import { DEFAULT_MAX_CYCLES, WORK_DIR } from '../core/constants.js'
 import { AutoResearchError } from '../core/utils.js'
@@ -6,7 +7,7 @@ import { createLogger, type Logger } from '../core/logger.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { saveState, writeDecision } from '../core/state.js'
 import type { ActionResult, ResearchDecision, RunState } from '../core/types.js'
-import { ensureDir, newId, readText, safeResolve } from '../core/utils.js'
+import { ensureDir, newId, readText, safeResolve, writeText } from '../core/utils.js'
 import { readCandidate } from '../domain/candidate.js'
 import { parseDecision } from '../domain/guards.js'
 import { blockingEvidence, lightHardGate, preGate, structuralCheck } from '../domain/idea-gate.js'
@@ -188,7 +189,7 @@ export class ResearchRunner {
     }
     await writeRubric(runDir, rubricText)
 
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
       await transition(state, 'rubric', `rubric-review-${attempt}`)
       const review = await this.runRole('rubric-reviewer', { runDir, candidate: candidateRaw, profile, rubric: rubricText, treeSummary }, context, `review rubric attempt ${attempt}`)
       const reviewValue = review.structured as { ok?: boolean; revised?: string } | undefined
@@ -205,7 +206,9 @@ export class ResearchRunner {
       }
       break
     }
-    throw new AutoResearchError('rubric review did not pass after two rounds', 'AGENT_FAILED')
+    this.logger.warn('rubric review did not pass after three rounds; continuing with warning')
+    await writeText(join(runDir, 'RUBRIC_REVIEW_WARNING.md'), `# Rubric Review Warning\n\nRubric did not pass review after 3 rounds.\n\nFinal rubric:\n\n${rubricText}\n`)
+    await freezeRubric(runDir)
   }
 
   private async runIdeaGeneration(runDir: string, state: RunState, tree: ResearchTree, candidateRaw: string, profile: string, context: RoleExecutionContext): Promise<void> {
