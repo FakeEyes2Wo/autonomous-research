@@ -1,5 +1,7 @@
+import { join } from 'node:path'
 import { ResearchTree } from '../core/research-tree.js'
 import { isEvidenceVerdict } from '../domain/guards.js'
+import { loadCheckpoint } from '../paper/checkpoint.js'
 import type { AutoResearchService } from '../service/autoresearch-service.js'
 
 export interface ToolExecutionContextLike {
@@ -182,6 +184,51 @@ export const researchTreeQuery: ToolDefinitionLike = defineTool({
     })
   },
 })
+
+export const paperPipelineStatus: ToolDefinitionLike = defineTool({
+  name: 'paper_pipeline_status',
+  description: 'Show the paper pipeline checkpoint status for a run directory.',
+  parameters: {
+    type: 'object',
+    properties: {
+      runDir: { type: 'string', description: 'Research run directory' },
+    },
+    required: ['runDir'],
+    additionalProperties: false,
+  },
+  output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+  async execute(args) {
+    const runDir = requireRunDir(args)
+    const cp = await loadCheckpoint(join(runDir, 'paper'))
+    return cp ?? { status: 'no_checkpoint' }
+  },
+})
+
+export function createPaperPipelineResumeTool(service: AutoResearchService): ToolDefinitionLike {
+  return defineTool({
+    name: 'paper_pipeline_resume',
+    description: 'Resume a paper pipeline from its checkpoint in a run directory.',
+    parameters: {
+      type: 'object',
+      properties: {
+        runDir: { type: 'string', description: 'Research run directory' },
+      },
+      required: ['runDir'],
+      additionalProperties: false,
+    },
+    output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+    async execute(args, exec) {
+      const parent = exec.agent as { id?: string } | undefined
+      if (!parent || typeof parent.id !== 'string') throw new TypeError('paper_pipeline_resume requires a calling DSH agent')
+      return service.resume({
+        runDir: String(args.runDir),
+      }, {
+        parent: parent as never,
+        signal: exec.signal,
+      })
+    },
+  })
+}
 
 export function createResearchRunTool(service: AutoResearchService): ToolDefinitionLike {
   return defineTool({
