@@ -41,6 +41,25 @@ const DEFAULT_VENUE = 'ICLR'
 const MAX_CONTRACT_ROUNDS = 3
 const MAX_FIGURE_RETRIES = 2
 
+const REQUIRED_SECTIONS: Record<string, string> = {
+  'sections/0_abstract.tex': '% Abstract content placeholder.\n',
+  'sections/1_introduction.tex': '\\section{Introduction}\n% TODO\n',
+  'sections/2_related_work.tex': '\\section{Related Work}\n% TODO\n',
+  'sections/3_method.tex': '\\section{Method}\n% TODO\n',
+  'sections/4_experiments.tex': '\\section{Experiments}\n% TODO\n',
+  'sections/5_conclusion.tex': '\\section{Conclusion}\n% TODO\n',
+  'sections/A_appendix.tex': '% Appendix content placeholder.\n',
+}
+
+async function ensureRequiredSections(paperDir: string): Promise<void> {
+  for (const [name, content] of Object.entries(REQUIRED_SECTIONS)) {
+    const file = join(paperDir, name)
+    if (existsSync(file)) continue
+    await ensureDir(dirname(file))
+    await writeFile(file, content, 'utf8')
+  }
+}
+
 /**
  * PaperPipeline orchestrates the paper-writing skill inside autoresearch.
  * `pipeline_checkpoint.json` doubles as the todo list and resume state.
@@ -283,6 +302,7 @@ export class PaperPipeline {
       await ensureDir(dirname(file))
       await writeFile(file, content, 'utf8')
     }
+    await ensureRequiredSections(ctx.paperDir)
     await Promise.all([
       writeFile(join(ctx.paperDir, 'math_commands.tex'), await this.readTemplate(ctx.runDir, 'math_commands.tex'), 'utf8'),
       writeFile(join(ctx.paperDir, 'iclr2026_conference.sty'), await this.readTemplate(ctx.runDir, 'iclr2026_conference.sty'), 'utf8'),
@@ -291,6 +311,8 @@ export class PaperPipeline {
   }
 
   private async enrichReferences(ctx: PaperContext): Promise<void> {
+    // PDFs are only supplementary reference material. Download failures are
+    // recorded but never treated as citation failures.
     const bib = await readText(join(ctx.paperDir, 'references.bib')).catch(() => '')
     if (!bib) return
     await downloadReferencePdfs(ctx.runDir, bib, { strict: false })

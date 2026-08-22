@@ -153,6 +153,8 @@ export async function downloadReferencePdfs(
     entries: records,
   })
 
+  // PDFs are supplementary reference material. A failed download does not mean
+  // the citation is invalid; citation validity is handled by citation-audit.
   if (strict && records.some((record) => record.status === 'failed')) {
     const failed = records
       .filter((record) => record.status === 'failed')
