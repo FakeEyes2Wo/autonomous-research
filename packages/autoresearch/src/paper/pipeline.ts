@@ -6,6 +6,7 @@ import type { RoleAgentProvider, RoleExecutionContext, RoleInput } from '../agen
 import { ResearchTree } from '../core/research-tree.js'
 import { atomicWriteJson, ensureDir, readText, writeText } from '../core/utils.js'
 import { auditPaper, compilePaper, downloadReferencePdfs, generatePaperPlan, runCompileLoop } from './index.js'
+import { loadCheckpoint, saveCheckpoint, type PaperCheckpoint } from './checkpoint.js'
 
 export interface PaperOptions {
   venue?: string
@@ -92,6 +93,16 @@ export class PaperPipeline {
     await ensureDir(join(paperDir, '.aris'))
     await writeText(join(paperDir, '.aris', 'assurance.txt'), `${assurance}\n`)
 
+    const cp = (await loadCheckpoint(paperDir)) ?? {
+      schema: 'autoresearch/paper-pipeline-checkpoint/v1',
+      updated_at: new Date().toISOString(),
+      assurance,
+      phases: {},
+      data: {},
+    }
+    cp.assurance = assurance
+    await saveCheckpoint(paperDir, cp)
+
     this.tasks = [
       { id: 'assurance', label: 'Phase 0: Assurance Setup', status: 'pending' },
       { id: 'plan', label: 'Phase 1: Paper Plan', status: 'pending' },
@@ -105,23 +116,51 @@ export class PaperPipeline {
     ]
     await this.todo(runDir, 'assurance', 'done')
 
-    // Phase 1: plan.
-    await this.todo(runDir, 'plan', 'running')
-    const { planFile, matrixFile } = await generatePaperPlan(runDir, tree)
-    const matrixText = await readText(matrixFile)
-    const planText = await this.plan(runDir, evidencePath, matrixText, context)
-    await writeText(planFile, planText)
-    await this.todo(runDir, 'plan', 'done')
+    // Phase 1: plan (resume skips if already done).
+    let planFile = cp.data.planFile
+    let matrixFile = cp.data.matrixFile
+    let planText: string
+    let matrixText: string
+    if (cp.phases.plan === 'done' && planFile && matrixFile && existsSync(planFile) && existsSync(matrixFile)) {
+      planText = await readText(planFile)
+      matrixText = await readText(matrixFile)
+    } else {
+      await this.todo(runDir, 'plan', 'running')
+      ;({ planFile, matrixFile } = await generatePaperPlan(runDir, tree))
+      matrixText = await readText(matrixFile)
+      planText = await this.plan(runDir, evidencePath, matrixText, context)
+      await writeText(planFile, planText)
+      cp.phases.plan = 'done'
+      cp.data.planFile = planFile
+      cp.data.matrixFile = matrixFile
+      await saveCheckpoint(paperDir, cp)
+      await this.todo(runDir, 'plan', 'done')
+    }
 
-    // Phase 1.5 + 2 are independent -> parallel.
-    await this.todo(runDir, 'contract', 'running')
-    await this.todo(runDir, 'figures', 'running')
-    const [contractFile, figuresLatex] = await Promise.all([
-      this.contract(runDir, planText, matrixText, evidencePath, context),
-      this.figures(runDir, planText, matrixText, evidencePath, context),
-    ])
-    await this.todo(runDir, 'contract', 'done')
-    await this.todo(runDir, 'figures', 'done')
+    // Phase 1.5 + 2 are independent -> parallel; resume runs only missing side.
+    let contractFile = cp.data.contractFile
+    let figuresLatex = ''
+    const needContract = cp.phases.contract !== 'done'
+    const needFigures = cp.phases.figures !== 'done'
+    if (needContract || needFigures) {
+      if (needContract) await this.todo(runDir, 'contract', 'running')
+      if (needFigures) await this.todo(runDir, 'figures', 'running')
+      const [c, f] = await Promise.all([
+        needContract ? this.contract(runDir, planText, matrixText, evidencePath, context) : Promise.resolve(contractFile),
+        needFigures ? this.figures(runDir, planText, matrixText, evidencePath, context) : Promise.resolve(figuresLatex),
+      ])
+      contractFile = c ?? contractFile
+      figuresLatex = f ?? ''
+      if (needContract) {
+        cp.phases.contract = 'done'
+        cp.data.contractFile = contractFile
+      }
+      if (needFigures) cp.phases.figures = 'done'
+      await saveCheckpoint(paperDir, cp)
+      if (needContract) await this.todo(runDir, 'contract', 'done')
+      if (needFigures) await this.todo(runDir, 'figures', 'done')
+    }
+    if (!figuresLatex) figuresLatex = await readText(join(paperDir, 'figures', 'latex_includes.tex')).catch(() => '')
 
     const ctx: PaperContext = {
       runDir,
@@ -135,28 +174,65 @@ export class PaperPipeline {
       context,
     }
 
-    // Phase 3-6.
-    await this.todo(runDir, 'writing', 'running')
-    await this.write(ctx)
-    await this.todo(runDir, 'writing', 'done')
+    // Phase 3: writing.
+    if (cp.phases.writing !== 'done') {
+      await this.todo(runDir, 'writing', 'running')
+      await this.write(ctx)
+      cp.phases.writing = 'done'
+      await saveCheckpoint(paperDir, cp)
+      await this.todo(runDir, 'writing', 'done')
+    }
 
-    await this.todo(runDir, 'compile', 'running')
-    const compileOk = await runCompileLoop(ctx.paperDir, (feedback) => this.write(ctx, feedback)).then((r) => r.ok)
-    await this.todo(runDir, 'compile', compileOk ? 'done' : 'failed')
+    // Phase 4: compile.
+    let compileOk = cp.data.compileOk ?? false
+    if (cp.phases.compile !== 'done') {
+      await this.todo(runDir, 'compile', 'running')
+      compileOk = await runCompileLoop(ctx.paperDir, (feedback) => this.write(ctx, feedback)).then((r) => r.ok)
+      cp.phases.compile = compileOk ? 'done' : 'failed'
+      cp.data.compileOk = compileOk
+      await saveCheckpoint(paperDir, cp)
+      await this.todo(runDir, 'compile', compileOk ? 'done' : 'failed')
+    }
 
-    await this.todo(runDir, 'audits', 'running')
-    const audits = await this.audit(ctx)
-    await this.todo(runDir, 'audits', 'done')
+    // Phase 4.5/4.7/5.5/5.6/5.8: audits (parallel inside).
+    let audits = cp.data.audits ?? {}
+    if (cp.phases.audits !== 'done') {
+      await this.todo(runDir, 'audits', 'running')
+      audits = await this.audit(ctx)
+      cp.phases.audits = 'done'
+      cp.data.audits = audits
+      await saveCheckpoint(paperDir, cp)
+      await this.todo(runDir, 'audits', 'done')
+    }
 
-    await this.todo(runDir, 'improvement', 'running')
-    await this.improve(ctx)
-    await this.todo(runDir, 'improvement', 'done')
+    // Phase 5: improvement.
+    if (cp.phases.improvement !== 'done') {
+      await this.todo(runDir, 'improvement', 'running')
+      await this.improve(ctx, cp)
+      cp.phases.improvement = 'done'
+      await saveCheckpoint(paperDir, cp)
+      await this.todo(runDir, 'improvement', 'done')
+    }
 
-    await this.todo(runDir, 'final', 'running')
-    const finalReport = await this.report(ctx, assurance, compileOk, audits)
-    await this.todo(runDir, 'final', 'done')
+    // Phase 6: final report.
+    let finalReport = cp.data.finalReport ?? ''
+    if (cp.phases.final !== 'done' || !finalReport) {
+      await this.todo(runDir, 'final', 'running')
+      finalReport = await this.report(ctx, assurance, compileOk, audits)
+      cp.phases.final = 'done'
+      cp.data.finalReport = finalReport
+      await saveCheckpoint(paperDir, cp)
+      await this.todo(runDir, 'final', 'done')
+    }
 
-    return { planFile, matrixFile, contractFile, compileOk, audits, finalReport }
+    return {
+      planFile: planFile ?? join(paperDir, 'PAPER_PLAN.md'),
+      matrixFile: matrixFile ?? join(paperDir, 'claims_evidence_matrix.json'),
+      contractFile,
+      compileOk,
+      audits,
+      finalReport,
+    }
   }
 
   private async plan(runDir: string, evidencePath: string, matrixText: string, context: RoleExecutionContext): Promise<string> {
@@ -263,10 +339,22 @@ export class PaperPipeline {
       ['citation', 'citation-auditor', 'CITATION_AUDIT.json'],
       ['kill', 'kill-argument-reviewer', 'KILL_ARGUMENT.json'],
     ] as const
-    const settled = await Promise.allSettled(specs.map(([, role]) => this.provider.run(role, { ...base }, ctx.context)))
+
     const audits: Record<string, unknown> = {}
+    const missing: Array<typeof specs[number]> = []
+    for (const spec of specs) {
+      const [name, , file] = spec
+      const path = join(ctx.paperDir, file)
+      try {
+        audits[name] = JSON.parse(await readText(path))
+      } catch {
+        missing.push(spec)
+      }
+    }
+
+    const settled = await Promise.allSettled(missing.map(([, role]) => this.provider.run(role, { ...base }, ctx.context)))
     await Promise.all(settled.map(async (result, i) => {
-      const spec = specs[i]
+      const spec = missing[i]
       if (!spec) return
       const [name, , file] = spec
       if (result.status === 'fulfilled') {
@@ -281,14 +369,16 @@ export class PaperPipeline {
       }
       await writeText(join(ctx.paperDir, file), JSON.stringify(audits[name], null, 2))
     }))
+
     const tree = await ResearchTree.load(ctx.runDir)
     audits.basic = await auditPaper(ctx.runDir, tree.query({ kind: 'evidence' }).map((e) => `E-${e.id}`))
     return audits
   }
 
-  private async improve(ctx: PaperContext): Promise<void> {
+  private async improve(ctx: PaperContext, cp: PaperCheckpoint): Promise<void> {
+    const total = this.options.maxImprovementRounds ?? 2
     const log: string[] = []
-    for (let round = 1; round <= (this.options.maxImprovementRounds ?? 2); round += 1) {
+    for (let round = (cp.data.improvementRounds ?? 0) + 1; round <= total; round += 1) {
       const review = await this.provider.run('paper-reviewer', {
         runDir: ctx.runDir, paperPath: ctx.paperDir, evidenceChainPath: ctx.evidencePath,
       }, ctx.context)
@@ -304,8 +394,11 @@ export class PaperPipeline {
         await copyFile(join(ctx.paperDir, 'main.pdf'), join(ctx.paperDir, `main_round${round}.pdf`))
       }
       log.push(`## Round ${round}\n\nScore: ${r?.score ?? 'N/A'}\n\n${feedback}\n`)
+      cp.data.improvementRounds = round
+      await saveCheckpoint(ctx.paperDir, cp)
     }
-    await writeText(join(ctx.paperDir, 'PAPER_IMPROVEMENT_LOG.md'), log.join('\n'))
+    const existing = await readText(join(ctx.paperDir, 'PAPER_IMPROVEMENT_LOG.md')).catch(() => '')
+    await writeText(join(ctx.paperDir, 'PAPER_IMPROVEMENT_LOG.md'), `${existing}${log.join('\n')}`)
   }
 
   private async report(ctx: PaperContext, assurance: string, compileOk: boolean, audits: Record<string, unknown>): Promise<string> {
