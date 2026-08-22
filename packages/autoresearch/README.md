@@ -80,6 +80,7 @@ import { name, inject, apply } from '@athena/autoresearch'
 
 - 五个 research tools：`research_hypothesis_add` / `research_action_start` / `research_action_finish` / `research_evidence_add` / `research_tree_query`
 - 一个控制工具：`research_run`
+- 每个 idea 由单个 combined reviewer 从方法论、统计、新颖性、可行性、可复现性等多角度审查
 
 ## 目录
 

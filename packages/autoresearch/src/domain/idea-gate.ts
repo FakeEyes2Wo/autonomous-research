@@ -13,7 +13,7 @@ export const MAX_TOLERATED_RISKS = 6
 
 export function maxTotalRisks(perspectiveCount: number): number {
   if (perspectiveCount < 1) throw new Error('perspectiveCount must be at least 1')
-  return MAX_TOLERATED_RISKS * perspectiveCount - 1
+  return MAX_TOLERATED_RISKS * perspectiveCount
 }
 
 export function structuralCheck(pkg: IdeaPackage): StructuralCheckReport {

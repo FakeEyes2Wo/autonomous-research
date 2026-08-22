@@ -248,10 +248,7 @@ export class ResearchRunner {
         continue
       }
 
-      const reviews = await Promise.all([
-        this.runIdeaReviewer(runDir, state, pkg, 'methodology', context),
-        this.runIdeaReviewer(runDir, state, pkg, 'statistics', context),
-      ])
+      const reviews = [await this.runIdeaReviewer(runDir, state, pkg, 'combined', context)]
       const validation: ValidationPlan = {
         idea_id: pkg.idea_id,
         minimal_test: pkg.intervention,
@@ -288,7 +285,7 @@ export class ResearchRunner {
     }
   }
 
-  private async runIdeaReviewer(runDir: string, state: RunState, pkg: IdeaPackage, perspective: 'methodology' | 'statistics', context: RoleExecutionContext): Promise<SkepticReport> {
+  private async runIdeaReviewer(runDir: string, state: RunState, pkg: IdeaPackage, perspective: 'combined' | 'methodology' | 'statistics', context: RoleExecutionContext): Promise<SkepticReport> {
     const result = await this.runRole('idea-reviewer', {
       runDir,
       ideaPackage: JSON.stringify({ ...pkg, review_perspective: perspective }, null, 2),

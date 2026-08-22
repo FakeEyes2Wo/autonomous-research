@@ -38,8 +38,9 @@ const validation: ValidationPlan = {
   decision_rule: 'compare',
 }
 
-test('maxTotalRisks follows 6N-1', () => {
-  assert.equal(maxTotalRisks(2), 11)
+test('maxTotalRisks follows 6N', () => {
+  assert.equal(maxTotalRisks(1), 6)
+  assert.equal(maxTotalRisks(2), 12)
 })
 
 test('structuralCheck rejects non-testable idea', () => {
@@ -56,6 +57,14 @@ test('lightHardGate passes clean reviews', () => {
   const reviews: SkepticReport[] = [
     { idea_id: 'idea-1', perspective: 'methodology', critique: 'ok', unaddressed_risks: [], fatal_flaw_found: false, failed: false },
     { idea_id: 'idea-1', perspective: 'statistics', critique: 'ok', unaddressed_risks: [], fatal_flaw_found: false, failed: false },
+  ]
+  const decision = lightHardGate(structural, falsifiable, reviews, validation)
+  assert.equal(decision.verdict, 'PASS')
+})
+
+test('lightHardGate passes a single combined review', () => {
+  const reviews: SkepticReport[] = [
+    { idea_id: 'idea-1', perspective: 'combined', critique: 'ok', unaddressed_risks: [], fatal_flaw_found: false, failed: false },
   ]
   const decision = lightHardGate(structural, falsifiable, reviews, validation)
   assert.equal(decision.verdict, 'PASS')
