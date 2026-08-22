@@ -162,6 +162,9 @@ export class PaperPipeline {
       },
     )) ?? false
 
+    // Reference enrichment is best-effort and never blocks the pipeline.
+    await this.enrichReferences(ctx)
+
     // Audits (parallel inside).
     const audits = (await this.runPhase(paperDir, cp, 'audits',
       () => this.audit(ctx),
@@ -285,8 +288,12 @@ export class PaperPipeline {
       writeFile(join(ctx.paperDir, 'iclr2026_conference.sty'), await this.readTemplate(ctx.runDir, 'iclr2026_conference.sty'), 'utf8'),
       writeFile(join(ctx.paperDir, 'iclr2026_conference.bst'), await this.readTemplate(ctx.runDir, 'iclr2026_conference.bst'), 'utf8'),
     ])
+  }
+
+  private async enrichReferences(ctx: PaperContext): Promise<void> {
     const bib = await readText(join(ctx.paperDir, 'references.bib')).catch(() => '')
-    if (bib) await downloadReferencePdfs(ctx.runDir, bib)
+    if (!bib) return
+    await downloadReferencePdfs(ctx.runDir, bib, { strict: false })
   }
 
   private async audit(ctx: PaperContext): Promise<Record<string, unknown>> {

@@ -287,7 +287,10 @@ async function fetchPdf(url: string, timeoutMs: number): Promise<Buffer> {
     const response = await fetch(url, {
       redirect: 'follow',
       signal: controller.signal,
-      headers: { accept: 'application/pdf' },
+      headers: {
+        accept: 'application/pdf',
+        'user-agent': 'Mozilla/5.0 (compatible; autoresearch/1.0)',
+      },
     })
     if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`)
     const buffer = Buffer.from(await response.arrayBuffer())
