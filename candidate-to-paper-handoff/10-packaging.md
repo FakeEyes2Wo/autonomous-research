@@ -11,6 +11,7 @@
 packaging/
   paper.pdf / paper_draft.md / paper_sources.zip
   evidence_chain.json / trace_audit.json
+  evidence/citations.json + evidence/*.pdf
   paper_claim_audit.json / citation_audit.json / kill_argument.json
   RUBRIC.md / PLAN-v*.md
   bibliography.bib

@@ -1,6 +1,7 @@
 export const STATE_FILE = 'state.json'
 export const EVENTS_FILE = 'events.jsonl'
 export const RESEARCH_TREE_FILE = 'research_tree.json'
+export const HYPOTHESIS_POOL_FILE = 'hypothesis_pool.json'
 export const EVIDENCE_CHAIN_FILE = 'evidence_chain.json'
 export const RUBRIC_FILE = 'RUBRIC.md'
 export const PLAN_PREFIX = 'PLAN-v'

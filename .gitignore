@@ -12,6 +12,9 @@ dist/
 *.toc
 *.pdf
 
+# Generated citation PDF evidence
+evidence/
+
 # Hidden target-paper data used only for local benchmark evaluation
 examples_articles/**/paper.pdf
 examples_articles/**/paper_text.md

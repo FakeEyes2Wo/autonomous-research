@@ -11,6 +11,13 @@ npm run build
 npm test
 ```
 
+## 默认论文模板
+
+- 默认使用 `templates/iclr2026.tex` 作为 ICLR LaTeX 模板；
+- Writer 必须按该模板输出 `paper/main.tex`，包含匿名投稿、abstract、sections 1-5、`references.bib`；
+- `math_commands.tex` 会自动复制到 `paper/`；
+- 程序会自动解析 `references.bib`，把每条引用的 PDF 下载到 `<run>/evidence/<bibkey>.pdf`，并生成 `evidence/citations.json`；下载失败会中断论文阶段。
+
 ## 无头模式运行
 
 ```bash
@@ -24,7 +31,7 @@ npm run run:headless
 2. 复制 `examples_articles/reliable_conflictive_multi_view_learning/candidate.md` 和 `PROFILE.md`；
 3. 确保 DSH `headless` profile 存在并安装本插件；
 4. 调用 `dsh --profile headless "..."` 让 DSH Agent 调用 `research_run` 完成闭环；
-5. 用 `pandoc` 把 `paper_draft.md` 转换为 `paper/main.tex`；
+5. 如果 Runner 已生成 `paper/main.tex` 则直接使用；否则用 `pandoc` 把 `paper_draft.md` 转换为 `paper/main.tex`；
 6. 若本机有 `latexmk` / `pdflatex` / `xelatex` / `tectonic`，继续编译 `paper/main.pdf`；
    - tectonic 在无网络且未缓存 bundle 时可能失败，此时会自动尝试用 Chrome/Edge Headless 将 Markdown 转 HTML 再打印为 `paper/main.pdf`；
 7. 打印最终产物路径。

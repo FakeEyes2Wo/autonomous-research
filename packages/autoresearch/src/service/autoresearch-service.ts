@@ -1,17 +1,20 @@
 import { DEFAULT_MAX_CYCLES } from '../core/constants.js'
+import { createLogger } from '../core/logger.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { createInitialState, loadState, saveState } from '../core/state.js'
 import type { RunState } from '../core/types.js'
 import { ensureDir } from '../core/utils.js'
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
-import { writeFailureReport } from '../domain/paper.js'
+import { writeFailureReport } from '../domain/files.js'
 import { ResearchRunner } from './runner.js'
+import type { PaperOptions } from '../paper/pipeline.js'
 
 export interface ResearchRunOptions {
   runDir: string
   candidatePath?: string
   profilePath?: string
   maxCycles?: number
+  paper?: PaperOptions
 }
 
 export interface ResearchRunContext extends RoleExecutionContext {}
@@ -25,10 +28,13 @@ export class AutoResearchService {
 
   async run(options: ResearchRunOptions, context: ResearchRunContext): Promise<RunState> {
     const runDir = options.runDir
+    const logger = createLogger(runDir)
+    logger.info(`AutoResearchService.run start runDir=${runDir}`)
     await ensureDir(runDir)
     const existing = await loadState(runDir)
     const state = existing ?? await createInitialState(runDir)
     if (state.status === 'COMPLETED' || state.status === 'FAILED') {
+      logger.info(`run already terminal status=${state.status}`)
       return state
     }
     state.status = 'RUNNING'
@@ -37,10 +43,14 @@ export class AutoResearchService {
     const runner = new ResearchRunner({
       provider: this.provider,
       maxCycles: options.maxCycles ?? DEFAULT_MAX_CYCLES,
+      paperOptions: options.paper,
     })
     try {
-      return await runner.run(runDir, state, tree, context)
+      const result = await runner.run(runDir, state, tree, context)
+      logger.info(`AutoResearchService.run done status=${result.status}`)
+      return result
     } catch (error) {
+      logger.error('AutoResearchService.run failed', error)
       state.status = 'FAILED'
       state.phase = 'failed'
       state.lastError = String(error)

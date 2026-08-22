@@ -16,6 +16,7 @@ function parseArgs(argv) {
     candidate: join(defaultExample, 'candidate.md'),
     profileFile: join(defaultExample, 'PROFILE.md'),
     maxCycles: 5,
+    paper: undefined,
   }
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -25,6 +26,14 @@ function parseArgs(argv) {
       case '--candidate': args.candidate = argv[++i]; break
       case '--profile-file': args.profileFile = argv[++i]; break
       case '--max-cycles': args.maxCycles = Number(argv[++i]); break
+      case '--venue': (args.paper ??= {}).venue = argv[++i]; break
+      case '--assurance': (args.paper ??= {}).assurance = argv[++i]; break
+      case '--effort': (args.paper ??= {}).effort = argv[++i]; break
+      case '--illustration': (args.paper ??= {}).illustration = argv[++i]; break
+      case '--style-ref': (args.paper ??= {}).styleRef = argv[++i]; break
+      case '--auto-proceed': (args.paper ??= {}).autoProceed = argv[++i] !== 'false'; break
+      case '--max-improvement-rounds': (args.paper ??= {}).maxImprovementRounds = Number(argv[++i]); break
+      case '--human-checkpoint': (args.paper ??= {}).humanCheckpoint = argv[++i] !== 'false'; break
       default:
         console.error(`Unknown argument: ${arg}`)
         process.exit(2)
@@ -90,7 +99,15 @@ async function ensureHeadlessProfile(profileName) {
     await writeFile(patchPath, '# User patch layer\n[]\n', 'utf8')
   }
   let patch = await readFile(patchPath, 'utf8')
-  const normalized = normalizePatch(patch)
+  let normalized = normalizePatch(patch)
+  if (profileName === 'headless') {
+    if (!normalized.includes('pwsh-local')) {
+      normalized = normalized.trimEnd() + `\n\n# Use local shell/fs providers to avoid Windows ACL sandbox failures\n- id: pwsh-sandbox\n  disabled: true\n- id: fs-sandbox\n  disabled: true\n- insert:\n    - id: pwsh-local\n      name: '@deepseek-ai/dsh-pwsh-local'\n    - id: fs-local\n      name: '@deepseek-ai/dsh-fs-local'\n`
+    }
+    if (!normalized.includes('permission\n  disabled: true') && !normalized.includes("permission:\n  disabled: true")) {
+      normalized = normalized.trimEnd() + `\n\n# Permission presets require a confining shell; disable when using local providers\n- id: permission\n  disabled: true\n`
+    }
+  }
   if (normalized !== patch || !normalized.includes('@athena/autoresearch')) {
     await writeFile(patchPath, normalized, 'utf8')
   }
@@ -186,23 +203,25 @@ async function compilePdfWithChromeFallback(runDir, paperDir) {
 
 async function compilePaper(runDir) {
   const draft = join(runDir, 'paper_draft.md')
-  if (!existsSync(draft)) {
-    console.log('[autoresearch] paper_draft.md not found; skip LaTeX generation.')
-    return
-  }
-
   const paperDir = join(runDir, 'paper')
   mkdirSync(paperDir, { recursive: true })
   const texPath = join(paperDir, 'main.tex')
 
-  const pandoc = spawnSync('pandoc', [draft, '-o', texPath, '--standalone'], { stdio: 'ignore' })
-  if (pandoc.error || pandoc.status !== 0) {
-    // Fallback: wrap the markdown as literal text inside a minimal LaTeX document.
-    const content = await readFile(draft, 'utf8')
-    await writeFile(texPath, `\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\begin{document}\n\\begin{verbatim}\n${content}\n\\end{verbatim}\n\\end{document}\n`, 'utf8')
-    console.log('[autoresearch] pandoc unavailable; wrote a minimal main.tex fallback.')
+  if (existsSync(texPath)) {
+    console.log(`[autoresearch] using existing LaTeX: ${texPath}`)
+  } else if (existsSync(draft)) {
+    const pandoc = spawnSync('pandoc', [draft, '-o', texPath, '--standalone'], { stdio: 'ignore' })
+    if (pandoc.error || pandoc.status !== 0) {
+      // Fallback: wrap the markdown as literal text inside a minimal LaTeX document.
+      const content = await readFile(draft, 'utf8')
+      await writeFile(texPath, `\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\begin{document}\n\\begin{verbatim}\n${content}\n\\end{verbatim}\n\\end{document}\n`, 'utf8')
+      console.log('[autoresearch] pandoc unavailable; wrote a minimal main.tex fallback.')
+    } else {
+      console.log(`[autoresearch] generated LaTeX: ${texPath}`)
+    }
   } else {
-    console.log(`[autoresearch] generated LaTeX: ${texPath}`)
+    console.log('[autoresearch] no paper_draft.md or main.tex found; skip LaTeX generation.')
+    return
   }
 
   const engine = findLatexEngine()
@@ -235,18 +254,25 @@ async function compilePaper(runDir) {
   }
 }
 
-function buildPrompt(runDir, maxCycles) {
+function buildPrompt(runDir, maxCycles, paper) {
   const absolute = resolve(runDir)
-  return [
+  const lines = [
     'Run the autonomous research loop in the directory below.',
     '',
     `runDir: ${absolute}`,
     `maxCycles: ${maxCycles}`,
     '',
     'Call the `research_run` tool with `runDir` set to that absolute path and `maxCycles` set to the value above.',
+  ]
+  if (paper && Object.keys(paper).length > 0) {
+    lines.push('', `Pass this paper pipeline configuration to research_run as the "paper" argument: ${JSON.stringify(paper)}`)
+  }
+  lines.push(
+    '',
     'Work autonomously until the loop completes. Do not inspect the hidden target paper.',
     'When finished, report the final status and the paths of the produced files (state.json, evidence_chain.json, paper_draft.md, FINAL_REPORT.md or FAILURE_REPORT.md).',
-  ].join('\n')
+  )
+  return lines.join('\n')
 }
 
 async function main() {
@@ -254,9 +280,10 @@ async function main() {
   const runDir = resolve(args.runDir)
   await prepareRunDir(runDir, resolve(args.candidate), resolve(args.profileFile))
   console.log(`[autoresearch] run dir: ${runDir}`)
+  process.env.DSH_PERMISSION_MODE ??= 'danger-full-access'
   await ensureHeadlessProfile(args.profile)
 
-  const prompt = buildPrompt(runDir, args.maxCycles)
+  const prompt = buildPrompt(runDir, args.maxCycles, args.paper)
   const nodeDir = dirname(process.execPath)
   const dshBin = join(nodeDir, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
   let result
@@ -274,8 +301,7 @@ async function main() {
     process.exit(result.status ?? 1)
   }
 
-  console.log('\n[autoresearch] run finished. Generating LaTeX/PDF...')
-  await compilePaper(runDir)
+  console.log('\n[autoresearch] run finished. Paper pipeline artifacts:')
 
   console.log('\n[autoresearch] Artifacts:')
   const interesting = [
@@ -285,6 +311,7 @@ async function main() {
     'paper_draft.md',
     'paper/main.tex',
     'paper/main.pdf',
+    'evidence/citations.json',
     'FINAL_REPORT.md',
     'FAILURE_REPORT.md',
   ]

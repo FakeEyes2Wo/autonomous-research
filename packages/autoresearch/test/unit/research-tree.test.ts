@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ResearchTree } from '../../dist/core/research-tree.js'
-import { AutoResearchError } from '../../dist/core/errors.js'
+import { AutoResearchError } from '../../dist/core/utils.js'
 
 test('ResearchTree add/query/update and persistence', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-tree-'))

@@ -1,5 +1,6 @@
 import { buildPrompt, outputSchemaFor } from '../agents/factory.js'
-import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from './types.js'
+import { createLogger } from '../core/logger.js'
+import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../agents/types.js'
 
 interface ContentBlockLike {
   type: string
@@ -13,6 +14,7 @@ interface SubagentResultLike {
 }
 
 interface SubagentRunLike {
+  id: string
   result: Promise<SubagentResultLike>
   dispose(): Promise<void>
 }
@@ -43,7 +45,10 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
   }
 
   async run(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
+    const logger = createLogger(input.runDir)
     const prompt = await buildPrompt(role, input)
+    logger.info(`[subagent:${role}] calling ctx.subagents.start provider=${this.providerName}`)
+    const started = Date.now()
     const run = await this.runtime.start(this.providerName, {
       label: role,
       prompt: [{ type: 'text', text: prompt }],
@@ -51,7 +56,9 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       signal: context.signal,
       ...(outputSchemaFor(role) !== undefined ? { outputSchema: outputSchemaFor(role) } : {}),
     })
+    logger.info(`[subagent:${role}] started id=${String(run.id ?? '')}`)
     const result = await run.result
+    logger.info(`[subagent:${role}] result stopReason=${result.stopReason} in ${Date.now() - started}ms`)
     await run.dispose()
     if (result.stopReason !== 'completed') {
       throw new Error(`role agent ${role} ended with stopReason=${result.stopReason}`)

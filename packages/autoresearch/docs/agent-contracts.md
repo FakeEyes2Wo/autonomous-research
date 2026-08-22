@@ -8,6 +8,10 @@
 |---|---|---|
 | rubric-generator | candidate, profile | `{ rubric: string }` |
 | rubric-reviewer | candidate, profile, rubric | `{ ok: boolean, issues: string[], revised?: string }` |
+| idea-generator | candidate, profile, rubric, tree | `{ hypotheses: IdeaDraft[], eda_request? }` |
+| idea-falsifiability | ideaPackage | `{ testable_implication, unobservable_variables, is_falsifiable }` |
+| idea-reviewer | ideaPackage + perspective | `{ perspective, critique, unaddressed_risks, fatal_flaw_found }` |
+| hypothesis-reviser | tree, cycle | `{ summary, hypotheses: RevisionDraft[] }` |
 | planner | tree, rubric, cycle | `{ plan: string }` |
 | research-worker | runDir, cycle, plan, tree | `{ status: 'completed'\|'failed', summary, artifacts }` |
 | evidence-agent | runDir, cycle, tree | `{ summary: string }` |

@@ -1,4 +1,4 @@
-import { AutoResearchError } from '../core/errors.js'
+import { AutoResearchError } from '../core/utils.js'
 import { readText, safeResolve } from '../core/utils.js'
 
 export interface Candidate {

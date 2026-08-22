@@ -12,7 +12,7 @@
 6. Bounded recovery：核心贡献全 unsupported/contradicted → `FAILURE_REPORT.md`，不强行成功。
 
 ## PACKAGING
-终检 PASS/WARN 后打包：paper.pdf/draft/sources.zip + evidence_chain.json + trace_audit.json + 三审查 JSON + bib + FINAL_REPORT（verdict、citation_validity%、figure_editability%、review_precision%）。
+终检 PASS/WARN 后打包：paper.pdf/draft/sources.zip + evidence_chain.json + trace_audit.json + evidence/citations.json + evidence/*.pdf + 三审查 JSON + bib + FINAL_REPORT（verdict、citation_validity%、figure_editability%、review_precision%）。
 
 ## 铁律
 verifier-as-truth；审计后改论文必须重跑受影响审查与 verify-trace。

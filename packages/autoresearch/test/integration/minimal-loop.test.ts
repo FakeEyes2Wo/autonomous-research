@@ -15,7 +15,7 @@ test('minimal loop runs revise then finish and produces paper', async () => {
 
     const provider = new FakeAgentProvider({
       decisions: ['revise', 'finish'],
-      writerText: '# Paper Draft\n\nResult.',
+      writerText: '\\documentclass{article}\n\\begin{document}\nPaper Draft Result.\n\\end{document}',
     })
     const service = new AutoResearchService(provider)
     const context = { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }
@@ -28,8 +28,8 @@ test('minimal loop runs revise then finish and produces paper', async () => {
     assert.equal(provider.calls.includes('supervisor'), true)
     assert.equal(provider.calls.filter((r) => r === 'supervisor').length, 2)
 
-    const paper = await readFile(join(dir, 'paper_draft.md'), 'utf8')
-    assert.match(paper, /Paper Draft/)
+    const paper = await readFile(join(dir, 'paper', 'main.tex'), 'utf8')
+    assert.match(paper, /Paper Draft Result/)
     const finalReport = await readFile(join(dir, 'FINAL_REPORT.md'), 'utf8')
     assert.match(finalReport, /FINAL_REPORT/)
     const evidence = await readFile(join(dir, 'evidence_chain.json'), 'utf8')

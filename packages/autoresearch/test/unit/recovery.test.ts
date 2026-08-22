@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { withRetry } from '../../dist/service/recovery.js'
+import { withRetry } from '../../dist/service/utils.js'
 
 test('withRetry retries once and succeeds', async () => {
   let calls = 0

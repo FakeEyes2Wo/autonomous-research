@@ -112,7 +112,8 @@ The agent achieves a mean final bank balance of 8468.7.
 2. writer 上下文**只放 `bib_keys.md`**，不放 bib 全文。
 3. 需要新文献：writer 把请求追加到 `bib_requests.md`（一句话为什么需要 + 候选 title/DOI）。
 4. bib worker（独立调用）验证 DBLP→CrossRef→`[VERIFY]`，更新 `bibliography.bib` 与 `bib_keys.md`；writer 下一轮拿增量。
-5. 终稿跑 dead-entry 清理（只含被 cite 条目）。
+5. 程序自动解析冻结 `bibliography.bib`/`references.bib`，把每个条目的 PDF 下载到 `<run>/evidence/<bibkey>.pdf`，并生成 `evidence/citations.json`；任一条目下载失败则 gate 失败。
+6. 终稿跑 dead-entry 清理（只含被 cite 条目）。
 
 ### W7 质量 pass（脚本 + writer）
 
@@ -126,6 +127,7 @@ The agent achieves a mean final bank balance of 8468.7.
 | 4 | clutter 词表：delve/pivotal/landscape/tapestry/underscore… | 词表 grep + 计数 | 只报告 |
 | 5 | 句长：>40 词句子列表 | 正则粗分句 | 只报告 |
 | 6 | 模板合规：section 顺序/匿名/页数 | 模板规则 | gate |
+| 7 | 引用 PDF 已下载：`evidence/citations.json` 无 failed 且每个被引 key 有 PDF | 下载脚本 + manifest | gate |
 
 writer 自检（每节，报告 4/5 作为输入）：
 
@@ -188,7 +190,7 @@ writer/图 agent 直接写 SVG → 结构自检（XML 语法/viewBox/文本可�
 
 ## 7. Gate
 
-- 脚本检查 1/2/3/6 全过；4/5 报告落盘。
+- 脚本检查 1/2/3/6/7 全过；4/5 报告落盘。
 - 所有 CONTRIB-* 有正文声明与标签；无 `SECTION_BLOCKED` 残留。
 - 首轮编译结果落盘。
 
@@ -197,5 +199,6 @@ writer/图 agent 直接写 SVG → 结构自检（XML 语法/viewBox/文本可�
 - `paper/` 源文件 + `paper_draft.md`
 - `claims_evidence_matrix.json`（冻结副本）
 - `bibliography.bib` + `bib_keys.md` + `bib_requests.md`
+- `evidence/citations.json` + `evidence/*.pdf`
 - `figures/assets_manifest.json`
 - 首轮编译日志

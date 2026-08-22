@@ -3,11 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { researchHypothesisAdd } from '../../dist/tools/research-hypothesis-add.js'
-import { researchActionStart } from '../../dist/tools/research-action-start.js'
-import { researchActionFinish } from '../../dist/tools/research-action-finish.js'
-import { researchEvidenceAdd } from '../../dist/tools/research-evidence-add.js'
-import { researchTreeQuery } from '../../dist/tools/research-tree-query.js'
+import { researchHypothesisAdd, researchActionStart, researchActionFinish, researchEvidenceAdd, researchTreeQuery } from '../../dist/tools/index.js'
 
 const exec = { signal: new AbortController().signal }
 

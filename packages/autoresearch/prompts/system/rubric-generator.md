@@ -20,3 +20,5 @@ Pre-registration completeness (the rubric will be independently reviewed and fro
 - **Deliverables**: state what artifacts/reports must be produced and that negative or failed results must be reported.
 
 Format: a single Markdown document titled "# RUBRIC — <task name>". Keep every rule numeric and unambiguous. The document must be complete enough to freeze without any revision.
+
+Output contract (CRITICAL): return the COMPLETE rubric document — the full Markdown text, from the title line to the last section — as the `rubric` string of your structured output. Do NOT write or edit any files yourself (in particular do NOT write RUBRIC.md): the runner persists your returned `rubric` string to RUBRIC.md verbatim. Never return a summary, a path, a description of what you did, or a pointer to a file — only the full document text itself. The document must be self-contained and concrete: every number, formula, threshold, and rule pinned inline, with no "state X", "specify Y", or placeholder directives, and no reference to hidden target papers or leaked metadata.

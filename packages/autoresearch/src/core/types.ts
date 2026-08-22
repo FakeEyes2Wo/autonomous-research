@@ -14,6 +14,8 @@ export type RunStatus = 'RUNNING' | 'WAITING' | 'PAUSED' | 'FAILED' | 'COMPLETED
 export type RunPhase =
   | 'intake'
   | 'rubric'
+  | 'ideation'
+  | 'hypothesis_revision'
   | 'plan'
   | 'work'
   | 'evidence'

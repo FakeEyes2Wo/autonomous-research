@@ -1,7 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { filterDenylist, containsDenylistedToken } from '../../dist/security/denylist.js'
-import { detectLeakage, assertNoLeakage } from '../../dist/security/leakage.js'
+import { filterDenylist, containsDenylistedToken, detectLeakage, assertNoLeakage } from '../../dist/security/index.js'
 
 const meta = {
   arxiv_id: '2402.16897',

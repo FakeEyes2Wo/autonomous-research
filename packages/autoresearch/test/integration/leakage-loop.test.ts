@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile, mkdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { AutoResearchService } from '../../dist/service/autoresearch-service.js'
-import { detectLeakage } from '../../dist/security/leakage.js'
+import { detectLeakage } from '../../dist/security/index.js'
 import { FakeAgentProvider } from './fake-agent-provider.ts'
 
 test('leakage detection catches leaked target title in generated paper', async () => {
@@ -16,12 +16,12 @@ test('leakage detection catches leaked target title in generated paper', async (
 
     const provider = new FakeAgentProvider({
       decisions: ['finish'],
-      writerText: 'Reliable Conflictive Multi-View Learning is the hidden paper.',
+      writerText: '\\documentclass{article}\n\\begin{document}\nReliable Conflictive Multi-View Learning is the hidden paper.\n\\end{document}',
     })
     const service = new AutoResearchService(provider)
     await service.run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
 
-    const paper = await readFile(join(dir, 'paper_draft.md'), 'utf8')
+    const paper = await readFile(join(dir, 'paper', 'main.tex'), 'utf8')
     const leaks = detectLeakage(paper, { title: 'Reliable Conflictive Multi-View Learning' })
     assert.equal(leaks.length, 1)
     assert.match(leaks[0] ?? '', /LEAKAGE/)

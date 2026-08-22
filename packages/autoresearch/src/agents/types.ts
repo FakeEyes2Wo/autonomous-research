@@ -1,11 +1,25 @@
 export type RoleName =
   | 'rubric-generator'
   | 'rubric-reviewer'
+  | 'idea-generator'
+  | 'idea-falsifiability'
+  | 'idea-reviewer'
+  | 'hypothesis-reviser'
   | 'planner'
   | 'research-worker'
   | 'evidence-agent'
   | 'supervisor'
   | 'writer'
+  | 'paper-planner'
+  | 'contract-negotiator'
+  | 'contract-reviewer'
+  | 'figure-generator'
+  | 'proof-checker'
+  | 'claim-auditor'
+  | 'citation-auditor'
+  | 'kill-argument-reviewer'
+  | 'paper-reviewer'
+  | 'final-report-writer'
 
 export interface ParentAgentLike {
   readonly id: string
@@ -26,6 +40,16 @@ export interface RoleInput {
   readonly plan?: string
   readonly treeSummary?: string
   readonly evidenceChainPath?: string
+  readonly ideaPackage?: string
+  readonly paperPlan?: string
+  readonly paperMatrix?: string
+  readonly paperTemplate?: string
+  readonly paperContract?: string
+  readonly paperFigures?: string
+  readonly styleProfile?: string
+  readonly venue?: string
+  readonly assurance?: string
+  readonly paperPath?: string
 }
 
 export interface RoleOutput {
