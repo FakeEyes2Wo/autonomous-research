@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { ResearchTree } from '../core/research-tree.js'
 import { isEvidenceVerdict } from '../domain/guards.js'
 import { loadCheckpoint } from '../paper/checkpoint.js'
+import { readLastRun } from '../session/last-run.js'
 import type { AutoResearchService } from '../service/autoresearch-service.js'
 
 export interface ToolExecutionContextLike {
@@ -201,6 +202,20 @@ export const paperPipelineStatus: ToolDefinitionLike = defineTool({
     const runDir = requireRunDir(args)
     const cp = await loadCheckpoint(join(runDir, 'paper'))
     return cp ?? { status: 'no_checkpoint' }
+  },
+})
+
+export const paperPipelineLastRun: ToolDefinitionLike = defineTool({
+  name: 'paper_pipeline_last_run',
+  description: 'Show the most recent autoresearch run directory recorded for DSH sessions.',
+  parameters: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false,
+  },
+  output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+  async execute() {
+    return (await readLastRun()) ?? { status: 'no_last_run' }
   },
 })
 

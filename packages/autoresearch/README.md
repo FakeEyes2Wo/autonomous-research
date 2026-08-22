@@ -42,6 +42,32 @@ npm run run:headless
 npm run run:headless -- --run-dir C:/tmp/my-run --max-cycles 3
 ```
 
+## DSH 会话使用
+
+```bash
+npm run build
+node scripts/start-session.mjs --profile autoresearch
+```
+
+或者带任务启动：
+
+```bash
+node scripts/start-session.mjs --profile autoresearch --prompt "继续上次研究"
+```
+
+会话内可用：
+
+- `research_run`
+- `paper_pipeline_status`
+- `paper_pipeline_last_run`
+- `paper_pipeline_resume`
+
+断点续传流程：
+
+1. `paper_pipeline_last_run` 查看最近 runDir
+2. `paper_pipeline_status` 查看 checkpoint
+3. `paper_pipeline_resume` 继续
+
 ## DSH 插件加载
 
 插件导出 Cordis 插件结构：`name` / `inject` / `apply`。

@@ -6,6 +6,7 @@ import type { RunState } from '../core/types.js'
 import { ensureDir } from '../core/utils.js'
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
 import { writeFailureReport } from '../domain/files.js'
+import { writeLastRun } from '../session/last-run.js'
 import { ResearchRunner } from './runner.js'
 import type { PaperOptions } from '../paper/pipeline.js'
 
@@ -47,10 +48,12 @@ export class AutoResearchService {
     })
     try {
       const result = await runner.run(runDir, state, tree, context)
+      await writeLastRun(runDir)
       logger.info(`AutoResearchService.run done status=${result.status}`)
       return result
     } catch (error) {
       logger.error('AutoResearchService.run failed', error)
+      await writeLastRun(runDir)
       state.status = 'FAILED'
       state.phase = 'failed'
       state.lastError = String(error)

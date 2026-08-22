@@ -2,7 +2,7 @@ import { AutoResearchService } from './service/autoresearch-service.js'
 import { ResearchRunner } from './service/runner.js'
 import { ResearchTree } from './core/research-tree.js'
 import { SubagentRoleAgentProvider } from './providers/subagent-provider.js'
-import { createPaperPipelineResumeTool, createResearchRunTool, paperPipelineStatus, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
+import { createPaperPipelineResumeTool, createResearchRunTool, paperPipelineLastRun, paperPipelineStatus, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
 
 export const name = 'autoresearch'
 export const inject = ['tools', 'subagents']
@@ -22,6 +22,7 @@ export function apply(ctx: {
     researchEvidenceAdd,
     researchTreeQuery,
     paperPipelineStatus,
+    paperPipelineLastRun,
     createPaperPipelineResumeTool(service),
     createResearchRunTool(service),
   ]) {
