@@ -281,6 +281,7 @@ async function main() {
   await prepareRunDir(runDir, resolve(args.candidate), resolve(args.profileFile))
   console.log(`[autoresearch] run dir: ${runDir}`)
   process.env.DSH_PERMISSION_MODE ??= 'danger-full-access'
+  process.env.DSH_AUTORESEARCH_AUTO ??= '1'
   await ensureHeadlessProfile(args.profile)
 
   const prompt = buildPrompt(runDir, args.maxCycles, args.paper)

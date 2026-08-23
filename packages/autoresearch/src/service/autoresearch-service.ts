@@ -1,10 +1,11 @@
-import { DEFAULT_MAX_CYCLES } from '../core/constants.js'
-import { createLogger } from '../core/logger.js'
+import { createLogger, DEFAULT_MAX_CYCLES } from '../core/utils.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { createInitialState, loadState, saveState } from '../core/state.js'
 import type { RunState } from '../core/types.js'
 import { ensureDir } from '../core/utils.js'
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
+import type { HumanReviewer, ReviewGateId } from '../core/human-review.js'
+import { DEFAULT_REVIEW_GATES } from '../core/human-review.js'
 import { writeFailureReport } from '../domain/files.js'
 import { writeLastRun } from '../session/last-run.js'
 import { ResearchRunner } from './runner.js'
@@ -16,15 +17,25 @@ export interface ResearchRunOptions {
   profilePath?: string
   maxCycles?: number
   paper?: PaperOptions
+  humanReview?: 'auto' | 'on' | 'off'
 }
 
 export interface ResearchRunContext extends RoleExecutionContext {}
 
+export interface AutoResearchServiceOptions {
+  reviewer?: HumanReviewer
+  reviewGates?: ReviewGateId[]
+}
+
 export class AutoResearchService {
   private readonly provider: RoleAgentProvider
+  private readonly reviewer?: HumanReviewer
+  private readonly reviewGates: ReviewGateId[]
 
-  constructor(provider: RoleAgentProvider) {
+  constructor(provider: RoleAgentProvider, options: AutoResearchServiceOptions = {}) {
     this.provider = provider
+    this.reviewer = options.reviewer
+    this.reviewGates = options.reviewGates ?? [...DEFAULT_REVIEW_GATES]
   }
 
   async run(options: ResearchRunOptions, context: ResearchRunContext): Promise<RunState> {
@@ -45,6 +56,9 @@ export class AutoResearchService {
       provider: this.provider,
       maxCycles: options.maxCycles ?? DEFAULT_MAX_CYCLES,
       paperOptions: options.paper,
+      reviewer: this.reviewer,
+      reviewGates: this.reviewGates,
+      humanReviewOverride: options.humanReview,
     })
     try {
       const result = await runner.run(runDir, state, tree, context)

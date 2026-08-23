@@ -1,8 +1,7 @@
 import { appendFile, access } from 'node:fs/promises'
 import { join } from 'node:path'
-import { EVENTS_FILE, STATE_FILE } from './constants.js'
-import { atomicWriteJson, ensureDir, newRunId, nowIso, readJson, safeResolve, writeText } from './utils.js'
-import type { RunEvent, RunState } from './types.js'
+import { atomicWriteJson, ensureDir, EVENTS_FILE, newRunId, nowIso, readJson, safeResolve, STATE_FILE, writeText } from './utils.js'
+import type { RunEvent, RunPhase, RunState } from './types.js'
 
 export async function loadState(runDir: string): Promise<RunState | undefined> {
   const file = safeResolve(runDir, STATE_FILE)
@@ -52,4 +51,21 @@ export async function writeDecision(runDir: string, decisionText: string): Promi
 
 export function stateFile(runDir: string): string {
   return join(runDir, STATE_FILE)
+}
+
+export async function transition(state: RunState, phase: RunPhase, stepId: string, data: Record<string, unknown> = {}): Promise<RunState> {
+  state.phase = phase
+  state.stepId = stepId
+  state.updatedAt = nowIso()
+  await saveState(state.runDir, state)
+  await appendEvent(state.runDir, { type: 'state', stepId, data: { phase, ...data } })
+  return state
+}
+
+export async function recordResult(state: RunState, stepId: string, data: Record<string, unknown>): Promise<void> {
+  await appendEvent(state.runDir, { type: 'result', stepId, data })
+}
+
+export async function recordDecision(state: RunState, stepId: string, data: Record<string, unknown>): Promise<void> {
+  await appendEvent(state.runDir, { type: 'decision', stepId, data })
 }

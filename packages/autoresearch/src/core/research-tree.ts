@@ -1,7 +1,7 @@
 import { access } from 'node:fs/promises'
 import { join } from 'node:path'
 import { AutoResearchError } from './utils.js'
-import { RESEARCH_TREE_FILE } from './constants.js'
+import { RESEARCH_TREE_FILE } from './utils.js'
 import { atomicWriteJson, newId, readJson, safeResolve } from './utils.js'
 import type { ResearchNode, ResearchNodeKind, ResearchNodeStatus } from './types.js'
 

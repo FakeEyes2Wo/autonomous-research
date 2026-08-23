@@ -1,4 +1,4 @@
-import { FAILURE_REPORT_FILE, FINAL_REPORT_FILE, PAPER_DRAFT_FILE, PLAN_PREFIX, RUBRIC_FILE } from '../core/constants.js'
+import { AutoResearchError, CANDIDATE_FILE, FAILURE_REPORT_FILE, FINAL_REPORT_FILE, INPUT_DIR, PAPER_DRAFT_FILE, PLAN_PREFIX, RUBRIC_FILE } from '../core/utils.js'
 import { readText, safeResolve, writeText } from '../core/utils.js'
 
 function mdPath(runDir: string, name: string): string {
@@ -30,4 +30,34 @@ export async function freezeRubric(runDir: string): Promise<void> {
   const file = rubricPath(runDir)
   const content = await readText(file)
   if (!content.includes('<!-- frozen -->')) await writeText(file, `${content}\n<!-- frozen -->\n`)
+}
+
+export interface Candidate {
+  direction: string
+  aPrioriIdeas: string[]
+  raw: string
+}
+
+export async function readCandidate(runDir: string, candidatePath?: string): Promise<Candidate> {
+  const file = candidatePath ? safeResolve(runDir, candidatePath) : safeResolve(runDir, INPUT_DIR, CANDIDATE_FILE)
+  const raw = await readText(file)
+  const directionMatch = raw.match(/^##\s+Direction\s*$/mi)
+  if (!directionMatch) {
+    throw new AutoResearchError('candidate.md is missing a Direction section', 'INVALID_ARGUMENT')
+  }
+  const after = raw.slice((directionMatch.index ?? 0) + directionMatch[0].length)
+  const ideasMatch = raw.match(/^##\s+A-priori ideas.*$/mi)
+  const direction = after.split(/^##\s+/m)[0]?.trim() ?? ''
+  if (!direction) throw new AutoResearchError('candidate direction is empty', 'INVALID_ARGUMENT')
+  let aPrioriIdeas: string[] = []
+  if (ideasMatch && ideasMatch.index !== undefined) {
+    const ideasBlock = raw.slice(ideasMatch.index + ideasMatch[0].length)
+    const nextHeading = ideasBlock.search(/^##\s+/m)
+    const block = nextHeading >= 0 ? ideasBlock.slice(0, nextHeading) : ideasBlock
+    aPrioriIdeas = block
+      .split('\n')
+      .map((line) => line.replace(/^\s*[-*]\s+/, '').trim())
+      .filter(Boolean)
+  }
+  return { direction, aPrioriIdeas, raw }
 }

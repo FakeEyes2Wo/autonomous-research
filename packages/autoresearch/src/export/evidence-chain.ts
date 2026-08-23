@@ -1,4 +1,4 @@
-import { EVIDENCE_CHAIN_FILE } from '../core/constants.js'
+import { EVIDENCE_CHAIN_FILE } from '../core/utils.js'
 import type { ResearchTree } from '../core/research-tree.js'
 import { atomicWriteJson, nowIso, safeResolve } from '../core/utils.js'
 

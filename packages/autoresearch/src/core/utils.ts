@@ -1,6 +1,24 @@
 import { randomBytes, randomUUID } from 'node:crypto'
-import { mkdir, rename, writeFile, readFile } from 'node:fs/promises'
-import { dirname, resolve, sep } from 'node:path'
+import { appendFile, mkdir, rename, writeFile, readFile } from 'node:fs/promises'
+import { dirname, join, resolve, sep } from 'node:path'
+
+export const STATE_FILE = 'state.json'
+export const EVENTS_FILE = 'events.jsonl'
+export const RESEARCH_TREE_FILE = 'research_tree.json'
+export const HYPOTHESIS_POOL_FILE = 'hypothesis_pool.json'
+export const EVIDENCE_CHAIN_FILE = 'evidence_chain.json'
+export const RUBRIC_FILE = 'RUBRIC.md'
+export const PLAN_PREFIX = 'PLAN-v'
+export const DECISION_FILE = 'DECISION.md'
+export const PAPER_DRAFT_FILE = 'paper_draft.md'
+export const FINAL_REPORT_FILE = 'FINAL_REPORT.md'
+export const FAILURE_REPORT_FILE = 'FAILURE_REPORT.md'
+export const WORK_DIR = 'work'
+export const INPUT_DIR = 'input'
+export const CANDIDATE_FILE = 'candidate.md'
+export const PROFILE_FILE = 'PROFILE.md'
+export const DEFAULT_MAX_CYCLES = 5
+export const DEFAULT_SUBAGENT_PROVIDER = 'spawn'
 
 export type ErrorKind = 'INVALID_ARGUMENT' | 'NOT_FOUND' | 'STATE_CORRUPT' | 'AGENT_FAILED' | 'LEAKAGE' | 'UNKNOWN'
 
@@ -60,4 +78,59 @@ export function safeResolve(runDir: string, ...parts: string[]): string {
     throw new AutoResearchError(`path escapes run dir: ${target}`, 'INVALID_ARGUMENT')
   }
   return target
+}
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+export class Logger {
+  private readonly file?: string
+
+  constructor(runDir?: string) {
+    if (runDir) this.file = join(runDir, 'logs', 'run.log')
+  }
+
+  private async write(level: LogLevel, message: string): Promise<void> {
+    const line = `[${nowIso()}] [${level.toUpperCase()}] ${message}`
+    console.log(line)
+    if (!this.file) return
+    try {
+      await ensureDir(dirname(this.file))
+      await appendFile(this.file, `${line}\n`, 'utf8')
+    } catch (error) {
+      console.error(`[logger] failed to write log file: ${String(error)}`)
+    }
+  }
+
+  debug(message: string): void {
+    void this.write('debug', message)
+  }
+
+  info(message: string): void {
+    void this.write('info', message)
+  }
+
+  warn(message: string): void {
+    void this.write('warn', message)
+  }
+
+  error(message: string, error?: unknown): void {
+    const detail = error instanceof Error ? `${error.message}\n${error.stack ?? ''}` : String(error)
+    void this.write('error', `${message}${detail ? `\n${detail}` : ''}`)
+  }
+}
+
+export function createLogger(runDir?: string): Logger {
+  return new Logger(runDir)
+}
+
+export async function withRetry<T>(operation: () => Promise<T>, label: string, attempts = 2): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`${label} failed: ${String(lastError)}`)
 }

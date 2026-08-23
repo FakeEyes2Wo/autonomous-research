@@ -1,4 +1,4 @@
-import { HYPOTHESIS_POOL_FILE } from './constants.js'
+import { HYPOTHESIS_POOL_FILE } from './utils.js'
 import type { ResearchTree } from './research-tree.js'
 import { atomicWriteJson, nowIso, readJson, safeResolve } from './utils.js'
 

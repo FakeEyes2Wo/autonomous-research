@@ -17,8 +17,12 @@ export type RunPhase =
   | 'ideation'
   | 'hypothesis_revision'
   | 'plan'
+  | 'minimal_verification'
+  | 'experiment_design'
+  | 'experiment_reflexion'
   | 'work'
   | 'evidence'
+  | 'result_reflexion'
   | 'decide'
   | 'paper'
   | 'failed'
@@ -61,3 +65,17 @@ export interface ResearchDecision {
 }
 
 export type EvidenceVerdict = 'supports' | 'refutes' | 'inconclusive'
+
+export function isEvidenceVerdict(value: string): value is EvidenceVerdict {
+  return value === 'supports' || value === 'refutes' || value === 'inconclusive'
+}
+
+export function parseDecision(value: unknown): ResearchDecision {
+  if (typeof value !== 'object' || value === null) throw new TypeError('decision must be an object')
+  const record = value as Record<string, unknown>
+  if (typeof record.action !== 'string' || !['continue', 'revise', 'finish', 'fail'].includes(record.action)) {
+    throw new TypeError(`invalid decision action: ${String(record.action)}`)
+  }
+  if (typeof record.reason !== 'string') throw new TypeError('decision reason must be a string')
+  return { action: record.action as ResearchDecisionAction, reason: record.reason }
+}

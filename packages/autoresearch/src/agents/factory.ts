@@ -30,6 +30,12 @@ export async function buildPrompt(role: RoleName, input: RoleInput): Promise<str
   if (input.venue) sections.push('### Venue', '', input.venue, '')
   if (input.assurance) sections.push('### Assurance', '', input.assurance, '')
   if (input.paperPath) sections.push('### Paper Directory', '', input.paperPath, '')
+  if (input.minimalVerification) sections.push('### Minimal Verification', '', input.minimalVerification, '')
+  if (input.experimentDesign) sections.push('### Experiment Design', '', input.experimentDesign, '')
+  if (input.reflexion) sections.push('### Reflexion', '', input.reflexion, '')
+  if (input.failureDirections) sections.push('### Failure Directions', '', input.failureDirections, '')
+  if (input.insight) sections.push('### Insight', '', input.insight, '')
+  if (input.modelScout) sections.push('### Model Scout', '', input.modelScout, '')
   sections.push('## Run directory', '', input.runDir, '')
   if (input.cycle !== undefined) sections.push('## Cycle', '', String(input.cycle), '')
   return sections.join('\n')
@@ -104,6 +110,74 @@ export function outputSchemaFor(role: RoleName): Record<string, unknown> | undef
       })
     case 'planner':
       return objectSchema({ plan: { type: 'string', required: true } })
+    case 'minimal-verifier':
+      return objectSchema({
+        feasibility: { type: 'string', enum: ['feasible', 'uncertain', 'infeasible'], required: true },
+        minimalEvidence: { type: 'array', items: { type: 'string' }, required: true },
+        artifacts: { type: 'array', items: { type: 'string' }, required: true },
+        reason: { type: 'string', required: true },
+      })
+    case 'experiment-designer':
+      return objectSchema({
+        datasets: { type: 'array', items: { type: 'string' }, required: true },
+        conflictConstruction: { type: 'string', required: true },
+        splitProtocol: { type: 'string', required: true },
+        backbones: { type: 'array', items: { type: 'string' }, required: true },
+        metrics: { type: 'array', items: { type: 'string' }, required: true },
+        rootCauseValidation: { type: 'string', required: true },
+        limitations: { type: 'array', items: { type: 'string' }, required: true },
+      })
+    case 'experiment-reflexion':
+      return objectSchema({
+        feasibility: { type: 'string', enum: ['high', 'medium', 'low'], required: true },
+        generalizability: { type: 'string', enum: ['high', 'medium', 'low'], required: true },
+        risks: { type: 'array', items: { type: 'string' }, required: true },
+        failureDirections: { type: 'array', items: { type: 'string' }, required: true },
+        verdict: { type: 'string', enum: ['proceed', 'revise'], required: true },
+      })
+    case 'model-scout':
+      return objectSchema({
+        models: {
+          type: 'array',
+          required: true,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              name: { type: 'string', required: true },
+              family: { type: 'string', required: true },
+              paper: { type: 'string' },
+              venue: { type: 'string' },
+              year: { type: 'string' },
+              why: { type: 'string', required: true },
+            },
+          },
+        },
+        sources: { type: 'array', items: { type: 'string' }, required: true },
+      })
+    case 'result-reflexion':
+      return objectSchema({
+        summary: { type: 'string', required: true },
+        failureAnalysis: { type: 'string', required: true },
+        explorationDirections: { type: 'array', items: { type: 'string' }, required: true },
+      })
+    case 'insight-abstractor':
+      return objectSchema({
+        insights: {
+          type: 'array',
+          required: true,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              wrongAssumption: { type: 'string', required: true },
+              researchQuestion: { type: 'string', required: true },
+              methodFamilies: { type: 'array', items: { type: 'string' }, required: true },
+              divergencePoint: { type: 'string', required: true },
+            },
+          },
+        },
+      })
     case 'research-worker':
       return objectSchema({
         status: { type: 'string', enum: ['completed', 'failed'], required: true },
@@ -122,6 +196,7 @@ export function outputSchemaFor(role: RoleName): Record<string, unknown> | undef
         mainTex: { type: 'string', required: true },
         bib: { type: 'string' },
         sections: { type: 'object', additionalProperties: true },
+        failureReport: { type: 'string', required: true },
       })
     case 'paper-planner':
       return objectSchema({
@@ -143,6 +218,14 @@ export function outputSchemaFor(role: RoleName): Record<string, unknown> | undef
         scripts: { type: 'object', additionalProperties: true, required: true },
         latexIncludes: { type: 'string' },
         notes: { type: 'string' },
+      })
+    case 'figure-reflexion':
+      return objectSchema({
+        verdict: { type: 'string', enum: ['pass', 'revise'], required: true },
+        issues: { type: 'array', items: { type: 'string' }, required: true },
+        textOverload: { type: 'boolean', required: true },
+        elementOverload: { type: 'boolean', required: true },
+        elementOverlap: { type: 'boolean', required: true },
       })
     case 'proof-checker':
       return objectSchema({
@@ -176,6 +259,12 @@ export function outputSchemaFor(role: RoleName): Record<string, unknown> | undef
         critical: { type: 'array', items: { type: 'string' }, required: true },
         major: { type: 'array', items: { type: 'string' }, required: true },
         minor: { type: 'array', items: { type: 'string' }, required: true },
+      })
+    case 'paper-polisher':
+      return objectSchema({
+        mainTex: { type: 'string', required: true },
+        sections: { type: 'object', additionalProperties: true },
+        changes: { type: 'array', items: { type: 'string' }, required: true },
       })
     case 'final-report-writer':
       return objectSchema({

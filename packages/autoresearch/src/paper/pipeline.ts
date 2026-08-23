@@ -4,7 +4,9 @@ import { copyFile, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
-import { ensureDir, readText, writeText } from '../core/utils.js'
+import { ensureDir, FAILURE_REPORT_FILE, readText, writeText } from '../core/utils.js'
+import { appendHumanReview, type HumanReviewAnswer, type HumanReviewer } from '../core/human-review.js'
+import { humanReviewEnabled } from '../session/auto-mode.js'
 import { auditPaper, compilePaper, downloadReferencePdfs, generatePaperPlan, runCompileLoop } from './index.js'
 import { loadCheckpoint, saveCheckpoint, type PaperCheckpoint } from './checkpoint.js'
 
@@ -14,6 +16,8 @@ export interface PaperOptions {
   effort?: 'lite' | 'balanced' | 'max' | 'beast'
   styleRef?: string
   maxImprovementRounds?: number
+  humanReviewer?: HumanReviewer
+  humanReviewOverride?: 'auto' | 'on' | 'off'
 }
 
 export interface PaperPipelineResult {
@@ -40,25 +44,6 @@ interface PaperContext {
 const DEFAULT_VENUE = 'ICLR'
 const MAX_CONTRACT_ROUNDS = 3
 const MAX_FIGURE_RETRIES = 2
-
-const REQUIRED_SECTIONS: Record<string, string> = {
-  'sections/0_abstract.tex': '% Abstract content placeholder.\n',
-  'sections/1_introduction.tex': '\\section{Introduction}\n% TODO\n',
-  'sections/2_related_work.tex': '\\section{Related Work}\n% TODO\n',
-  'sections/3_method.tex': '\\section{Method}\n% TODO\n',
-  'sections/4_experiments.tex': '\\section{Experiments}\n% TODO\n',
-  'sections/5_conclusion.tex': '\\section{Conclusion}\n% TODO\n',
-  'sections/A_appendix.tex': '% Appendix content placeholder.\n',
-}
-
-async function ensureRequiredSections(paperDir: string): Promise<void> {
-  for (const [name, content] of Object.entries(REQUIRED_SECTIONS)) {
-    const file = join(paperDir, name)
-    if (existsSync(file)) continue
-    await ensureDir(dirname(file))
-    await writeFile(file, content, 'utf8')
-  }
-}
 
 /**
  * PaperPipeline orchestrates the paper-writing skill inside autoresearch.
@@ -167,12 +152,11 @@ export class PaperPipeline {
       context,
     }
 
-    // Writing.
-    await this.runPhase(paperDir, cp, 'writing', () => this.write(ctx), () => {
-      cp.phases.writing = 'done'
-    })
+    // Writing is only considered done after a successful compile. Until then,
+    // resume will re-run the writer so missing sections/content can be repaired.
+    await this.runPhase(paperDir, cp, 'writing', () => this.write(ctx), () => {})
 
-    // Compile.
+    // Compile. Missing sections are left for the writer to fix via the compile loop.
     const compileOk = (await this.runPhase(paperDir, cp, 'compile',
       () => runCompileLoop(ctx.paperDir, (feedback) => this.write(ctx, feedback)).then((r) => r.ok),
       (ok) => {
@@ -180,6 +164,19 @@ export class PaperPipeline {
         cp.data.compileOk = ok
       },
     )) ?? false
+    if (compileOk) {
+      cp.phases.writing = 'done'
+      cp.data.compileOk = true
+      await save()
+    }
+
+    // Human review of the compiled paper draft. Revise loops back through the
+    // writer + compile loop; approve/skip records the phase as done.
+    if (compileOk && cp.phases.human_review !== 'done') {
+      await this.reviewPaperDraft(ctx)
+      cp.phases.human_review = 'done'
+      await save()
+    }
 
     // Reference enrichment is best-effort and never blocks the pipeline.
     await this.enrichReferences(ctx)
@@ -196,6 +193,11 @@ export class PaperPipeline {
     // Improvement.
     await this.runPhase(paperDir, cp, 'improvement', () => this.improve(ctx, cp), () => {
       cp.phases.improvement = 'done'
+    })
+
+    // Beautification: layout, tables, figures. Content stays unchanged.
+    await this.runPhase(paperDir, cp, 'polish', () => this.polish(ctx), () => {
+      cp.phases.polish = 'done'
     })
 
     // Final report.
@@ -274,7 +276,18 @@ export class PaperPipeline {
           if (run.status !== 0) errors.push(`${safe}: ${(run.stderr ?? run.stdout ?? '').slice(0, 500)}`)
         }
       }
-      if (errors.length === 0) break
+      if (errors.length === 0) {
+        const review = await this.provider.run('figure-reflexion', {
+          runDir,
+          paperPlan: planText,
+          paperFigures: latexIncludes,
+          plan: JSON.stringify(structured?.scripts ?? {}),
+        }, context)
+        const r = review.structured as { verdict?: string; issues?: string[] } | undefined
+        if (r?.verdict === 'pass') break
+        feedback = `Fix figure quality issues:\n${(r?.issues ?? []).join('\n')}`
+        continue
+      }
       feedback = `Fix figure errors:\n${errors.join('\n')}`
     }
     await writeText(join(figuresDir, 'latex_includes.tex'), latexIncludes || '% No generated figures.\n')
@@ -282,6 +295,14 @@ export class PaperPipeline {
   }
 
   private async write(ctx: PaperContext, feedback?: string): Promise<void> {
+    const readOptional = (name: string) => readText(join(ctx.runDir, name)).catch(() => undefined)
+    const [experimentDesign, reflexion, insight, minimalVerification, modelScout] = await Promise.all([
+      readOptional('EXPERIMENT_DESIGN.md'),
+      readOptional('REFLEXION.md'),
+      readOptional('INSIGHT.md'),
+      readOptional('MINIMAL_VERIFICATION.md'),
+      readOptional('MODEL_SCOUT.md'),
+    ])
     const result = await this.provider.run('writer', {
       runDir: ctx.runDir,
       evidenceChainPath: ctx.evidencePath,
@@ -292,8 +313,13 @@ export class PaperPipeline {
       styleProfile: ctx.styleProfile,
       paperTemplate: await this.readTemplate(ctx.runDir, 'iclr2026.tex'),
       plan: feedback,
+      ...(experimentDesign ? { experimentDesign } : {}),
+      ...(reflexion ? { reflexion } : {}),
+      ...(insight ? { insight } : {}),
+      ...(minimalVerification ? { minimalVerification } : {}),
+      ...(modelScout ? { modelScout } : {}),
     }, ctx.context)
-    const value = result.structured as { mainTex?: string; bib?: string; sections?: Record<string, string> } | undefined
+    const value = result.structured as { mainTex?: string; bib?: string; sections?: Record<string, string>; failureReport?: string } | undefined
     if (!value?.mainTex) throw new Error('writer did not return mainTex')
     await writeFile(join(ctx.paperDir, 'main.tex'), value.mainTex, 'utf8')
     if (value.bib) await writeFile(join(ctx.paperDir, 'references.bib'), value.bib, 'utf8')
@@ -302,7 +328,9 @@ export class PaperPipeline {
       await ensureDir(dirname(file))
       await writeFile(file, content, 'utf8')
     }
-    await ensureRequiredSections(ctx.paperDir)
+    if (value.failureReport?.trim()) {
+      await writeText(join(ctx.runDir, FAILURE_REPORT_FILE), `# FAILURE_REPORT — 人类完善笔记\n\n${value.failureReport.trim()}\n`)
+    }
     await Promise.all([
       writeFile(join(ctx.paperDir, 'math_commands.tex'), await this.readTemplate(ctx.runDir, 'math_commands.tex'), 'utf8'),
       writeFile(join(ctx.paperDir, 'iclr2026_conference.sty'), await this.readTemplate(ctx.runDir, 'iclr2026_conference.sty'), 'utf8'),
@@ -310,12 +338,50 @@ export class PaperPipeline {
     ])
   }
 
+  private async reviewPaperDraft(ctx: PaperContext): Promise<void> {
+    const reviewer = this.options.humanReviewer
+    if (!reviewer || !(await humanReviewEnabled(this.options.humanReviewOverride))) {
+      await appendHumanReview(ctx.runDir, { time: new Date().toISOString(), gate: 'paper_draft', verdict: 'skipped', feedback: 'auto mode or no reviewer' })
+      return
+    }
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      const detail = [
+        `# Paper draft review`,
+        '',
+        `Compiled draft: ${join(ctx.paperDir, 'main.pdf')}`,
+        `LaTeX source: ${join(ctx.paperDir, 'main.tex')}`,
+        `Human fix notes: ${join(ctx.runDir, FAILURE_REPORT_FILE)}`,
+      ].join('\n')
+      let answer: HumanReviewAnswer
+      try {
+        answer = await reviewer.ask({ gate: 'paper_draft', title: 'Paper draft is ready to proceed?', detail }, ctx.context.signal, ctx.context.parent)
+      } catch (error) {
+        await appendHumanReview(ctx.runDir, { time: new Date().toISOString(), gate: 'paper_draft', verdict: 'skipped', feedback: `ask failed: ${String(error)}` })
+        return
+      }
+      await appendHumanReview(ctx.runDir, { time: new Date().toISOString(), gate: 'paper_draft', verdict: answer.verdict, feedback: answer.feedback })
+      if (answer.verdict === 'approve') return
+      if (answer.verdict === 'reject') {
+        throw new Error(`paper draft rejected by human review: ${answer.feedback ?? 'no feedback'}`)
+      }
+      // revise: apply feedback through the writer and compile loop.
+      await this.write(ctx, `Human review feedback:\n${answer.feedback ?? 'revise the draft'}`)
+      const compile = await runCompileLoop(ctx.paperDir, (feedback) => this.write(ctx, feedback))
+      if (!compile.ok) throw new Error(`paper draft compile failed after human revision: ${compile.rounds} rounds`)
+    }
+    throw new Error('paper draft human review did not converge after 5 attempts')
+  }
+
   private async enrichReferences(ctx: PaperContext): Promise<void> {
     // PDFs are only supplementary reference material. Download failures are
     // recorded but never treated as citation failures.
     const bib = await readText(join(ctx.paperDir, 'references.bib')).catch(() => '')
     if (!bib) return
-    await downloadReferencePdfs(ctx.runDir, bib, { strict: false })
+    try {
+      await downloadReferencePdfs(ctx.runDir, bib, { strict: false })
+    } catch (error) {
+      await writeText(join(ctx.paperDir, 'REFERENCE_DOWNLOAD_WARNINGS.txt'), String(error))
+    }
   }
 
   private async audit(ctx: PaperContext): Promise<Record<string, unknown>> {
@@ -389,6 +455,27 @@ export class PaperPipeline {
     await writeText(join(ctx.paperDir, 'PAPER_IMPROVEMENT_LOG.md'), `${existing}${log.join('\n')}`)
   }
 
+  private async polish(ctx: PaperContext): Promise<void> {
+    const result = await this.provider.run('paper-polisher', {
+      runDir: ctx.runDir,
+      paperPath: ctx.paperDir,
+      evidenceChainPath: ctx.evidencePath,
+    }, ctx.context)
+    const value = result.structured as { mainTex?: string; sections?: Record<string, string>; changes?: string[] } | undefined
+    if (!value?.mainTex) throw new Error('paper-polisher did not return mainTex')
+    await writeFile(join(ctx.paperDir, 'main.tex'), value.mainTex, 'utf8')
+    for (const [name, content] of Object.entries(value.sections ?? {})) {
+      const file = join(ctx.paperDir, name)
+      await ensureDir(dirname(file))
+      await writeFile(file, content, 'utf8')
+    }
+    await writeText(join(ctx.paperDir, 'PAPER_POLISH_LOG.md'), `# Paper Polish Log\n\n${(value.changes ?? []).map((x) => `- ${x}`).join('\n')}\n`)
+    const compile = await compilePaper(ctx.paperDir)
+    if (compile.ok && existsSync(join(ctx.paperDir, 'main.pdf'))) {
+      await copyFile(join(ctx.paperDir, 'main.pdf'), join(ctx.paperDir, 'main_polished.pdf'))
+    }
+  }
+
   private async report(ctx: PaperContext, assurance: string, compileOk: boolean, audits: Record<string, unknown>): Promise<string> {
     const report = `# FINAL_REPORT — Paper Writing Pipeline Report
 
@@ -424,6 +511,7 @@ ${JSON.stringify(audits, null, 2)}
 - paper/claims_evidence_matrix.json
 - paper/PAPER_ACCEPTANCE_CONTRACT.md
 - paper/PAPER_IMPROVEMENT_LOG.md
+- FAILURE_REPORT.md (human fix notes: experimental/theoretical insufficiencies)
 `
     await writeText(join(ctx.runDir, 'FINAL_REPORT.md'), report)
     return report

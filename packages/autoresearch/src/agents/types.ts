@@ -6,6 +6,12 @@ export type RoleName =
   | 'idea-reviewer'
   | 'hypothesis-reviser'
   | 'planner'
+  | 'minimal-verifier'
+  | 'experiment-designer'
+  | 'experiment-reflexion'
+  | 'model-scout'
+  | 'result-reflexion'
+  | 'insight-abstractor'
   | 'research-worker'
   | 'evidence-agent'
   | 'supervisor'
@@ -14,11 +20,13 @@ export type RoleName =
   | 'contract-negotiator'
   | 'contract-reviewer'
   | 'figure-generator'
+  | 'figure-reflexion'
   | 'proof-checker'
   | 'claim-auditor'
   | 'citation-auditor'
   | 'kill-argument-reviewer'
   | 'paper-reviewer'
+  | 'paper-polisher'
   | 'final-report-writer'
 
 export interface ParentAgentLike {
@@ -50,6 +58,12 @@ export interface RoleInput {
   readonly venue?: string
   readonly assurance?: string
   readonly paperPath?: string
+  readonly minimalVerification?: string
+  readonly experimentDesign?: string
+  readonly reflexion?: string
+  readonly failureDirections?: string
+  readonly insight?: string
+  readonly modelScout?: string
 }
 
 export interface RoleOutput {

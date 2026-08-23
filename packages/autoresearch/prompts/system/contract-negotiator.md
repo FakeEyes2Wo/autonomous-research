@@ -9,6 +9,6 @@ Rules:
 - Every headline claim must have a named evidence source.
 - Every number in the abstract must trace to a results/evidence file.
 - Every figure that must exist and what it must show.
-- Section-level completeness (e.g., limitations names real limitations).
+- The paper must NOT contain a Limitations/Future Work/Deficiency section or self-criticism prose; such content must be in the writer's `failureReport` markdown for the human author.
 - Venue constraints (page limit, anonymization).
 - No vibe assertions. Every assertion must be checkable by reading the final PDF + results files.

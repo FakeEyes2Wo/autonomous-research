@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { ResearchTree } from '../core/research-tree.js'
-import { isEvidenceVerdict } from '../domain/guards.js'
+import { isEvidenceVerdict } from '../core/types.js'
 import { loadCheckpoint } from '../paper/checkpoint.js'
 import { readLastRun } from '../session/last-run.js'
 import type { AutoResearchService } from '../service/autoresearch-service.js'
@@ -259,6 +259,7 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
         candidatePath: { type: 'string', description: 'Optional candidate.md path relative to runDir' },
         profilePath: { type: 'string', description: 'Optional PROFILE.md path relative to runDir' },
         maxCycles: { type: 'number', description: 'Optional max research cycles' },
+        humanReview: { type: 'string', enum: ['auto', 'on', 'off'], description: 'auto follows /auto command, on forces human gates, off skips them' },
         paper: {
           type: 'object',
           description: 'Paper writing pipeline options',
@@ -287,6 +288,7 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
         candidatePath: typeof args.candidatePath === 'string' ? args.candidatePath : undefined,
         profilePath: typeof args.profilePath === 'string' ? args.profilePath : undefined,
         maxCycles: typeof args.maxCycles === 'number' ? args.maxCycles : undefined,
+        humanReview: typeof args.humanReview === 'string' ? args.humanReview as 'auto' | 'on' | 'off' : undefined,
         paper: typeof args.paper === 'object' && args.paper !== null ? args.paper as Record<string, unknown> : undefined,
       }, {
         parent: parent as never,

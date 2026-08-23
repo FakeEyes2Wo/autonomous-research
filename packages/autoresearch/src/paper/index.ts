@@ -62,8 +62,7 @@ ${matrix.claims.map((c) => `| ${c.claim_id} | ${c.hypothesis_id} | ${c.evidence_
 4. Method
 5. Experiments
 6. Results
-7. Limitations
-8. Conclusion
+7. Conclusion
 
 ## Figures
 
@@ -214,7 +213,7 @@ export async function compilePaper(paperDir: string): Promise<CompileResult> {
 export async function runCompileLoop(
   paperDir: string,
   fix: (feedback: string) => Promise<void>,
-  maxRounds = 2,
+  maxRounds = 5,
 ): Promise<{ ok: boolean; rounds: number }> {
   await mkdir(paperDir, { recursive: true })
   let last: CompileResult = { ok: false, engine: undefined, output: 'not run' }

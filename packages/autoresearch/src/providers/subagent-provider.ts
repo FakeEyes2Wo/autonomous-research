@@ -1,5 +1,5 @@
 import { buildPrompt, outputSchemaFor } from '../agents/factory.js'
-import { createLogger } from '../core/logger.js'
+import { createLogger } from '../core/utils.js'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../agents/types.js'
 
 interface ContentBlockLike {
