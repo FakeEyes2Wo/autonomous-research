@@ -6,13 +6,15 @@ import { join, dirname, basename, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+const repoRoot = join(pkgRoot, '..', '..')
+const defaultExample = join(repoRoot, 'examples_articles', 'reliable_conflictive_multi_view_learning')
 
 function parseArgs(argv) {
   const args = {
     profile: 'headless',
     runDir: undefined,
-    candidate: undefined,
-    profileFile: undefined,
+    candidate: join(defaultExample, 'candidate.md'),
+    profileFile: join(defaultExample, 'PROFILE.md'),
     maxCycles: 5,
     paper: undefined,
   }
@@ -44,13 +46,12 @@ function parseArgs(argv) {
 }
 
 async function prepareRunDir(runDir, candidatePath, profilePath) {
-  await mkdir(runDir, { recursive: true })
-  if (candidatePath) {
-    await mkdir(join(runDir, 'input'), { recursive: true })
-    await cp(candidatePath, join(runDir, 'input', 'candidate.md'), { force: true })
-  }
-  if (profilePath) {
+  await mkdir(join(runDir, 'input'), { recursive: true })
+  await cp(candidatePath, join(runDir, 'input', 'candidate.md'), { force: true })
+  if (existsSync(profilePath)) {
     await cp(profilePath, join(runDir, 'PROFILE.md'), { force: true })
+  } else {
+    await writeFile(join(runDir, 'PROFILE.md'), '# PROFILE\n\n- Allowed: local analysis, public search, code, statistics.\n- Forbidden: reading hidden target paper.\n', 'utf8')
   }
   return runDir
 }
@@ -268,7 +269,6 @@ function buildPrompt(runDir, maxCycles, paper) {
   }
   lines.push(
     '',
-    'Do not create candidate.md or PROFILE.md yourself; research_run auto-generates them when missing.',
     'Work autonomously until the loop completes. Do not inspect the hidden target paper.',
     'When finished, report the final status and the paths of the produced files (state.json, evidence_chain.json, paper_draft.md, FINAL_REPORT.md or FAILURE_REPORT.md).',
   )
