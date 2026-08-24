@@ -13,8 +13,7 @@ Read the paper wiki index and propose 2-3 candidate directions with a new proble
 For each direction return: id, source `novelty`, direction, evidence (>=3 paper ids), cheapTest, risk.
 
 ## Perspective: debate
-Read the Plan section. It names your stance and the target direction plus all candidates.
-Attack the target direction from your assigned stance: return attack (specific weaknesses), support (what is strong), and revisedDirection (a tightened one-sentence version; keep the same id and never switch to a candidate outside the pool).
+Read the Plan section. It names one target direction and lists all candidates. Attack the target from the two perspectives that did not propose it: return attack (specific weaknesses), support (what is strong), and revisedDirection (a tightened one-sentence version of the target; keep its id and never switch to a candidate outside the pool).
 
 ## Perspective: score
 Read the Plan section containing the candidate pool. Score every candidate 1-5 on:
