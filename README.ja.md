@@ -1,6 +1,6 @@
-[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
-
 # Autonomous Research System 設計ドキュメント
+
+[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
 
 Autonomous Research System：candidate / 実験記録からトレーサブルな論文パッケージまでを自動化する研究コントロールプレーン。DSH の Agent、Subagent、Goal、Workflow、Tools、Skills、永続化、サンドボックス、承認、モデルルーティングをそのまま再利用し、新規に追加するのは研究制御のセマンティクスのみ。
 

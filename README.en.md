@@ -1,6 +1,6 @@
-[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
-
 # Autonomous Research System Design Docs
+
+[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
 
 Autonomous Research System: an automated research control plane that goes from a candidate / experiment records all the way to a traceable paper package. It reuses DSH's Agent, Subagent, Goal, Workflow, Tools, Skills, persistence, sandbox, approval and model-routing layers; only the research control semantics are new.
 
