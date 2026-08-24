@@ -3,7 +3,7 @@ import { ResearchRunner } from './service/runner.js'
 import { ResearchTree } from './core/research-tree.js'
 import { SubagentRoleAgentProvider } from './providers/subagent-provider.js'
 import { createPaperPipelineResumeTool, createResearchRunTool, paperPipelineLastRun, paperPipelineStatus, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
-import type { HumanReviewAnswer, HumanReviewer, HumanReviewRequest } from './core/human-review.js'
+import type { HumanOpenRequest, HumanReviewAnswer, HumanReviewer, HumanReviewRequest } from './core/human-review.js'
 import { writeAutoMode } from './session/auto-mode.js'
 
 export const name = 'autoresearch'
@@ -85,6 +85,18 @@ export function apply(ctx: {
       if (selected === 'reject') return { verdict: 'reject', feedback }
       if (selected === 'revise' || feedback) return { verdict: 'revise', feedback }
       return { verdict: 'approve', feedback }
+    },
+    async askOpen(request: HumanOpenRequest, signal: AbortSignal, agent?: unknown): Promise<string | undefined> {
+      const answer = await ctx.userQuestions.ask({
+        questions: [{
+          id: 'open',
+          question: request.title,
+          header: 'Human Input',
+        }],
+        ...(agent ? { agent } : {}),
+        signal,
+      })
+      return answer.answers[0]?.custom?.trim() || undefined
     },
   }
 

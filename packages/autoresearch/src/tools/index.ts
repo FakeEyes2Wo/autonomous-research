@@ -260,6 +260,8 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
         profilePath: { type: 'string', description: 'Optional PROFILE.md path relative to runDir' },
         maxCycles: { type: 'number', description: 'Optional max research cycles' },
         humanReview: { type: 'string', enum: ['auto', 'on', 'off'], description: 'auto follows /auto command, on forces human gates, off skips them' },
+        idea: { type: 'string', description: 'Optional human idea/seed for the brainstorm pre-phase' },
+        brainstorm: { type: 'string', enum: ['auto', 'on', 'off'], description: 'auto runs brainstorm when no candidate.md exists' },
         paper: {
           type: 'object',
           description: 'Paper writing pipeline options',
@@ -289,6 +291,8 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
         profilePath: typeof args.profilePath === 'string' ? args.profilePath : undefined,
         maxCycles: typeof args.maxCycles === 'number' ? args.maxCycles : undefined,
         humanReview: typeof args.humanReview === 'string' ? args.humanReview as 'auto' | 'on' | 'off' : undefined,
+        idea: typeof args.idea === 'string' ? args.idea : undefined,
+        brainstorm: typeof args.brainstorm === 'string' ? args.brainstorm as 'auto' | 'on' | 'off' : undefined,
         paper: typeof args.paper === 'object' && args.paper !== null ? args.paper as Record<string, unknown> : undefined,
       }, {
         parent: parent as never,

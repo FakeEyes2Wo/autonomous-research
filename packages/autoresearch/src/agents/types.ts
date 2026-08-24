@@ -28,6 +28,9 @@ export type RoleName =
   | 'paper-reviewer'
   | 'paper-polisher'
   | 'final-report-writer'
+  | 'paper-miner'
+  | 'paper-wiki-writer'
+  | 'brainstorm'
 
 export interface ParentAgentLike {
   readonly id: string
@@ -64,6 +67,7 @@ export interface RoleInput {
   readonly failureDirections?: string
   readonly insight?: string
   readonly modelScout?: string
+  readonly perspective?: string
 }
 
 export interface RoleOutput {

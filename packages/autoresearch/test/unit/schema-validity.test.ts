@@ -32,6 +32,9 @@ const roles = [
   'paper-reviewer',
   'paper-polisher',
   'final-report-writer',
+  'paper-miner',
+  'paper-wiki-writer',
+  'brainstorm',
 ] as const
 
 function findInvalidRequired(node: unknown, path: string): string[] {

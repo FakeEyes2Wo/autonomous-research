@@ -1,6 +1,7 @@
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName } from '../agents/types.js'
-import { AutoResearchError, DEFAULT_MAX_CYCLES, WORK_DIR } from '../core/utils.js'
+import { AutoResearchError, DEFAULT_MAX_CYCLES, IDEA_FILE, INPUT_DIR, WORK_DIR } from '../core/utils.js'
 import { HypothesisPool } from '../core/hypothesis-pool.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { recordDecision, recordResult, saveState, transition, writeDecision } from '../core/state.js'
@@ -14,6 +15,7 @@ import type { FalsifiabilityReport, IdeaDraft, IdeaPackage, SkepticReport, Valid
 import { freezeRubric, readCandidate, readPlan, readRubric, writeFailureReport, writePlan, writeRubric } from '../domain/files.js'
 import { exportEvidenceChain } from '../export/evidence-chain.js'
 import { PaperPipeline, type PaperOptions } from '../paper/pipeline.js'
+import { BrainstormPipeline } from '../brainstorm/pipeline.js'
 
 export interface ResearchRunnerOptions {
   provider: RoleAgentProvider
@@ -22,6 +24,8 @@ export interface ResearchRunnerOptions {
   reviewer?: HumanReviewer
   reviewGates?: ReviewGateId[]
   humanReviewOverride?: 'auto' | 'on' | 'off'
+  idea?: string
+  brainstorm?: 'auto' | 'on' | 'off'
 }
 
 export class ResearchRunner {
@@ -31,6 +35,8 @@ export class ResearchRunner {
   private readonly reviewer?: HumanReviewer
   private readonly reviewGates: ReviewGateId[]
   private readonly humanReviewOverride?: 'auto' | 'on' | 'off'
+  private readonly idea?: string
+  private readonly brainstorm: 'auto' | 'on' | 'off'
   private logger: Logger = createLogger()
 
   constructor(options: ResearchRunnerOptions) {
@@ -40,6 +46,8 @@ export class ResearchRunner {
     this.reviewer = options.reviewer
     this.reviewGates = options.reviewGates ?? ['idea', 'rubric', 'experiment', 'evidence', 'paper_draft']
     this.humanReviewOverride = options.humanReviewOverride
+    this.idea = options.idea
+    this.brainstorm = options.brainstorm ?? 'auto'
   }
 
   private assurance(): 'draft' | 'submission' {
@@ -48,9 +56,28 @@ export class ResearchRunner {
     return effort === 'max' || effort === 'beast' ? 'submission' : 'draft'
   }
 
+  private shouldBrainstorm(runDir: string): boolean {
+    if (this.brainstorm === 'off') return false
+    if (this.brainstorm === 'on') return true
+    return !existsSync(safeResolve(runDir, INPUT_DIR, IDEA_FILE))
+  }
+
   async run(runDir: string, state: RunState, tree: ResearchTree, context: RoleExecutionContext): Promise<RunState> {
     this.logger = createLogger(runDir)
     this.logger.info(`run started runDir=${runDir} runId=${state.runId} status=${state.status} cycle=${state.cycle}`)
+
+    // Optional brainstorm pre-phase: mine papers, write a paper wiki, debate
+    // directions, and hand off a reformed winning idea as candidate.md.
+    if (this.shouldBrainstorm(runDir)) {
+      await transition(state, 'brainstorm', 'brainstorm-pipeline')
+      const ideaFile = await new BrainstormPipeline(this.provider, {
+        idea: this.idea,
+        reviewer: this.reviewer,
+        humanReviewOverride: this.humanReviewOverride,
+      }).run(runDir, context)
+      this.logger.info(`brainstorm done idea=${ideaFile}`)
+    }
+
     const candidate = await readCandidate(runDir)
     const profile = await this.readProfile(runDir)
     this.logger.info(`intake done direction=${candidate.direction.slice(0, 80)}`)

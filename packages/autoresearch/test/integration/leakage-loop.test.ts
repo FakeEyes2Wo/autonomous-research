@@ -11,7 +11,7 @@ test('leakage detection catches leaked target title in generated paper', async (
   const dir = await mkdtemp(join(tmpdir(), 'ar-leak-'))
   try {
     await mkdir(join(dir, 'input'), { recursive: true })
-    await writeFile(join(dir, 'input', 'candidate.md'), '# Candidate\n\n## Direction\n\nSomething.\n', 'utf8')
+    await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nSomething.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
 
     const provider = new FakeAgentProvider({

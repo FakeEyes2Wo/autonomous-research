@@ -1,46 +1,100 @@
-# Autonomous Research System 设计文档
+# Autonomous Research System
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+DSH 插件 `@athena/autoresearch`：最小闭环研究自动化（`idea → plan → work → evidence → decide → paper | failure report`）。本文档只包含两件事：**DSH 插件安装** 与 **无头模式运行脚本**。
 
-Autonomous Research System：从 candidate / 实验记录到可追溯论文包的自动化研究控制平面。复用 DSH 的 Agent、Subagent、Goal、Workflow、Tools、Skills、持久化、沙箱、审批与模型路由；只新增研究控制语义。
+## 环境要求
 
-## 当前执行基线
+- Node.js ≥ 22.19.0
+- pnpm
+- DSH ≥ 0.1.0-rc.5（`dsh` CLI 可用）
+- 可选：pandoc、LaTeX（`latexmk` / `pdflatex` / `xelatex` / `tectonic`）或 Chrome/Edge，用于论文 PDF 生成
 
-| 文档 | 内容 |
-|---|---|
-| [2026-08-20-autoresearch-ml-control-plane-design.md](2026-08-20-autoresearch-ml-control-plane-design.md) | **唯一实现基线**：AutoResearchService + 最小状态 + 动态 rubric + 自主迭代 + Domain Profile（ML v1） |
-| [2026-08-16-candidate-to-paper-design.md](2026-08-16-candidate-to-paper-design.md) | candidate → paper 全流程（默认入口） |
-| [2026-08-16-records-to-paper-design.md](2026-08-16-records-to-paper-design.md) | 已有实验记录 → paper（第二入口） |
-| [2026-08-16-idea-generation-design.md](2026-08-16-idea-generation-design.md) | brainstorm + 候选生成 + 门禁 |
-| [2026-08-15-hypothesis-local-pool-design.md](2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool 生命周期索引 |
-| [2026-08-15-autoresearch-figures-and-experiment-design.md](2026-08-15-autoresearch-figures-and-experiment-design.md) | 论文图、可信实验、消融规则 |
+## 一、DSH 插件安装
 
-## 代码实现
+1. 构建插件：
 
-- [packages/autoresearch/](packages/autoresearch/)：最小闭环 DSH 插件（TypeScript），实现 `idea → plan → work → evidence → decide → paper | failure report`，复用 DSH Agent/Subagent 系统。
-  - 无头运行：`cd packages/autoresearch && npm run run:headless`
+   ```powershell
+   cd packages/autoresearch
+   npm run build
+   ```
 
-## Handoff（领域流程执行手册）
+2. 安装到已有 DSH profile（默认 `web`）：
 
-| 组 | 文件 |
-|---|---|
-| candidate→paper | [candidate-to-paper-handoff/](candidate-to-paper-handoff/)：00 总控 + 01–10 各阶段 |
-| records→paper | [records-paper-handoff/](records-paper-handoff/)：00 总控 + 01、02、04、05（含数据契约；写作复用 candidate 08） |
-| 最小验证 | [verify_exp/](verify_exp/)：图管线、drawio MCP、pure LLM / drawio 结果 |
+   ```powershell
+   npm run install:dsh -- web
+   ```
 
-## 历史 / 延期参考（非实现基线）
+   或：
 
-- `2026-08-15-autoresearch-ts-plugin-design.md`：交付物决策与三条论文路径仍有效；旧框架已收敛。
-- `2026-08-15-autoresearch-detailed-design.md`：历史实现级设计，保留恢复与质量闸原则。
-- `2026-08-15-autoresearch-protocols-and-paper-engine.md`：Paper Engine 规则仍有效；阶段协议已由 2026-08-20 取代。
-- `2026-08-15-autoresearch-generalization-and-minimalism.md`：M4 泛化参考。
+   ```powershell
+   node scripts/install-dsh-plugin.mjs web
+   ```
 
-## 关键决策
+   脚本会修改 `<DSH_HOME>\profiles\web\package.json`（添加 `"@athena/autoresearch": "link:<repo>\packages\autoresearch"`），并向 `cordis.patch.yml` 注入插件加载行。默认 `<DSH_HOME>` 为 `%USERPROFILE%\.dsh`，可通过环境变量 `DSH_HOME` 覆盖。
 
-1. 不实现第二套 Agent Runtime / EventBus / DAG / 任务队列。
-2. ML v1 只实现一个主要 `AutoResearchService` + 最小 state/events。
-3. 实验执行方统一为 **Experiment Provider**（当前实现 Athena）；Core 不依赖其私有类型。
-4. 证据契约统一为 `evidence_chain.json`；论文引用统一为 `E:`/`B:` 标签；四段 ID：`candidate_id → hypothesis_id → experiment_id → paper tag`。
-5. 实验前动态生成并冻结 rubric；失败、DRAW、负结果不得删除。
-6. 论文三路径：Overleaf → local TeX → Markdown-only；编译修复只受时间预算。
-7. 通用化时机：第二个真实领域接入后提炼最小 Domain Profile，不预建空壳接口。
+3. 安装 profile 依赖并启动 DSH：
+
+   ```powershell
+   cd $env:USERPROFILE\.dsh\profiles\web
+   pnpm install
+   dsh --profile web
+   ```
+
+   会话内会自动注册 research 工具与 `research_run` 控制工具。
+
+> 说明：profile 必须已经存在（需先由 DSH 创建）。如果只跑无头模式，`run:headless` 会自动创建 `headless` profile，无需手动执行本节。
+
+## 二、无头模式运行脚本
+
+```powershell
+cd packages/autoresearch
+npm run run:headless
+```
+
+脚本会：
+
+1. 构建插件（`npm run build`）；
+2. 创建运行目录 `.runs/run-<timestamp>`（可用 `--run-dir` 指定）；
+3. 复制默认输入：`examples_articles/reliable_conflictive_multi_view_learning/` 下的 `idea.md` 与 `PROFILE.md`；
+4. 确保 DSH `headless` profile 存在并完成 `pnpm install`；
+5. 启动 `dsh --profile headless`，由 Agent 调用 `research_run` 完成研究闭环；
+6. 生成论文产物：优先 LaTeX 编译，缺失时用 pandoc + Chrome/Edge 以 HTML→PDF 兜底；
+7. 打印最终产物路径。
+
+> 注意：`run:headless` 自动创建的 `headless` profile 会禁用 sandbox / permission 预设并改用本地 shell / fs provider，请在可信环境中运行。
+
+### 常用参数
+
+| 参数 | 默认值 | 说明 |
+|---|---|---|
+| `--profile` | `headless` | DSH profile 名 |
+| `--run-dir` | `.runs/run-<timestamp>` | 运行输出目录 |
+| `--idea` | 默认示例的 `idea.md` | idea 输入文件 |
+| `--profile-file` | 默认示例的 `PROFILE.md` | 实验约束 profile 文件 |
+| `--max-cycles` | `5` | 研究循环最大轮数 |
+| `--venue` | 无 | 目标会议，如 `ICLR` / `NeurIPS` / `ICML` |
+| `--assurance` | 无 | `draft` 或 `submission` |
+| `--effort` | 无 | `lite` / `balanced` / `max` / `beast` |
+| `--illustration` | 无 | `figurespec` / `gemini` / `codex-image2` / `mermaid` / `false` |
+| `--style-ref` | 无 | 论文风格参考文件路径 |
+| `--auto-proceed` | `true` | 论文流水线自动继续（`true` / `false`） |
+| `--human-checkpoint` | `true` | 论文流水线人工检查点（`true` / `false`） |
+| `--max-improvement-rounds` | 无（内部默认 `2`） | 论文改进轮数上限 |
+
+### 示例
+
+```powershell
+npm run run:headless -- --run-dir C:/tmp/my-run --idea C:/path/idea.md --profile-file C:/path/PROFILE.md --max-cycles 3 --venue ICLR --effort balanced
+```
+
+### 产物
+
+运行结束后，在 `--run-dir` 下可能生成：
+
+- `state.json`：运行状态
+- `research_tree.json`：研究树
+- `evidence_chain.json`：证据链
+- `paper_draft.md`：论文草稿
+- `paper/main.tex`、`paper/main.pdf`：论文 LaTeX / PDF
+- `evidence/citations.json`：引用证据
+- `FINAL_REPORT.md` 或 `FAILURE_REPORT.md`：最终 / 失败报告

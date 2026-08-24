@@ -1,4 +1,4 @@
-import { AutoResearchError, CANDIDATE_FILE, FAILURE_REPORT_FILE, FINAL_REPORT_FILE, INPUT_DIR, PAPER_DRAFT_FILE, PLAN_PREFIX, RUBRIC_FILE } from '../core/utils.js'
+import { AutoResearchError, FAILURE_REPORT_FILE, FINAL_REPORT_FILE, IDEA_FILE, INPUT_DIR, PAPER_DRAFT_FILE, PLAN_PREFIX, RUBRIC_FILE } from '../core/utils.js'
 import { readText, safeResolve, writeText } from '../core/utils.js'
 
 function mdPath(runDir: string, name: string): string {
@@ -39,11 +39,11 @@ export interface Candidate {
 }
 
 export async function readCandidate(runDir: string, candidatePath?: string): Promise<Candidate> {
-  const file = candidatePath ? safeResolve(runDir, candidatePath) : safeResolve(runDir, INPUT_DIR, CANDIDATE_FILE)
+  const file = candidatePath ? safeResolve(runDir, candidatePath) : safeResolve(runDir, INPUT_DIR, IDEA_FILE)
   const raw = await readText(file)
   const directionMatch = raw.match(/^##\s+Direction\s*$/mi)
   if (!directionMatch) {
-    throw new AutoResearchError('candidate.md is missing a Direction section', 'INVALID_ARGUMENT')
+    throw new AutoResearchError('idea.md is missing a Direction section', 'INVALID_ARGUMENT')
   }
   const after = raw.slice((directionMatch.index ?? 0) + directionMatch[0].length)
   const ideasMatch = raw.match(/^##\s+A-priori ideas.*$/mi)

@@ -13,6 +13,7 @@ export interface ResearchNode {
 export type RunStatus = 'RUNNING' | 'WAITING' | 'PAUSED' | 'FAILED' | 'COMPLETED'
 export type RunPhase =
   | 'intake'
+  | 'brainstorm'
   | 'rubric'
   | 'ideation'
   | 'hypothesis_revision'

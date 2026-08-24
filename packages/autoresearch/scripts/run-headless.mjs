@@ -6,15 +6,14 @@ import { join, dirname, basename, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
-const repoRoot = join(pkgRoot, '..', '..')
-const defaultExample = join(repoRoot, 'examples_articles', 'reliable_conflictive_multi_view_learning')
 
 function parseArgs(argv) {
   const args = {
     profile: 'headless',
     runDir: undefined,
-    candidate: join(defaultExample, 'candidate.md'),
-    profileFile: join(defaultExample, 'PROFILE.md'),
+    candidate: undefined,
+    profileFile: undefined,
+    idea: undefined,
     maxCycles: 5,
     paper: undefined,
   }
@@ -25,6 +24,7 @@ function parseArgs(argv) {
       case '--run-dir': args.runDir = argv[++i]; break
       case '--candidate': args.candidate = argv[++i]; break
       case '--profile-file': args.profileFile = argv[++i]; break
+      case '--idea': args.idea = argv[++i]; break
       case '--max-cycles': args.maxCycles = Number(argv[++i]); break
       case '--venue': (args.paper ??= {}).venue = argv[++i]; break
       case '--assurance': (args.paper ??= {}).assurance = argv[++i]; break
@@ -46,12 +46,13 @@ function parseArgs(argv) {
 }
 
 async function prepareRunDir(runDir, candidatePath, profilePath) {
-  await mkdir(join(runDir, 'input'), { recursive: true })
-  await cp(candidatePath, join(runDir, 'input', 'candidate.md'), { force: true })
-  if (existsSync(profilePath)) {
+  await mkdir(runDir, { recursive: true })
+  if (candidatePath) {
+    await mkdir(join(runDir, 'input'), { recursive: true })
+    await cp(candidatePath, join(runDir, 'input', 'candidate.md'), { force: true })
+  }
+  if (profilePath) {
     await cp(profilePath, join(runDir, 'PROFILE.md'), { force: true })
-  } else {
-    await writeFile(join(runDir, 'PROFILE.md'), '# PROFILE\n\n- Allowed: local analysis, public search, code, statistics.\n- Forbidden: reading hidden target paper.\n', 'utf8')
   }
   return runDir
 }
@@ -254,7 +255,7 @@ async function compilePaper(runDir) {
   }
 }
 
-function buildPrompt(runDir, maxCycles, paper) {
+function buildPrompt(runDir, maxCycles, paper, idea, hasCandidate) {
   const absolute = resolve(runDir)
   const lines = [
     'Run the autonomous research loop in the directory below.',
@@ -264,6 +265,8 @@ function buildPrompt(runDir, maxCycles, paper) {
     '',
     'Call the `research_run` tool with `runDir` set to that absolute path and `maxCycles` set to the value above.',
   ]
+  if (!hasCandidate) lines.push('Do not create candidate.md yourself: research_run will run the brainstorm pre-phase automatically.')
+  if (idea) lines.push(`Pass the human idea/seed to research_run as the "idea" argument: ${JSON.stringify(idea)}`)
   if (paper && Object.keys(paper).length > 0) {
     lines.push('', `Pass this paper pipeline configuration to research_run as the "paper" argument: ${JSON.stringify(paper)}`)
   }
@@ -278,13 +281,14 @@ function buildPrompt(runDir, maxCycles, paper) {
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const runDir = resolve(args.runDir)
-  await prepareRunDir(runDir, resolve(args.candidate), resolve(args.profileFile))
+  const candidate = args.candidate ? resolve(args.candidate) : undefined
+  await prepareRunDir(runDir, candidate, args.profileFile ? resolve(args.profileFile) : undefined)
   console.log(`[autoresearch] run dir: ${runDir}`)
   process.env.DSH_PERMISSION_MODE ??= 'danger-full-access'
   process.env.DSH_AUTORESEARCH_AUTO ??= '1'
   await ensureHeadlessProfile(args.profile)
 
-  const prompt = buildPrompt(runDir, args.maxCycles, args.paper)
+  const prompt = buildPrompt(runDir, args.maxCycles, args.paper, args.idea, Boolean(candidate))
   const nodeDir = dirname(process.execPath)
   const dshBin = join(nodeDir, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
   let result

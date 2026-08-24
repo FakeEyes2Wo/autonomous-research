@@ -16,8 +16,14 @@ export interface HumanReviewAnswer {
   feedback?: string
 }
 
+export interface HumanOpenRequest {
+  title: string
+  detail: string
+}
+
 export interface HumanReviewer {
   ask(request: HumanReviewRequest, signal: AbortSignal, agent?: unknown): Promise<HumanReviewAnswer>
+  askOpen?(request: HumanOpenRequest, signal: AbortSignal, agent?: unknown): Promise<string | undefined>
 }
 
 export interface HumanReviewRecord {

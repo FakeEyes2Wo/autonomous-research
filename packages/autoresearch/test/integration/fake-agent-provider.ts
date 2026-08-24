@@ -145,6 +145,109 @@ export class FakeAgentProvider implements RoleAgentProvider {
         return { text: '', structured: { mainTex: this.script.writerText ?? '\\documentclass{article}\n\\begin{document}\nDone.\n\\end{document}', changes: [] }, stopReason: 'completed' }
       case 'final-report-writer':
         return { text: '', structured: { report: '# Final Report' }, stopReason: 'completed' }
+      case 'paper-miner': {
+        const papers = Array.from({ length: 30 }, (_, i) => ({
+          id: `p${String(i + 1).padStart(3, '0')}`,
+          title: `Paper ${i + 1}`,
+          arxivId: `2401.${String(i + 1).padStart(5, '0')}`,
+          url: `https://arxiv.org/abs/2401.${String(i + 1).padStart(5, '0')}`,
+          year: '2024',
+          venue: 'ICLR',
+          citations: 10 + i,
+          abstract: 'abstract',
+          relevance: i < 15 ? 'A' : 'B',
+          reasons: ['relevant'],
+        }))
+        return { text: '', structured: { papers }, stopReason: 'completed' }
+      }
+      case 'paper-wiki-writer': {
+        const wikis: Record<string, string> = {}
+        for (let i = 1; i <= 15; i += 1) {
+          wikis[`p${String(i).padStart(3, '0')}`] = `# Paper ${i}\n\n## 要点\npoint\n\n## 核心方法\nmethod\n\n## 失败点\nfailure\n\n## 可改进点\nimprove\n\n## Insight\ninsight\n\n## 与我方可能的结合点\nlink`
+        }
+        return { text: '', structured: { wikis }, stopReason: 'completed' }
+      }
+      case 'brainstorm': {
+        const perspective = String(_input.perspective ?? '')
+        if (perspective.startsWith('propose:')) {
+          const view = perspective.split(':')[1] ?? 'gap'
+          return {
+            text: '',
+            structured: {
+              directions: [{
+                id: `${view}-1`,
+                source: view,
+                direction: `Direction from ${view}`,
+                evidence: ['p001', 'p002', 'p003'],
+                cheapTest: 'small real-data test',
+                risk: 'low',
+              }],
+            },
+            stopReason: 'completed',
+          }
+        }
+        if (perspective === 'score') {
+          let candidates: Array<{ id: string }> = []
+          try { candidates = JSON.parse(_input.plan ?? '[]') } catch { candidates = [] }
+          return {
+            text: '',
+            structured: {
+              scores: candidates.map((candidate, index) => ({
+                candidateId: candidate.id,
+                novelty: 5 - index,
+                feasibility: 4,
+                evidence: 5 - index,
+              })),
+            },
+            stopReason: 'completed',
+          }
+        }
+        if (perspective === 'chair') {
+          return {
+            text: '',
+            structured: {
+              selectedId: 'gap-1',
+              ideaMd: [
+                '# IDEA',
+                '',
+                '## original_seed',
+                'seed',
+                '',
+                '## selected',
+                '- rank: 1',
+                '- votes: 12',
+                '- source: gap',
+                '',
+                '## reformed_idea',
+                '- direction: Refined gap direction',
+                '- what_changed: tightened scope',
+                '- why_promising: clear gap',
+                '',
+                '## evidence',
+                '- paper_wiki/p001.md',
+                '- paper_wiki/p002.md',
+                '- paper_wiki/p003.md',
+                '',
+                '## cheap_test',
+                '- run the small real-data test',
+                '',
+                '## risks',
+                '- dataset bias',
+                '',
+                '## backups',
+                '- rank 2: Direction from feasibility',
+                '- rank 3: Direction from novelty',
+              ].join('\n'),
+            },
+            stopReason: 'completed',
+          }
+        }
+        return {
+          text: '',
+          structured: { attack: ['weak point'], support: ['strong point'], revisedDirection: 'Revised direction' },
+          stopReason: 'completed',
+        }
+      }
       default:
         throw new Error(`unexpected role ${role}`)
     }

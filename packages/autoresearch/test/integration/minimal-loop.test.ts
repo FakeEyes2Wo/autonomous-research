@@ -10,7 +10,7 @@ test('minimal loop runs revise then finish and produces paper', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-loop-'))
   try {
     await mkdir(join(dir, 'input'), { recursive: true })
-    await writeFile(join(dir, 'input', 'candidate.md'), '# Candidate\n\n## Direction\n\nStudy conflictive multi-view learning.\n\n## A-priori ideas\n- Model conflicts explicitly\n', 'utf8')
+    await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nStudy conflictive multi-view learning.\n\n## A-priori ideas\n- Model conflicts explicitly\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n\n- Allowed: local analysis\n', 'utf8')
 
     const provider = new FakeAgentProvider({
@@ -43,7 +43,7 @@ test('minimal loop fails when supervisor decides fail', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-loop-fail-'))
   try {
     await mkdir(join(dir, 'input'), { recursive: true })
-    await writeFile(join(dir, 'input', 'candidate.md'), '# Candidate\n\n## Direction\n\nSomething.\n', 'utf8')
+    await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nSomething.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
 
     const provider = new FakeAgentProvider({ decisions: ['fail'] })

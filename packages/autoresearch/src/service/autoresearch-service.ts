@@ -18,6 +18,8 @@ export interface ResearchRunOptions {
   maxCycles?: number
   paper?: PaperOptions
   humanReview?: 'auto' | 'on' | 'off'
+  idea?: string
+  brainstorm?: 'auto' | 'on' | 'off'
 }
 
 export interface ResearchRunContext extends RoleExecutionContext {}
@@ -59,6 +61,8 @@ export class AutoResearchService {
       reviewer: this.reviewer,
       reviewGates: this.reviewGates,
       humanReviewOverride: options.humanReview,
+      idea: options.idea,
+      brainstorm: options.brainstorm,
     })
     try {
       const result = await runner.run(runDir, state, tree, context)

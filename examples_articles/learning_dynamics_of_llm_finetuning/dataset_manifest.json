@@ -24,7 +24,7 @@
       "sha256": "3881168ed4c7c92a4abbbb3d28bdaeaac146a99d473ac7341cfde50d43be565c",
       "bytes": 1867
     },
-    "candidate.md": {
+    "idea.md": {
       "sha256": "0fed1a2526be1633a7e198830be09875c2ecdf40e4a458a7a3c810eb9626746b",
       "bytes": 1177
     }
@@ -35,6 +35,6 @@
     "text_extractor": "PyMuPDF"
   },
   "notes": [
-    "candidate.md is written separately by an LLM; it must contain only human-style vague a-priori ideas, with no evidence and no paper conclusions."
+    "idea.md is written separately by an LLM; it must contain only human-style vague a-priori ideas, with no evidence and no paper conclusions."
   ]
 }

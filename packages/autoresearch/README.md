@@ -28,7 +28,7 @@ npm run run:headless
 脚本会：
 
 1. 准备一个独立 run 目录（默认 `packages/autoresearch/.runs/run-*`）；
-2. 复制 `examples_articles/reliable_conflictive_multi_view_learning/candidate.md` 和 `PROFILE.md`；
+2. 复制 `examples_articles/reliable_conflictive_multi_view_learning/idea.md` 和 `PROFILE.md`；
 3. 确保 DSH `headless` profile 存在并安装本插件；
 4. 调用 `dsh --profile headless "..."` 让 DSH Agent 调用 `research_run` 完成闭环；
 5. 如果 Runner 已生成 `paper/main.tex` 则直接使用；否则用 `pandoc` 把 `paper_draft.md` 转换为 `paper/main.tex`；

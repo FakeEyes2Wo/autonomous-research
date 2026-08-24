@@ -36,6 +36,7 @@ export async function buildPrompt(role: RoleName, input: RoleInput): Promise<str
   if (input.failureDirections) sections.push('### Failure Directions', '', input.failureDirections, '')
   if (input.insight) sections.push('### Insight', '', input.insight, '')
   if (input.modelScout) sections.push('### Model Scout', '', input.modelScout, '')
+  if (input.perspective) sections.push('### Perspective', '', input.perspective, '')
   sections.push('## Run directory', '', input.runDir, '')
   if (input.cycle !== undefined) sections.push('## Cycle', '', String(input.cycle), '')
   return sections.join('\n')
@@ -269,6 +270,28 @@ export function outputSchemaFor(role: RoleName): Record<string, unknown> | undef
     case 'final-report-writer':
       return objectSchema({
         report: { type: 'string', required: true },
+      })
+    case 'paper-miner':
+      return objectSchema({
+        papers: {
+          type: 'array',
+          required: true,
+          items: { type: 'object', additionalProperties: true },
+        },
+      })
+    case 'paper-wiki-writer':
+      return objectSchema({
+        wikis: { type: 'object', additionalProperties: true, required: true },
+      })
+    case 'brainstorm':
+      return objectSchema({
+        directions: { type: 'array', items: { type: 'object', additionalProperties: true } },
+        attack: { type: 'array', items: { type: 'string' } },
+        support: { type: 'array', items: { type: 'string' } },
+        revisedDirection: { type: 'string' },
+        scores: { type: 'array', items: { type: 'object', additionalProperties: true } },
+        selectedId: { type: 'string' },
+        ideaMd: { type: 'string' },
       })
     default:
       return undefined
