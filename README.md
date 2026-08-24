@@ -1,3 +1,5 @@
+[简体中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
+
 # Autonomous Research System 设计文档
 
 Autonomous Research System：从 candidate / 实验记录到可追溯论文包的自动化研究控制平面。复用 DSH 的 Agent、Subagent、Goal、Workflow、Tools、Skills、持久化、沙箱、审批与模型路由；只新增研究控制语义。
