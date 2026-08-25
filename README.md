@@ -68,8 +68,8 @@ npm --prefix packages/autoresearch run run:headless
 
 1. 构建插件（`npm run build`）；
 2. 创建运行目录 `.runs/run-<timestamp>`（可用 `--run-dir` 指定）；
-3. 如果没有传 `--candidate`，自动先生成 brainstorm 前置流程：挖论文 → paper wiki → 多视角 debate → vote → 生成 `input/idea.md`；
-4. 不传 `--idea` 时**完全从 0 开始，不预设 seed**：`paper-miner` 自行从近期文献中选定一个方向后再挖论文；
+3. 如果没有传 `--candidate`，自动先生成 brainstorm 前置流程：广泛领域调研（先找相关综述）→ survey paper wiki + 知识图谱 → 选 direction → 查最新前沿 → 统一 paper wiki → 多视角 debate → vote → 生成 `input/idea.md`；
+4. 不传 `--idea` 时**完全从 0 开始，不预设 seed**：先由 `paper-survey` 做广泛领域调研并找相关综述，再选 direction 并挖最新论文；
 5. 如果传了 `--idea`，则把该文本作为 brainstorm 的初始 seed；
 6. 确保 DSH `headless` profile 存在并完成 `pnpm install`；
 7. 启动 `dsh --profile headless`，由 Agent 调用 `research_run` 完成研究闭环；

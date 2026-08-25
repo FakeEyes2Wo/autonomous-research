@@ -2,7 +2,8 @@ import { HYPOTHESIS_POOL_FILE } from './utils.js'
 import type { ResearchTree } from './research-tree.js'
 import { atomicWriteJson, nowIso, readJson, safeResolve } from './utils.js'
 
-export type PoolStatus = 'QUEUED' | 'TESTING' | 'SUPPORTED' | 'REFUTED' | 'INCONCLUSIVE' | 'REJECTED'
+export const POOL_STATUSES = ['QUEUED', 'TESTING', 'SUPPORTED', 'REFUTED', 'INCONCLUSIVE', 'REJECTED'] as const
+export type PoolStatus = typeof POOL_STATUSES[number]
 
 export interface PoolEntry {
   id: string

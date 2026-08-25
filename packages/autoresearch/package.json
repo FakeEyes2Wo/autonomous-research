@@ -35,5 +35,13 @@
     "node": ">=22.19.0",
     "dsh": ">=0.1.0-rc.5"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "cytoscape": "^3.34.2",
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "graphology-layout-forceatlas2": "^0.10.1",
+    "graphology-metrics": "^2.4.0",
+    "graphology-types": "^0.24.8"
+  }
 }

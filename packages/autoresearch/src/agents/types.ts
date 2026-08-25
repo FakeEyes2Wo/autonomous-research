@@ -28,7 +28,9 @@ export type RoleName =
   | 'paper-reviewer'
   | 'paper-polisher'
   | 'final-report-writer'
-  | 'paper-miner'
+  | 'paper-survey'
+  | 'direction-select'
+  | 'paper-frontier-miner'
   | 'paper-wiki-writer'
   | 'brainstorm'
 
@@ -42,16 +44,44 @@ export interface RoleExecutionContext {
   readonly signal: AbortSignal
 }
 
-export interface RoleInput {
+/**
+ * Fields shared by every role/domain.
+ */
+export interface CommonRoleInput {
   readonly runDir: string
   readonly cycle?: number
-  readonly candidate?: string
+  readonly plan?: string
+}
+
+/**
+ * Research-loop input fields.
+ */
+export interface ResearchRoleInput {
+  readonly idea?: string
   readonly profile?: string
   readonly rubric?: string
-  readonly plan?: string
   readonly treeSummary?: string
-  readonly evidenceChainPath?: string
   readonly ideaPackage?: string
+  readonly minimalVerification?: string
+  readonly experimentDesign?: string
+  readonly reflexion?: string
+  readonly failureDirections?: string
+  readonly insight?: string
+  readonly modelScout?: string
+}
+
+/**
+ * Brainstorm pre-phase input fields.
+ */
+export interface BrainstormRoleInput {
+  readonly perspective?: string
+}
+
+/**
+ * Paper-writing input fields.
+ */
+export interface PaperRoleInput {
+  readonly evidenceChainPath?: string
   readonly paperPlan?: string
   readonly paperMatrix?: string
   readonly paperTemplate?: string
@@ -61,14 +91,14 @@ export interface RoleInput {
   readonly venue?: string
   readonly assurance?: string
   readonly paperPath?: string
-  readonly minimalVerification?: string
-  readonly experimentDesign?: string
-  readonly reflexion?: string
-  readonly failureDirections?: string
-  readonly insight?: string
-  readonly modelScout?: string
-  readonly perspective?: string
 }
+
+/**
+ * Flat input bag shared by all roles. The `sections` list in each role spec
+ * controls which fields are rendered for that role, so irrelevant fields never
+ * leak into the prompt.
+ */
+export interface RoleInput extends CommonRoleInput, ResearchRoleInput, BrainstormRoleInput, PaperRoleInput {}
 
 export interface RoleOutput {
   readonly text: string

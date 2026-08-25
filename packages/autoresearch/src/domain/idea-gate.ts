@@ -11,6 +11,20 @@ import type {
 export const GATE_RUBRIC_VERSION = 'gate-rubric/v2'
 export const MAX_TOLERATED_RISKS = 6
 
+export interface GateInput {
+  structural: StructuralCheckReport
+  falsifiability: FalsifiabilityReport
+  reviews?: SkepticReport[]
+  validationPlan?: ValidationPlan
+}
+
+export type PreGateInput = Pick<GateInput, 'structural' | 'falsifiability'>
+
+export interface LightHardGateInput extends GateInput {
+  reviews: SkepticReport[]
+  validationPlan: ValidationPlan
+}
+
 export function maxTotalRisks(perspectiveCount: number): number {
   if (perspectiveCount < 1) throw new Error('perspectiveCount must be at least 1')
   return MAX_TOLERATED_RISKS * perspectiveCount
@@ -56,7 +70,25 @@ export function structuralRubricScores(
   }
 }
 
-export function preGate(structural: StructuralCheckReport, falsifiability: FalsifiabilityReport): GateDecision {
+function createGateDecision(input: {
+  ideaId: string
+  gatePhase: GateDecision['gate_phase']
+  verdict: GateDecision['verdict']
+  itemScores: RubricItemScore[]
+  blockingFactor: GateDecision['blocking_factor']
+}): GateDecision {
+  return {
+    idea_id: input.ideaId,
+    gate_phase: input.gatePhase,
+    verdict: input.verdict,
+    rubric_version: GATE_RUBRIC_VERSION,
+    item_scores: input.itemScores,
+    blocking_factor: input.blockingFactor,
+  }
+}
+
+function preGateDecision(input: PreGateInput): GateDecision {
+  const { structural, falsifiability } = input
   const { ok, evidenceTraceable, falsifiable } = structuralRubricScores(structural, falsifiability)
   let verdict: GateDecision['verdict'] = 'PASS'
   let blockingFactor: string | null = null
@@ -67,26 +99,31 @@ export function preGate(structural: StructuralCheckReport, falsifiability: Falsi
     verdict = 'REVISE'
     blockingFactor = 'falsifiable'
   }
-  return {
-    idea_id: structural.idea_id,
-    gate_phase: 'pre_gate',
+  return createGateDecision({
+    ideaId: structural.idea_id,
+    gatePhase: 'pre_gate',
     verdict,
-    rubric_version: GATE_RUBRIC_VERSION,
-    item_scores: [evidenceTraceable, falsifiable],
-    blocking_factor: blockingFactor,
-  }
+    itemScores: [evidenceTraceable, falsifiable],
+    blockingFactor,
+  })
+}
+
+export function preGate(structural: StructuralCheckReport, falsifiability: FalsifiabilityReport): GateDecision
+export function preGate(input: PreGateInput): GateDecision
+export function preGate(
+  structuralOrInput: PreGateInput | StructuralCheckReport,
+  falsifiability?: FalsifiabilityReport,
+): GateDecision {
+  if ('structural' in structuralOrInput) return preGateDecision(structuralOrInput)
+  return preGateDecision({ structural: structuralOrInput, falsifiability: falsifiability! })
 }
 
 export function perspectiveOk(review: SkepticReport): boolean {
   return !review.failed && !review.fatal_flaw_found && review.unaddressed_risks.length <= MAX_TOLERATED_RISKS
 }
 
-export function lightHardGate(
-  structural: StructuralCheckReport,
-  falsifiability: FalsifiabilityReport,
-  reviews: SkepticReport[],
-  validationPlan: ValidationPlan,
-): GateDecision {
+function lightHardGateDecision(input: LightHardGateInput): GateDecision {
+  const { structural, falsifiability, reviews, validationPlan } = input
   const perspectiveIds = reviews.map((r) => r.perspective)
   if (new Set(perspectiveIds).size !== perspectiveIds.length) {
     throw new Error(`light_hard_gate requires distinct perspectives, got ${perspectiveIds.join(', ')}`)
@@ -143,14 +180,35 @@ export function lightHardGate(
     blockingFactor = 'verifier_ok'
   }
 
-  return {
-    idea_id: structural.idea_id,
-    gate_phase: 'full',
+  return createGateDecision({
+    ideaId: structural.idea_id,
+    gatePhase: 'full',
     verdict,
-    rubric_version: GATE_RUBRIC_VERSION,
-    item_scores: [evidenceTraceable, falsifiable, riskTotalScore, verifierScore, ...riskScores],
-    blocking_factor: blockingFactor,
-  }
+    itemScores: [evidenceTraceable, falsifiable, riskTotalScore, verifierScore, ...riskScores],
+    blockingFactor,
+  })
+}
+
+export function lightHardGate(
+  structural: StructuralCheckReport,
+  falsifiability: FalsifiabilityReport,
+  reviews: SkepticReport[],
+  validationPlan: ValidationPlan,
+): GateDecision
+export function lightHardGate(input: LightHardGateInput): GateDecision
+export function lightHardGate(
+  structuralOrInput: LightHardGateInput | StructuralCheckReport,
+  falsifiability?: FalsifiabilityReport,
+  reviews?: SkepticReport[],
+  validationPlan?: ValidationPlan,
+): GateDecision {
+  if ('structural' in structuralOrInput) return lightHardGateDecision(structuralOrInput)
+  return lightHardGateDecision({
+    structural: structuralOrInput,
+    falsifiability: falsifiability!,
+    reviews: reviews!,
+    validationPlan: validationPlan!,
+  })
 }
 
 export function blockingEvidence(decision: GateDecision): string {

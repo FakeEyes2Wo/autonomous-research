@@ -145,25 +145,106 @@ export class FakeAgentProvider implements RoleAgentProvider {
         return { text: '', structured: { mainTex: this.script.writerText ?? '\\documentclass{article}\n\\begin{document}\nDone.\n\\end{document}', changes: [] }, stopReason: 'completed' }
       case 'final-report-writer':
         return { text: '', structured: { report: '# Final Report' }, stopReason: 'completed' }
-      case 'paper-miner': {
-        const papers = Array.from({ length: 30 }, (_, i) => ({
-          id: `p${String(i + 1).padStart(3, '0')}`,
-          title: `Paper ${i + 1}`,
+      case 'paper-survey': {
+        const clusters = Array.from({ length: 5 }, (_, i) => ({
+          id: `c${String(i + 1).padStart(2, '0')}`,
+          name: `Cluster ${i + 1}`,
+          summary: `cluster summary ${i + 1}`,
+          sourceSurveyIds: [`s${String(i + 1).padStart(3, '0')}`],
+          openQuestions: [`open ${i + 1}`],
+        }))
+        const surveys = Array.from({ length: 3 }, (_, i) => ({
+          id: `s${String(i + 1).padStart(3, '0')}`,
+          title: `Survey ${i + 1}`,
           arxivId: `2401.${String(i + 1).padStart(5, '0')}`,
           url: `https://arxiv.org/abs/2401.${String(i + 1).padStart(5, '0')}`,
           year: '2024',
           venue: 'ICLR',
-          citations: 10 + i,
-          abstract: 'abstract',
-          relevance: i < 15 ? 'A' : 'B',
-          reasons: ['relevant'],
+          citations: 100 + i,
+          scope: `scope ${i + 1}`,
+          taxonomy: [`tax ${i + 1}`],
+          openQuestions: [`q ${i + 1}`],
+          recommendedDirections: [`dir ${i + 1}`],
         }))
+        const papers = Array.from({ length: 60 }, (_, i) => {
+          const n = i + 1
+          const id = `s${String(n).padStart(3, '0')}`
+          const isSurvey = n <= 3
+          return {
+            id,
+            title: isSurvey ? `Survey ${n}` : `Paper ${n}`,
+            arxivId: `2401.${String(n).padStart(5, '0')}`,
+            url: `https://arxiv.org/abs/2401.${String(n).padStart(5, '0')}`,
+            year: '2024',
+            venue: 'ICLR',
+            citations: 10 + n,
+            abstract: `abstract ${n}`,
+            clusterId: `c${String((n % 5) + 1).padStart(2, '0')}`,
+            role: isSurvey ? 'survey' : 'method',
+            isSurvey,
+            oneLiner: `one ${n}`,
+            keyFinding: `finding ${n}`,
+            weakness: `weak ${n}`,
+            implication: `implication ${n}`,
+          }
+        })
+        return {
+          text: '',
+          structured: { overview: 'overview', surveys, clusters, papers },
+          stopReason: 'completed',
+        }
+      }
+      case 'direction-select': {
+        return {
+          text: '',
+          structured: {
+            directions: [
+              { id: 'd1', name: 'Direction 1', statement: 'Statement 1', evidence: ['s001', 's002', 's003'], cheapTest: 'cheap 1', risk: 'risk 1' },
+              { id: 'd2', name: 'Direction 2', statement: 'Statement 2', evidence: ['s004', 's005', 's006'], cheapTest: 'cheap 2', risk: 'risk 2' },
+              { id: 'd3', name: 'Direction 3', statement: 'Statement 3', evidence: ['s007', 's008', 's009'], cheapTest: 'cheap 3', risk: 'risk 3' },
+            ],
+            selectedId: 'd1',
+            backups: ['d2', 'd3'],
+          },
+          stopReason: 'completed',
+        }
+      }
+      case 'paper-frontier-miner': {
+        const papers = Array.from({ length: 15 }, (_, i) => {
+          const n = i + 1
+          return {
+            id: `l${String(n).padStart(3, '0')}`,
+            title: `Latest Paper ${n}`,
+            arxivId: `2501.${String(n).padStart(5, '0')}`,
+            url: `https://arxiv.org/abs/2501.${String(n).padStart(5, '0')}`,
+            year: '2025',
+            venue: 'NeurIPS',
+            citations: n,
+            abstract: `latest abstract ${n}`,
+            directionId: `d${(i % 3) + 1}`,
+            role: 'A',
+            whyLatest: `latest ${n}`,
+            novelty: `novelty ${n}`,
+            weakness: `weak ${n}`,
+            oneLiner: `one ${n}`,
+            keyFinding: `finding ${n}`,
+            implication: `implication ${n}`,
+          }
+        })
         return { text: '', structured: { papers }, stopReason: 'completed' }
       }
       case 'paper-wiki-writer': {
+        let papers: Array<{ id: string }> = []
+        try {
+          const parsed = JSON.parse(_input.plan ?? '{}') as { papers?: Array<{ id: string }> }
+          papers = parsed.papers ?? []
+        } catch {
+          papers = []
+        }
         const wikis: Record<string, string> = {}
-        for (let i = 1; i <= 15; i += 1) {
-          wikis[`p${String(i).padStart(3, '0')}`] = `# Paper ${i}\n\n## 要点\npoint\n\n## 核心方法\nmethod\n\n## 失败点\nfailure\n\n## 可改进点\nimprove\n\n## Insight\ninsight\n\n## 与我方可能的结合点\nlink`
+        for (const paper of papers) {
+          const id = paper.id
+          wikis[id] = `# ${id}\n\n## 要点\npoint\n\n## 核心方法\nmethod\n\n## 失败点\nfailure\n\n## 可改进点\nimprove\n\n## Insight\ninsight\n\n## 与我方可能的结合点\nlink`
         }
         return { text: '', structured: { wikis }, stopReason: 'completed' }
       }
@@ -178,7 +259,7 @@ export class FakeAgentProvider implements RoleAgentProvider {
                 id: `${view}-1`,
                 source: view,
                 direction: `Direction from ${view}`,
-                evidence: ['p001', 'p002', 'p003'],
+                evidence: ['s001', 's002', 's003'],
                 cheapTest: 'small real-data test',
                 risk: 'low',
               }],
@@ -224,9 +305,9 @@ export class FakeAgentProvider implements RoleAgentProvider {
                 '- why_promising: clear gap',
                 '',
                 '## evidence',
-                '- paper_wiki/p001.md',
-                '- paper_wiki/p002.md',
-                '- paper_wiki/p003.md',
+                '- paper_wiki/s001.md',
+                '- paper_wiki/s002.md',
+                '- paper_wiki/s003.md',
                 '',
                 '## cheap_test',
                 '- run the small real-data test',

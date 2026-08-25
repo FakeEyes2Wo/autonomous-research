@@ -2,6 +2,9 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { atomicWriteJson, readJson } from '../core/utils.js'
 
+export const HUMAN_REVIEW_MODES = ['auto', 'on', 'off'] as const
+export type HumanReviewMode = typeof HUMAN_REVIEW_MODES[number]
+
 interface AutoModeState {
   auto: boolean
   updatedAt: string
@@ -26,7 +29,7 @@ export async function writeAutoMode(enabled: boolean, profileDir?: string): Prom
   return enabled
 }
 
-export async function humanReviewEnabled(override?: 'auto' | 'on' | 'off'): Promise<boolean> {
+export async function humanReviewEnabled(override?: HumanReviewMode): Promise<boolean> {
   if (override === 'on') return true
   if (override === 'off') return false
   return !(await readAutoMode())

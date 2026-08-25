@@ -5,6 +5,17 @@ import { isEvidenceVerdict } from '../core/types.js'
 import { loadCheckpoint } from '../paper/checkpoint.js'
 import { readLastRun } from '../session/last-run.js'
 import type { AutoResearchService } from '../service/autoresearch-service.js'
+import {
+  evidenceVerdictSchema,
+  humanReviewModeSchema,
+  jsonOutput,
+  renderJson,
+  researchNodeKindSchema,
+  runDirSchema,
+  stringArraySchema,
+  stringSchema,
+} from './schemas.js'
+import { toResearchRunOptions } from './options.js'
 
 export interface ToolExecutionContextLike {
   signal: AbortSignal
@@ -32,10 +43,6 @@ async function loadTree(runDir: string): Promise<ResearchTree> {
   return ResearchTree.load(runDir)
 }
 
-function renderJson(_args: unknown, value: unknown): Array<{ type: 'text'; text: string }> {
-  return [{ type: 'text', text: JSON.stringify(value, null, 2) }]
-}
-
 function defineTool(def: ToolDefinitionLike): ToolDefinitionLike {
   return def
 }
@@ -50,16 +57,16 @@ export const researchHypothesisAdd: ToolDefinitionLike = defineTool({
   parameters: {
     type: 'object',
     properties: {
-      runDir: { type: 'string', description: 'Research run directory' },
-      content: { type: 'string', description: 'Hypothesis statement' },
-      id: { type: 'string', description: 'Optional hypothesis id' },
-      status: { type: 'string', description: 'Optional hypothesis status', default: 'proposed' },
-      parent: { type: 'string', description: 'Optional parent node id' },
+      runDir: runDirSchema,
+      content: stringSchema('Hypothesis statement'),
+      id: stringSchema('Optional hypothesis id'),
+      status: stringSchema('Optional hypothesis status', { default: 'proposed' }),
+      parent: stringSchema('Optional parent node id'),
     },
     required: ['runDir', 'content'],
     additionalProperties: false,
   },
-  output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+  output: jsonOutput,
   async execute(args) {
     const tree = await loadTree(requireRunDir(args))
     const node = tree.add('hypothesis', String(args.content), {
@@ -78,15 +85,15 @@ export const researchActionStart: ToolDefinitionLike = defineTool({
   parameters: {
     type: 'object',
     properties: {
-      runDir: { type: 'string', description: 'Research run directory' },
-      hypothesisId: { type: 'string', description: 'Parent hypothesis id' },
-      content: { type: 'string', description: 'Action description' },
-      artifacts: { type: 'array', items: { type: 'string' }, description: 'Initial artifact paths' },
+      runDir: runDirSchema,
+      hypothesisId: stringSchema('Parent hypothesis id'),
+      content: stringSchema('Action description'),
+      artifacts: stringArraySchema('Initial artifact paths'),
     },
     required: ['runDir', 'hypothesisId', 'content'],
     additionalProperties: false,
   },
-  output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+  output: jsonOutput,
   async execute(args) {
     const tree = await loadTree(requireRunDir(args))
     const node = tree.add('action', String(args.content), {
@@ -105,16 +112,16 @@ export const researchActionFinish: ToolDefinitionLike = defineTool({
   parameters: {
     type: 'object',
     properties: {
-      runDir: { type: 'string', description: 'Research run directory' },
-      actionId: { type: 'string', description: 'Action node id' },
+      runDir: runDirSchema,
+      actionId: stringSchema('Action node id'),
       status: { type: 'string', enum: ['completed', 'failed'], description: 'Action result status' },
-      summary: { type: 'string', description: 'Action result summary' },
-      artifacts: { type: 'array', items: { type: 'string' }, description: 'Artifact paths' },
+      summary: stringSchema('Action result summary'),
+      artifacts: stringArraySchema('Artifact paths'),
     },
     required: ['runDir', 'actionId', 'status', 'summary'],
     additionalProperties: false,
   },
-  output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+  output: jsonOutput,
   async execute(args) {
     const tree = await loadTree(requireRunDir(args))
     const node = tree.update(String(args.actionId), {
@@ -133,17 +140,17 @@ export const researchEvidenceAdd: ToolDefinitionLike = defineTool({
   parameters: {
     type: 'object',
     properties: {
-      runDir: { type: 'string', description: 'Research run directory' },
-      actionId: { type: 'string', description: 'Parent action id' },
-      hypothesisId: { type: 'string', description: 'Parent hypothesis id (used when no action)' },
-      content: { type: 'string', description: 'Evidence description' },
-      verdict: { type: 'string', enum: ['supports', 'refutes', 'inconclusive'], description: 'Evidence verdict' },
-      artifacts: { type: 'array', items: { type: 'string' }, description: 'Evidence artifact paths' },
+      runDir: runDirSchema,
+      actionId: stringSchema('Parent action id'),
+      hypothesisId: stringSchema('Parent hypothesis id (used when no action)'),
+      content: stringSchema('Evidence description'),
+      verdict: evidenceVerdictSchema,
+      artifacts: stringArraySchema('Evidence artifact paths'),
     },
     required: ['runDir', 'content', 'verdict'],
     additionalProperties: false,
   },
-  output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+  output: jsonOutput,
   async execute(args) {
     const verdict = String(args.verdict)
     if (!isEvidenceVerdict(verdict)) throw new TypeError(`invalid verdict: ${verdict}`)
@@ -166,11 +173,11 @@ export const researchTreeQuery: ToolDefinitionLike = defineTool({
   parameters: {
     type: 'object',
     properties: {
-      runDir: { type: 'string', description: 'Research run directory' },
-      id: { type: 'string', description: 'Node id' },
-      kind: { type: 'string', enum: ['hypothesis', 'action', 'evidence'], description: 'Node kind' },
-      status: { type: 'string', description: 'Node status' },
-      parent: { type: 'string', description: 'Parent node id' },
+      runDir: runDirSchema,
+      id: stringSchema('Node id'),
+      kind: researchNodeKindSchema,
+      status: stringSchema('Node status'),
+      parent: stringSchema('Parent node id'),
     },
     required: ['runDir'],
     additionalProperties: false,
@@ -193,12 +200,12 @@ export const paperPipelineStatus: ToolDefinitionLike = defineTool({
   parameters: {
     type: 'object',
     properties: {
-      runDir: { type: 'string', description: 'Research run directory' },
+      runDir: runDirSchema,
     },
     required: ['runDir'],
     additionalProperties: false,
   },
-  output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+  output: jsonOutput,
   async execute(args) {
     const runDir = requireRunDir(args)
     const cp = await loadCheckpoint(join(runDir, 'paper'))
@@ -216,7 +223,7 @@ export const paperPipelineLastRun: ToolDefinitionLike = defineTool({
     properties: {},
     additionalProperties: false,
   },
-  output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+  output: jsonOutput,
   async execute() {
     return (await readLastRun()) ?? { status: 'no_last_run' }
   },
@@ -229,12 +236,12 @@ export function createPaperPipelineResumeTool(service: AutoResearchService): Too
     parameters: {
       type: 'object',
       properties: {
-        runDir: { type: 'string', description: 'Research run directory' },
+        runDir: runDirSchema,
       },
       required: ['runDir'],
       additionalProperties: false,
     },
-    output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+    output: jsonOutput,
     async execute(args, exec) {
       const parent = exec.agent as { id?: string } | undefined
       if (!parent || typeof parent.id !== 'string') throw new TypeError('paper_pipeline_resume requires a calling DSH agent')
@@ -255,18 +262,18 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
     parameters: {
       type: 'object',
       properties: {
-        runDir: { type: 'string', description: 'Research run directory' },
-        candidatePath: { type: 'string', description: 'Optional candidate.md path relative to runDir' },
-        profilePath: { type: 'string', description: 'Optional PROFILE.md path relative to runDir' },
+        runDir: runDirSchema,
+        candidatePath: stringSchema('Optional candidate.md path relative to runDir'),
+        profilePath: stringSchema('Optional PROFILE.md path relative to runDir'),
         maxCycles: { type: 'number', description: 'Optional max research cycles' },
-        humanReview: { type: 'string', enum: ['auto', 'on', 'off'], description: 'auto follows /auto command, on forces human gates, off skips them' },
-        idea: { type: 'string', description: 'Optional human idea/seed for the brainstorm pre-phase' },
-        brainstorm: { type: 'string', enum: ['auto', 'on', 'off'], description: 'auto runs brainstorm when no candidate.md exists' },
+        humanReview: { ...humanReviewModeSchema, description: 'auto follows /auto command, on forces human gates, off skips them' },
+        idea: stringSchema('Optional human idea/seed for the brainstorm pre-phase'),
+        brainstorm: { ...humanReviewModeSchema, description: 'auto runs brainstorm when no candidate.md exists' },
         paper: {
           type: 'object',
           description: 'Paper writing pipeline options',
           properties: {
-            venue: { type: 'string', description: 'Target venue, e.g. ICLR, NeurIPS, ICML' },
+            venue: stringSchema('Target venue, e.g. ICLR, NeurIPS, ICML'),
             assurance: { type: 'string', enum: ['draft', 'submission'] },
             effort: { type: 'string', enum: ['lite', 'balanced', 'max', 'beast'] },
             illustration: { type: 'string', enum: ['figurespec', 'gemini', 'codex-image2', 'mermaid', 'false'] },
@@ -281,20 +288,11 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
       required: ['runDir'],
       additionalProperties: false,
     },
-    output: { schema: { type: 'object', additionalProperties: true }, render: renderJson },
+    output: jsonOutput,
     async execute(args, exec) {
       const parent = exec.agent as { id?: string } | undefined
       if (!parent || typeof parent.id !== 'string') throw new TypeError('research_run requires a calling DSH agent')
-      return service.run({
-        runDir: String(args.runDir),
-        candidatePath: typeof args.candidatePath === 'string' ? args.candidatePath : undefined,
-        profilePath: typeof args.profilePath === 'string' ? args.profilePath : undefined,
-        maxCycles: typeof args.maxCycles === 'number' ? args.maxCycles : undefined,
-        humanReview: typeof args.humanReview === 'string' ? args.humanReview as 'auto' | 'on' | 'off' : undefined,
-        idea: typeof args.idea === 'string' ? args.idea : undefined,
-        brainstorm: typeof args.brainstorm === 'string' ? args.brainstorm as 'auto' | 'on' | 'off' : undefined,
-        paper: typeof args.paper === 'object' && args.paper !== null ? args.paper as Record<string, unknown> : undefined,
-      }, {
+      return service.run(toResearchRunOptions(args), {
         parent: parent as never,
         signal: exec.signal,
       })

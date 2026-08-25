@@ -1,3 +1,4 @@
+import type { ResearchIdea } from './idea.js'
 import { AutoResearchError, FAILURE_REPORT_FILE, FINAL_REPORT_FILE, IDEA_FILE, INPUT_DIR, PAPER_DRAFT_FILE, PLAN_PREFIX, RUBRIC_FILE } from '../core/utils.js'
 import { readText, safeResolve, writeText } from '../core/utils.js'
 
@@ -32,13 +33,10 @@ export async function freezeRubric(runDir: string): Promise<void> {
   if (!content.includes('<!-- frozen -->')) await writeText(file, `${content}\n<!-- frozen -->\n`)
 }
 
-export interface Candidate {
-  direction: string
-  aPrioriIdeas: string[]
-  raw: string
-}
+/** @deprecated Use ResearchIdea / readIdea going forward. */
+export interface Candidate extends ResearchIdea {}
 
-export async function readCandidate(runDir: string, candidatePath?: string): Promise<Candidate> {
+export async function readIdea(runDir: string, candidatePath?: string): Promise<ResearchIdea> {
   const file = candidatePath ? safeResolve(runDir, candidatePath) : safeResolve(runDir, INPUT_DIR, IDEA_FILE)
   const raw = await readText(file)
   const directionMatch = raw.match(/^##\s+Direction\s*$/mi)
@@ -60,4 +58,9 @@ export async function readCandidate(runDir: string, candidatePath?: string): Pro
       .filter(Boolean)
   }
   return { direction, aPrioriIdeas, raw }
+}
+
+/** @deprecated Use readIdea instead. */
+export async function readCandidate(runDir: string, candidatePath?: string): Promise<Candidate> {
+  return readIdea(runDir, candidatePath)
 }

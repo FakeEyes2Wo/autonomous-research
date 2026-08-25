@@ -47,6 +47,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
   async run(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
     const logger = createLogger(input.runDir)
     const prompt = await buildPrompt(role, input)
+    const schema = outputSchemaFor(role)
     logger.info(`[subagent:${role}] calling ctx.subagents.start provider=${this.providerName}`)
     const started = Date.now()
     const run = await this.runtime.start(this.providerName, {
@@ -54,7 +55,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       prompt: [{ type: 'text', text: prompt }],
       parent: context.parent,
       signal: context.signal,
-      ...(outputSchemaFor(role) !== undefined ? { outputSchema: outputSchemaFor(role) } : {}),
+      ...(schema !== undefined ? { outputSchema: schema } : {}),
     })
     logger.info(`[subagent:${role}] started id=${String(run.id ?? '')}`)
     const result = await run.result

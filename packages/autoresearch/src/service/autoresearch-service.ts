@@ -5,7 +5,7 @@ import type { RunState } from '../core/types.js'
 import { ensureDir } from '../core/utils.js'
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
 import type { HumanReviewer, ReviewGateId } from '../core/human-review.js'
-import { DEFAULT_REVIEW_GATES } from '../core/human-review.js'
+import type { HumanReviewMode } from '../session/auto-mode.js'
 import { writeFailureReport } from '../domain/files.js'
 import { writeLastRun } from '../session/last-run.js'
 import { ResearchRunner } from './runner.js'
@@ -17,12 +17,12 @@ export interface ResearchRunOptions {
   profilePath?: string
   maxCycles?: number
   paper?: PaperOptions
-  humanReview?: 'auto' | 'on' | 'off'
+  humanReview?: HumanReviewMode
   idea?: string
-  brainstorm?: 'auto' | 'on' | 'off'
+  brainstorm?: HumanReviewMode
 }
 
-export interface ResearchRunContext extends RoleExecutionContext {}
+export type ResearchRunContext = RoleExecutionContext
 
 export interface AutoResearchServiceOptions {
   reviewer?: HumanReviewer
@@ -31,13 +31,11 @@ export interface AutoResearchServiceOptions {
 
 export class AutoResearchService {
   private readonly provider: RoleAgentProvider
-  private readonly reviewer?: HumanReviewer
-  private readonly reviewGates: ReviewGateId[]
+  private readonly options: AutoResearchServiceOptions
 
   constructor(provider: RoleAgentProvider, options: AutoResearchServiceOptions = {}) {
     this.provider = provider
-    this.reviewer = options.reviewer
-    this.reviewGates = options.reviewGates ?? [...DEFAULT_REVIEW_GATES]
+    this.options = options
   }
 
   async run(options: ResearchRunOptions, context: ResearchRunContext): Promise<RunState> {
@@ -58,8 +56,8 @@ export class AutoResearchService {
       provider: this.provider,
       maxCycles: options.maxCycles ?? DEFAULT_MAX_CYCLES,
       paperOptions: options.paper,
-      reviewer: this.reviewer,
-      reviewGates: this.reviewGates,
+      reviewer: this.options.reviewer,
+      reviewGates: this.options.reviewGates,
       humanReviewOverride: options.humanReview,
       idea: options.idea,
       brainstorm: options.brainstorm,

@@ -2,8 +2,11 @@ import { appendFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ensureDir, nowIso } from './utils.js'
 
-export type ReviewGateId = 'idea' | 'rubric' | 'experiment' | 'evidence' | 'paper_draft'
-export type ReviewVerdict = 'approve' | 'revise' | 'reject'
+export const REVIEW_GATES = ['idea', 'rubric', 'experiment', 'evidence', 'paper_draft'] as const
+export type ReviewGateId = typeof REVIEW_GATES[number]
+
+export const REVIEW_VERDICTS = ['approve', 'revise', 'reject'] as const
+export type ReviewVerdict = typeof REVIEW_VERDICTS[number]
 
 export interface HumanReviewRequest {
   gate: ReviewGateId
@@ -47,4 +50,4 @@ export async function appendHumanReview(runDir: string, record: HumanReviewRecor
   await appendFile(file, `${block}\n`, 'utf8')
 }
 
-export const DEFAULT_REVIEW_GATES: readonly ReviewGateId[] = ['idea', 'rubric', 'experiment', 'evidence', 'paper_draft']
+export const DEFAULT_REVIEW_GATES: readonly ReviewGateId[] = [...REVIEW_GATES]

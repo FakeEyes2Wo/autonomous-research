@@ -32,7 +32,9 @@ const roles = [
   'paper-reviewer',
   'paper-polisher',
   'final-report-writer',
-  'paper-miner',
+  'paper-survey',
+  'direction-select',
+  'paper-frontier-miner',
   'paper-wiki-writer',
   'brainstorm',
 ] as const

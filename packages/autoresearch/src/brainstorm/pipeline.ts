@@ -1,63 +1,125 @@
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
 import { appendHumanReview, type HumanReviewer } from '../core/human-review.js'
-import { humanReviewEnabled } from '../session/auto-mode.js'
+import { humanReviewEnabled, type HumanReviewMode } from '../session/auto-mode.js'
 import {
-  atomicWriteJson, AutoResearchError, ensureDir, IDEA_FILE, INPUT_DIR, PROFILE_FILE,
-  readText, safeResolve, writeText,
+  atomicWriteJson,
+  AutoResearchError,
+  ensureDir,
+  safeResolve,
+  writeText,
 } from '../core/utils.js'
+import {
+  brainstormDirPath,
+  buildIdeaHandoff,
+  countPaperWikiCitations,
+  debatePath,
+  ideaPath,
+  paperWikiPath,
+  renderUnifiedWikiIndex,
+  seedPath,
+  wikiIndexPath,
+  writeBrainstormHandoff,
+  type IdeaHandoff,
+} from './handoff.js'
+import {
+  DefaultRankingStrategy,
+  type BrainstormContext,
+  type CandidateDirection,
+  type RankingStrategy,
+} from './ranking.js'
+import type { FrontierPaper, PaperRecord, SurveyPaper } from './paper-record.js'
+import {
+  mergePaperRecords,
+  normalizeFrontierPapers,
+  normalizeSurveyPapers,
+  type RawFrontier,
+  type RawSurvey,
+} from './normalize.js'
+import {
+  buildKnowledgeGraphSummary,
+  buildPaperKnowledgeGraph,
+  writePaperKnowledgeGraph,
+  type KnowledgeCluster,
+  type KnowledgeDirection,
+} from './knowledge-graph.js'
 
-const DEFAULTS = { minPapers: 30, minRelevant: 15, maxRelevant: 20 }
+const DEFAULTS = {
+  surveyMinSurveys: 3,
+  surveyMinPapers: 60,
+  surveyMinClusters: 5,
+  latestPerDirection: 5,
+  latestWindowYears: 1,
+  maxSelectedDirections: 3,
+}
 
 export interface BrainstormOptions {
   idea?: string
-  minPapers?: number
-  minRelevant?: number
-  maxRelevant?: number
   reviewer?: HumanReviewer
-  humanReviewOverride?: 'auto' | 'on' | 'off'
+  humanReviewOverride?: HumanReviewMode
+  ranking?: RankingStrategy
+  // Two-stage survey options
+  surveyMinSurveys?: number
+  surveyMinPapers?: number
+  surveyMinClusters?: number
+  latestPerDirection?: number
+  latestWindowYears?: number
+  maxSelectedDirections?: number
+  enableKnowledgeGraph?: boolean
 }
 
-interface PaperEntry {
-  id: string
-  title: string
-  arxivId?: string
-  doi?: string
-  url?: string
-  year?: string
-  venue?: string
-  citations?: number
-  abstract?: string
-  relevance?: 'A' | 'B' | 'C'
+export type { BrainstormContext, CandidateDirection, RankingStrategy } from './ranking.js'
+export type { IdeaHandoff } from './handoff.js'
+export type { PaperRecord, SurveyPaper, FrontierPaper } from './paper-record.js'
+export type { KnowledgeCluster, KnowledgeDirection } from './knowledge-graph.js'
+
+const surveyPoolPath = (runDir: string) => safeResolve(runDir, 'brainstorm', 'survey_pool.json')
+const frontierPoolPath = (runDir: string) => safeResolve(runDir, 'brainstorm', 'frontier_pool.json')
+const selectedDirectionsPath = (runDir: string) => safeResolve(runDir, 'brainstorm', 'selected_directions.json')
+const paperRecordsPath = (runDir: string) => safeResolve(runDir, 'brainstorm', 'paper_records.json')
+const surveyOverviewPath = (runDir: string) => safeResolve(runDir, 'paper_wiki', '_survey.md')
+const directionsOverviewPath = (runDir: string) => safeResolve(runDir, 'paper_wiki', '_directions.md')
+
+interface RawDirection {
+  id?: string
+  name?: string
+  statement?: string
+  why?: string
+  evidence?: string[]
+  cheapTest?: string
+  risk?: string
 }
 
-interface CandidateDirection {
-  id: string
-  source: string
-  direction: string
-  evidence: string[]
-  cheapTest: string
-  risk: string
+interface SelectedDirectionResult {
+  directions?: RawDirection[]
+  selectedId?: string
+  backups?: string[]
 }
 
-interface RankedDirection extends CandidateDirection {
-  total: number
-  novelty: number
-  feasibility: number
-  evidenceScore: number
+/**
+ * Internal per-run state passed through every phase method as a single context
+ * object.
+ */
+interface BrainstormState extends BrainstormContext {
+  readonly surveyRaw?: RawSurvey
+  readonly frontierRaw?: RawFrontier
+  readonly surveyPapers: SurveyPaper[]
+  readonly frontierPapers: FrontierPaper[]
+  readonly records: PaperRecord[]
+  readonly clusters: KnowledgeCluster[]
+  readonly directions: KnowledgeDirection[]
+  readonly candidates: CandidateDirection[]
+  readonly ranked: CandidateDirection[]
+  readonly handoff: IdeaHandoff
 }
 
-const path = (runDir: string, ...parts: string[]) => safeResolve(runDir, ...parts)
-const seedPath = (runDir: string) => path(runDir, 'brainstorm', 'SEED.md')
-const poolPath = (runDir: string) => path(runDir, 'brainstorm', 'paper_pool.json')
-const debatePath = (runDir: string) => path(runDir, 'brainstorm', 'DEBATE.md')
-const ideaPath = (runDir: string) => path(runDir, 'brainstorm', 'IDEA.md')
-const wikiIndexPath = (runDir: string) => path(runDir, 'paper_wiki', '_index.md')
+const defaultRanking = new DefaultRankingStrategy()
 const VIEWS = ['gap', 'feasibility', 'novelty']
 
 /**
- * Minimal brainstorm pre-phase: mine papers, write a wiki, propose/debate/score
- * directions from three perspectives, let a chair reform only the vote winner,
- * and hand the winner off as input/idea.md for the normal research loop.
+ * Two-stage brainstorm pre-phase:
+ *   1. broad survey (surveys first) + survey wiki + knowledge graph
+ *   2. direction selection + latest/frontier mining + merged wiki/KG
+ * then the existing propose/debate/score/chair ideation.
  */
 export class BrainstormPipeline {
   private readonly provider: RoleAgentProvider
@@ -69,28 +131,79 @@ export class BrainstormPipeline {
   }
 
   async run(runDir: string, context: RoleExecutionContext): Promise<string> {
-    await ensureDir(path(runDir, 'brainstorm'))
+    await ensureDir(brainstormDirPath(runDir))
 
-    const seed = await this.resolveSeed(runDir, context)
-    await writeText(seedPath(runDir), seed)
+    const base: BrainstormContext = { runDir, seed: '', wikiIndex: '', agentContext: context }
+    const seed = await this.resolveSeed(base)
+    let state: BrainstormState = {
+      ...base,
+      seed,
+      surveyPapers: [],
+      frontierPapers: [],
+      records: [],
+      clusters: [],
+      directions: [],
+      candidates: [],
+      ranked: [],
+      handoff: { direction: '', cheapTest: '', backups: [] },
+    }
 
-    const pool = await this.mine(runDir, seed, context)
-    await atomicWriteJson(poolPath(runDir), pool)
+    // Stage 1: broad survey
+    const surveyRaw = await this.survey(state)
+    const clusters = this.toClusters(surveyRaw)
+    const surveyPapers = normalizeSurveyPapers(surveyRaw, clusters)
+    state = { ...state, surveyRaw, clusters, surveyPapers, records: surveyPapers }
 
-    const wikiIndex = await this.writeWikis(runDir, pool, context)
-    const candidates = await this.propose(runDir, seed, wikiIndex, context)
-    const revised = await this.debate(runDir, seed, wikiIndex, candidates, context)
-    const ranked = await this.scoreAndRank(runDir, revised, context)
+    await atomicWriteJson(surveyPoolPath(runDir), surveyRaw)
+    await this.writeWikis(state, surveyPapers, 'survey')
+    await this.writeSurveyOverview(state, surveyRaw)
+
+    const surveyIndex = renderUnifiedWikiIndex(surveyPapers)
+    state = { ...state, wikiIndex: surveyIndex }
+    await writeText(wikiIndexPath(runDir), surveyIndex)
+    const kgSummary = await this.rebuildKnowledgeGraph(state)
+
+    // Stage 2: select directions, then query latest/frontier
+    const directions = await this.selectDirections(state, kgSummary)
+    state = { ...state, directions }
+    await atomicWriteJson(selectedDirectionsPath(runDir), directions)
+
+    const frontierRaw = await this.frontierMine(state)
+    const frontierPapers = normalizeFrontierPapers(frontierRaw)
+    const records = mergePaperRecords(surveyPapers, frontierPapers)
+    state = { ...state, frontierRaw, frontierPapers, records }
+
+    await atomicWriteJson(frontierPoolPath(runDir), frontierRaw)
+    await atomicWriteJson(paperRecordsPath(runDir), records)
+    await this.writeWikis(state, frontierPapers, 'latest')
+    await this.writeDirectionsOverview(state, directions)
+
+    const mergedIndex = renderUnifiedWikiIndex(records)
+    state = { ...state, wikiIndex: mergedIndex }
+    await writeText(wikiIndexPath(runDir), mergedIndex)
+    await this.rebuildKnowledgeGraph(state)
+
+    // Existing multi-perspective ideation
+    const candidates = await this.propose(state)
+    state = { ...state, candidates }
+
+    const revised = await this.debate(state)
+    state = { ...state, candidates: revised }
+
+    const ranked = await this.scoreAndRank(state)
     if (ranked.length < 3) throw new AutoResearchError(`brainstorm produced ${ranked.length} candidates; need >= 3`, 'AGENT_FAILED')
+    state = { ...state, ranked }
 
-    const ideaFile = await this.reform(runDir, seed, wikiIndex, ranked, context)
-    await this.handoff(runDir, ideaFile)
-    return ideaFile
+    const handoff = await this.reform(state)
+    state = { ...state, handoff }
+
+    await this.handoff(state)
+    return ideaPath(runDir)
   }
 
   // ---------- seed ----------
 
-  private async resolveSeed(runDir: string, context: RoleExecutionContext): Promise<string> {
+  private async resolveSeed(ctx: BrainstormContext): Promise<string> {
     const idea = this.options.idea?.trim()
     if (idea) return idea
     if (this.options.reviewer?.askOpen && await humanReviewEnabled(this.options.humanReviewOverride)) {
@@ -98,70 +211,201 @@ export class BrainstormPipeline {
         const answer = await this.options.reviewer.askOpen({
           title: '请指定本次研究的 idea / seed（可留空，留空由系统自动选择）',
           detail: 'Provide a one-sentence research idea or topic seed for the brainstorm.',
-        }, context.signal, context.parent)
+        }, ctx.agentContext.signal, ctx.agentContext.parent)
         if (answer) {
-          await appendHumanReview(runDir, { time: new Date().toISOString(), gate: 'idea', verdict: 'approve', feedback: `human seed: ${answer}` })
+          await appendHumanReview(ctx.runDir, { time: new Date().toISOString(), gate: 'idea', verdict: 'approve', feedback: `human seed: ${answer}` })
           return answer
         }
       } catch (error) {
-        await appendHumanReview(runDir, { time: new Date().toISOString(), gate: 'idea', verdict: 'skipped', feedback: `seed ask failed: ${String(error)}` })
+        await appendHumanReview(ctx.runDir, { time: new Date().toISOString(), gate: 'idea', verdict: 'skipped', feedback: `seed ask failed: ${String(error)}` })
       }
     }
     return ''
   }
 
-  // ---------- phases ----------
+  // ---------- Stage 1 ----------
 
-  private async mine(runDir: string, seed: string, context: RoleExecutionContext): Promise<PaperEntry[]> {
-    const minPapers = this.options.minPapers ?? DEFAULTS.minPapers
-    const minRelevant = this.options.minRelevant ?? DEFAULTS.minRelevant
-    const maxRelevant = this.options.maxRelevant ?? DEFAULTS.maxRelevant
-    const result = await this.provider.run('paper-miner', {
-      runDir,
-      plan: `Seed: ${seed || 'None'}\nHard constraints: >= ${minPapers} papers; A-level papers must be ${minRelevant}-${maxRelevant}.`,
-    }, context)
-    const papers = ((result.structured as { papers?: Array<Record<string, unknown>> } | undefined)?.papers ?? [])
-      .map((paper, index) => ({
-        ...paper,
-        id: typeof paper.id === 'string' && paper.id ? paper.id : `p${String(index + 1).padStart(3, '0')}`,
-      })) as PaperEntry[]
-    const aCount = papers.filter((paper) => paper.relevance === 'A').length
-    if (papers.length < minPapers || aCount < minRelevant || aCount > maxRelevant) {
-      throw new AutoResearchError(`paper-miner constraints failed: papers=${papers.length} A=${aCount}`, 'AGENT_FAILED')
-    }
-    return papers
+  private surveyPlan(ctx: BrainstormState): string {
+    return [
+      `Seed: ${ctx.seed || 'None'}`,
+      `Stage: survey`,
+      `Goal: breadth first; find field surveys/reviews first`,
+      `Min surveys: ${this.options.surveyMinSurveys ?? DEFAULTS.surveyMinSurveys}`,
+      `Min clusters: ${this.options.surveyMinClusters ?? DEFAULTS.surveyMinClusters}`,
+      `Min papers: ${this.options.surveyMinPapers ?? DEFAULTS.surveyMinPapers}`,
+    ].join('\n')
   }
 
-  private async writeWikis(runDir: string, pool: PaperEntry[], context: RoleExecutionContext): Promise<string> {
-    const aPapers = pool.filter((paper) => paper.relevance === 'A')
+  private async survey(ctx: BrainstormState): Promise<RawSurvey> {
+    const result = await this.provider.run('paper-survey', {
+      runDir: ctx.runDir,
+      plan: this.surveyPlan(ctx),
+    }, ctx.agentContext)
+    const raw = (result.structured ?? {}) as RawSurvey
+    const surveys = raw.surveys ?? []
+    const clusters = raw.clusters ?? []
+    const papers = raw.papers ?? []
+    const minSurveys = this.options.surveyMinSurveys ?? DEFAULTS.surveyMinSurveys
+    const minClusters = this.options.surveyMinClusters ?? DEFAULTS.surveyMinClusters
+    const minPapers = this.options.surveyMinPapers ?? DEFAULTS.surveyMinPapers
+    if (surveys.length < minSurveys) {
+      throw new AutoResearchError(`paper-survey must find >= ${minSurveys} field surveys; got ${surveys.length}`, 'AGENT_FAILED')
+    }
+    if (clusters.length < minClusters) {
+      throw new AutoResearchError(`paper-survey must return >= ${minClusters} clusters; got ${clusters.length}`, 'AGENT_FAILED')
+    }
+    if (papers.length < minPapers) {
+      throw new AutoResearchError(`paper-survey must return >= ${minPapers} papers; got ${papers.length}`, 'AGENT_FAILED')
+    }
+    return raw
+  }
+
+  private toClusters(raw: RawSurvey): KnowledgeCluster[] {
+    return (raw.clusters ?? []).map((cluster, index) => ({
+      id: typeof cluster.id === 'string' && cluster.id ? cluster.id : `c${String(index + 1).padStart(2, '0')}`,
+      name: typeof cluster.name === 'string' && cluster.name ? cluster.name : `Cluster ${index + 1}`,
+      summary: typeof cluster.summary === 'string' ? cluster.summary : '',
+      sourceSurveyIds: Array.isArray(cluster.sourceSurveyIds) ? cluster.sourceSurveyIds.map(String) : [],
+      openQuestions: Array.isArray(cluster.openQuestions) ? cluster.openQuestions.map(String) : [],
+    }))
+  }
+
+  private async writeWikis(
+    ctx: BrainstormState,
+    records: readonly PaperRecord[],
+    stage: 'survey' | 'latest',
+  ): Promise<void> {
+    if (records.length === 0) return
     const result = await this.provider.run('paper-wiki-writer', {
-      runDir,
-      plan: JSON.stringify(aPapers, null, 2),
-    }, context)
+      runDir: ctx.runDir,
+      plan: JSON.stringify({ papers: records, stageHint: stage }, null, 2),
+    }, ctx.agentContext)
     const wikis = (result.structured as { wikis?: Record<string, string> } | undefined)?.wikis ?? {}
-    const missing = aPapers.filter((paper) => !wikis[paper.id])
+    const missing = records.filter((paper) => !wikis[paper.id])
     if (missing.length > 0) {
-      throw new AutoResearchError(`paper wiki missing ${missing.length} A-level papers`, 'AGENT_FAILED')
+      throw new AutoResearchError(`paper wiki missing ${missing.length} ${stage} papers`, 'AGENT_FAILED')
     }
     for (const [id, markdown] of Object.entries(wikis)) {
-      await writeText(path(runDir, 'paper_wiki', `${id}.md`), markdown)
+      await writeText(paperWikiPath(ctx.runDir, id), markdown)
     }
-    const rows = pool.map((paper) => `| ${paper.id} | ${paper.title} | ${paper.relevance ?? '-'} | ${paper.relevance === 'A' ? `paper_wiki/${paper.id}.md` : ''} |`)
-    const index = ['# Paper Wiki Index', '', '| id | title | relevance | wiki |', '|---|---|---|---|', ...rows].join('\n')
-    await writeText(wikiIndexPath(runDir), index)
-    return index
   }
 
-  private async propose(runDir: string, seed: string, wikiIndex: string, context: RoleExecutionContext): Promise<CandidateDirection[]> {
+  private async writeSurveyOverview(ctx: BrainstormState, raw: RawSurvey): Promise<void> {
+    const surveys = raw.surveys ?? []
+    const clusters = ctx.clusters
+    const lines = ['# Field Survey Overview', '', '## Found Surveys', '']
+    for (const survey of surveys) {
+      lines.push(`- ${survey.title ?? survey.id ?? 'Unnamed survey'} (${survey.year ?? 'year?'}): ${survey.scope ?? ''}`)
+    }
+    lines.push('', '## Cluster Map', '')
+    for (const cluster of clusters) {
+      lines.push(`- ${cluster.name} (${cluster.id})`)
+      lines.push(`  - source surveys: ${(cluster.sourceSurveyIds ?? []).join(', ') || '-'}`)
+      lines.push(`  - open questions: ${(cluster.openQuestions ?? []).join('; ') || '-'}`)
+    }
+    lines.push('', '## Coverage Gap', '')
+    const minSurveys = this.options.surveyMinSurveys ?? DEFAULTS.surveyMinSurveys
+    if (surveys.length < minSurveys) {
+      lines.push(`- Only ${surveys.length} field surveys found; expected at least ${minSurveys}. This gap must be explicit.`)
+    } else {
+      lines.push('- No explicit coverage gap recorded.')
+    }
+    await writeText(surveyOverviewPath(ctx.runDir), `${lines.join('\n')}\n`)
+  }
+
+  // ---------- Stage 2 ----------
+
+  private async selectDirections(ctx: BrainstormState, kgSummary: string): Promise<KnowledgeDirection[]> {
+    const result = await this.provider.run('direction-select', {
+      runDir: ctx.runDir,
+      plan: [
+        `Seed: ${ctx.seed || 'None'}`,
+        'Survey wiki index:',
+        ctx.wikiIndex,
+        '',
+        'Knowledge graph summary:',
+        kgSummary,
+      ].join('\n'),
+    }, ctx.agentContext)
+    const value = (result.structured ?? {}) as SelectedDirectionResult
+    const directions = this.toDirections(value.directions ?? [])
+    if (directions.length < 1) throw new AutoResearchError('direction-select produced no directions', 'AGENT_FAILED')
+    const weak = directions.filter((direction) => (direction.evidence?.length ?? 0) < 3)
+    if (weak.length > 0) {
+      throw new AutoResearchError(`direction-select must cite >= 3 items for each direction; weak: ${weak.map((d) => d.id).join(', ')}`, 'AGENT_FAILED')
+    }
+    return directions.slice(0, this.options.maxSelectedDirections ?? DEFAULTS.maxSelectedDirections)
+  }
+
+  private toDirections(raw: RawDirection[]): KnowledgeDirection[] {
+    return raw.map((direction, index) => ({
+      id: direction.id?.trim() || `d${index + 1}`,
+      name: direction.name?.trim() || direction.statement?.trim() || `Direction ${index + 1}`,
+      statement: direction.statement?.trim() ?? '',
+      evidence: Array.isArray(direction.evidence) ? direction.evidence.map(String) : [],
+      cheapTest: direction.cheapTest ?? '',
+      risk: direction.risk ?? '',
+    }))
+  }
+
+  private async frontierMine(ctx: BrainstormState): Promise<RawFrontier> {
+    const latestPerDirection = this.options.latestPerDirection ?? DEFAULTS.latestPerDirection
+    const latestWindowYears = this.options.latestWindowYears ?? DEFAULTS.latestWindowYears
+    const result = await this.provider.run('paper-frontier-miner', {
+      runDir: ctx.runDir,
+      plan: JSON.stringify({
+        selectedDirections: ctx.directions,
+        existingSurveyIds: ctx.surveyPapers.map((paper) => paper.id),
+        latestWindowYears,
+        latestPerDirection,
+      }, null, 2),
+    }, ctx.agentContext)
+    const raw = (result.structured ?? {}) as RawFrontier
+    const papers = raw.papers ?? []
+    const expected = ctx.directions.length * latestPerDirection
+    if (papers.length < 1) {
+      throw new AutoResearchError('paper-frontier-miner returned no latest papers', 'AGENT_FAILED')
+    }
+    if (papers.length < expected) {
+      // Not fatal, but keep the constraint visible in the artifact.
+      raw.expectedMin = expected
+    }
+    return raw
+  }
+
+  private async writeDirectionsOverview(ctx: BrainstormState, directions: KnowledgeDirection[]): Promise<void> {
+    const lines = ['# Selected Directions', '']
+    for (const direction of directions) {
+      lines.push(`## ${direction.id} — ${direction.name}`)
+      lines.push(`- statement: ${direction.statement || '-'}`)
+      lines.push(`- evidence: ${direction.evidence?.join(', ') || '-'}`)
+      lines.push(`- cheapTest: ${direction.cheapTest || '-'}`)
+      lines.push(`- risk: ${direction.risk || '-'}`)
+    }
+    await writeText(directionsOverviewPath(ctx.runDir), `${lines.join('\n')}\n`)
+  }
+
+  // ---------- knowledge graph ----------
+
+  private async rebuildKnowledgeGraph(ctx: BrainstormState): Promise<string> {
+    if (this.options.enableKnowledgeGraph === false) return ''
+    const kg = buildPaperKnowledgeGraph(ctx.records, ctx.clusters, ctx.directions)
+    await writePaperKnowledgeGraph(ctx.runDir, kg)
+    return buildKnowledgeGraphSummary(kg)
+  }
+
+  // ---------- existing ideation ----------
+
+  private async propose(ctx: BrainstormState): Promise<CandidateDirection[]> {
     const candidates: CandidateDirection[] = []
     for (const view of VIEWS) {
       const result = await this.provider.run('brainstorm', {
-        runDir,
+        runDir: ctx.runDir,
         perspective: `propose:${view}`,
-        plan: `Seed: ${seed || 'None'}\nWiki index:\n${wikiIndex}`,
-      }, context)
+        plan: `Seed: ${ctx.seed || 'None'}\nWiki index:\n${ctx.wikiIndex}`,
+      }, ctx.agentContext)
       for (const raw of (result.structured as { directions?: Array<Record<string, unknown>> } | undefined)?.directions ?? []) {
-        const direction = this.toDirection(view, raw, candidates)
+        const direction = this.toDirection({ view, raw, existing: candidates })
         if (direction) candidates.push(direction)
       }
     }
@@ -169,7 +413,12 @@ export class BrainstormPipeline {
     return candidates
   }
 
-  private toDirection(view: string, raw: Record<string, unknown>, existing: CandidateDirection[]): CandidateDirection | undefined {
+  private toDirection(request: {
+    view: string
+    raw: Record<string, unknown>
+    existing: CandidateDirection[]
+  }): CandidateDirection | undefined {
+    const { view, raw, existing } = request
     const evidence = Array.isArray(raw.evidence) ? raw.evidence.map(String) : []
     const direction = String(raw.direction ?? '').trim()
     if (!direction || evidence.length < 3 || existing.some((c) => c.direction === direction)) return undefined
@@ -184,21 +433,22 @@ export class BrainstormPipeline {
     }
   }
 
-  private async debate(runDir: string, seed: string, wikiIndex: string, candidates: CandidateDirection[], context: RoleExecutionContext): Promise<CandidateDirection[]> {
+  private async debate(ctx: BrainstormState): Promise<CandidateDirection[]> {
+    const { candidates } = ctx
     const lines = ['# Brainstorm Debate', '']
     for (const candidate of candidates) {
       const result = await this.provider.run('brainstorm', {
-        runDir,
+        runDir: ctx.runDir,
         perspective: 'debate',
         plan: [
-          `Seed: ${seed || 'None'}`,
+          `Seed: ${ctx.seed || 'None'}`,
           `Target direction to attack and revise (id ${candidate.id}): ${candidate.direction}`,
           'All candidates:',
           JSON.stringify(candidates, null, 2),
           'Wiki index:',
-          wikiIndex,
+          ctx.wikiIndex,
         ].join('\n'),
-      }, context)
+      }, ctx.agentContext)
       const value = result.structured as { attack?: string[]; support?: string[]; revisedDirection?: string } | undefined
       lines.push(`## Debate ${candidate.id}`)
       lines.push(...(value?.attack ?? []).map((x) => `- ATTACK: ${x}`))
@@ -207,80 +457,40 @@ export class BrainstormPipeline {
       if (revised) candidate.direction = revised
       lines.push(`- REVISED: ${candidate.direction}`)
     }
-    await writeText(debatePath(runDir), `${lines.join('\n')}\n`)
+    await writeText(debatePath(ctx.runDir), `${lines.join('\n')}\n`)
     return candidates
   }
 
-  private async scoreAndRank(runDir: string, candidates: CandidateDirection[], context: RoleExecutionContext): Promise<RankedDirection[]> {
-    const result = await this.provider.run('brainstorm', {
-      runDir,
-      perspective: 'score',
-      plan: JSON.stringify(candidates, null, 2),
-    }, context)
-    const scores = (result.structured as { scores?: Array<{ candidateId?: string; novelty?: number; feasibility?: number; evidence?: number }> } | undefined)?.scores ?? []
-    const totals = new Map<string, { novelty: number; feasibility: number; evidenceScore: number }>()
-    for (const score of scores) {
-      if (!score.candidateId) continue
-      const previous = totals.get(score.candidateId) ?? { novelty: 0, feasibility: 0, evidenceScore: 0 }
-      totals.set(score.candidateId, {
-        novelty: previous.novelty + (score.novelty ?? 0),
-        feasibility: previous.feasibility + (score.feasibility ?? 0),
-        evidenceScore: previous.evidenceScore + (score.evidence ?? 0),
-      })
-    }
-    return candidates.map((candidate) => {
-      const score = totals.get(candidate.id) ?? { novelty: 0, feasibility: 0, evidenceScore: 0 }
-      return {
-        ...candidate,
-        ...score,
-        total: score.novelty + score.feasibility + score.evidenceScore,
-      }
-    }).sort((a, b) => b.total - a.total || b.evidenceScore - a.evidenceScore || b.novelty - a.novelty)
+  private async scoreAndRank(ctx: BrainstormState): Promise<CandidateDirection[]> {
+    const ranking = this.options.ranking ?? defaultRanking
+    return ranking.rank(ctx, ctx.candidates, this.provider)
   }
 
-  private async reform(runDir: string, seed: string, wikiIndex: string, ranked: RankedDirection[], context: RoleExecutionContext): Promise<string> {
+  private async reform(ctx: BrainstormState): Promise<IdeaHandoff> {
+    const { ranked } = ctx
     const winner = ranked[0]
     if (!winner) throw new AutoResearchError('no vote winner to reform', 'AGENT_FAILED')
     const result = await this.provider.run('brainstorm', {
-      runDir,
+      runDir: ctx.runDir,
       perspective: 'chair',
       plan: [
-        `Seed: ${seed || 'None'}`,
+        `Seed: ${ctx.seed || 'None'}`,
         'Ranked candidates (rank 1 is the only reform target; rank 2/3 are backups):',
         JSON.stringify(ranked, null, 2),
         'Wiki index:',
-        wikiIndex,
+        ctx.wikiIndex,
       ].join('\n'),
-    }, context)
+    }, ctx.agentContext)
     const value = result.structured as { selectedId?: string; ideaMd?: string } | undefined
     const ideaMd = value?.ideaMd?.trim()
-    if (value?.selectedId !== winner.id || !ideaMd || (ideaMd.match(/paper_wiki\//g) ?? []).length < 3) {
+    if (value?.selectedId !== winner.id || !ideaMd || countPaperWikiCitations(ideaMd) < 3) {
       throw new AutoResearchError(`chair must reform rank-1 candidate "${winner.id}" and cite >= 3 paper_wiki files`, 'AGENT_FAILED')
     }
-    await writeText(ideaPath(runDir), ideaMd)
-    return ideaPath(runDir)
+    await writeText(ideaPath(ctx.runDir), ideaMd)
+    return buildIdeaHandoff(ideaMd)
   }
 
-  private async handoff(runDir: string, ideaFile: string): Promise<void> {
-    const idea = await readText(ideaFile)
-    const direction = idea.match(/^\s*- direction:\s*(.+)$/mi)?.[1]?.trim() ?? 'Reformed research direction'
-    const cheap = idea.match(/^\s*- cheap_test:\s*(.+)$/mi)?.[1]
-      ?? idea.match(/^## cheap_test\s*\n([\s\S]*?)(?=\n## |$)/)?.[1]?.trim()
-      ?? 'Run the minimal validation experiment'
-    const backups = [...idea.matchAll(/^\s*- rank [23]:\s*(.+)$/gm)].map((m) => m[1]?.trim()).filter(Boolean)
-    await writeText(path(runDir, INPUT_DIR, IDEA_FILE), [
-      '## Direction', '', direction, '', '## A-priori ideas', '',
-      `- ${cheap}`,
-      ...backups.map((backup) => `- ${backup}`),
-      '',
-    ].join('\n'))
-    await writeText(path(runDir, PROFILE_FILE), [
-      '# PROFILE', '',
-      `- Brainstorm source: ${ideaFile}`,
-      `- Paper wiki: ${wikiIndexPath(runDir)}`,
-      '- Allowed: public literature search, local code, small real-data experiments.',
-      '- Forbidden: hidden target papers, fabricated citations or results.',
-      '',
-    ].join('\n'))
+  private async handoff(ctx: BrainstormState): Promise<void> {
+    await writeBrainstormHandoff({ runDir: ctx.runDir, handoff: ctx.handoff })
   }
 }

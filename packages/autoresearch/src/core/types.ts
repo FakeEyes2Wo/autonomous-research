@@ -1,4 +1,5 @@
-export type ResearchNodeKind = 'hypothesis' | 'action' | 'evidence'
+export const RESEARCH_NODE_KINDS = ['hypothesis', 'action', 'evidence'] as const
+export type ResearchNodeKind = typeof RESEARCH_NODE_KINDS[number]
 export type ResearchNodeStatus = string
 
 export interface ResearchNode {
@@ -10,23 +11,27 @@ export interface ResearchNode {
   artifacts?: string[]
 }
 
-export type RunStatus = 'RUNNING' | 'WAITING' | 'PAUSED' | 'FAILED' | 'COMPLETED'
-export type RunPhase =
-  | 'intake'
-  | 'brainstorm'
-  | 'rubric'
-  | 'ideation'
-  | 'hypothesis_revision'
-  | 'plan'
-  | 'minimal_verification'
-  | 'experiment_design'
-  | 'experiment_reflexion'
-  | 'work'
-  | 'evidence'
-  | 'result_reflexion'
-  | 'decide'
-  | 'paper'
-  | 'failed'
+export const RUN_STATUSES = ['RUNNING', 'WAITING', 'PAUSED', 'FAILED', 'COMPLETED'] as const
+export type RunStatus = typeof RUN_STATUSES[number]
+
+export const RUN_PHASES = [
+  'intake',
+  'brainstorm',
+  'rubric',
+  'ideation',
+  'hypothesis_revision',
+  'plan',
+  'minimal_verification',
+  'experiment_design',
+  'experiment_reflexion',
+  'work',
+  'evidence',
+  'result_reflexion',
+  'decide',
+  'paper',
+  'failed',
+] as const
+export type RunPhase = typeof RUN_PHASES[number]
 
 export interface RunState {
   schema: 'autoresearch/run-state/v1'
@@ -43,7 +48,8 @@ export interface RunState {
   updatedAt: string
 }
 
-export type RunEventType = 'state' | 'result' | 'decision' | 'error'
+export const RUN_EVENT_TYPES = ['state', 'result', 'decision', 'error'] as const
+export type RunEventType = typeof RUN_EVENT_TYPES[number]
 
 export interface RunEvent {
   time: string
@@ -58,23 +64,25 @@ export interface ActionResult {
   artifacts: string[]
 }
 
-export type ResearchDecisionAction = 'continue' | 'revise' | 'finish' | 'fail'
+export const RESEARCH_DECISION_ACTIONS = ['continue', 'revise', 'finish', 'fail'] as const
+export type ResearchDecisionAction = typeof RESEARCH_DECISION_ACTIONS[number]
 
 export interface ResearchDecision {
   action: ResearchDecisionAction
   reason: string
 }
 
-export type EvidenceVerdict = 'supports' | 'refutes' | 'inconclusive'
+export const EVIDENCE_VERDICTS = ['supports', 'refutes', 'inconclusive'] as const
+export type EvidenceVerdict = typeof EVIDENCE_VERDICTS[number]
 
 export function isEvidenceVerdict(value: string): value is EvidenceVerdict {
-  return value === 'supports' || value === 'refutes' || value === 'inconclusive'
+  return (EVIDENCE_VERDICTS as readonly string[]).includes(value)
 }
 
 export function parseDecision(value: unknown): ResearchDecision {
   if (typeof value !== 'object' || value === null) throw new TypeError('decision must be an object')
   const record = value as Record<string, unknown>
-  if (typeof record.action !== 'string' || !['continue', 'revise', 'finish', 'fail'].includes(record.action)) {
+  if (typeof record.action !== 'string' || !(RESEARCH_DECISION_ACTIONS as readonly string[]).includes(record.action)) {
     throw new TypeError(`invalid decision action: ${String(record.action)}`)
   }
   if (typeof record.reason !== 'string') throw new TypeError('decision reason must be a string')

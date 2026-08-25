@@ -76,3 +76,9 @@ export interface ValidationPlan {
   verifier: string | null
   decision_rule: string
 }
+
+export interface ResearchIdea {
+  direction: string
+  aPrioriIdeas: string[]
+  raw: string
+}

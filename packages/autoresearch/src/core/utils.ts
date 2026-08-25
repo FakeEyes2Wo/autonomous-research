@@ -20,7 +20,8 @@ export const PROFILE_FILE = 'PROFILE.md'
 export const DEFAULT_MAX_CYCLES = 5
 export const DEFAULT_SUBAGENT_PROVIDER = 'spawn'
 
-export type ErrorKind = 'INVALID_ARGUMENT' | 'NOT_FOUND' | 'STATE_CORRUPT' | 'AGENT_FAILED' | 'LEAKAGE' | 'UNKNOWN'
+export const ERROR_KINDS = ['INVALID_ARGUMENT', 'NOT_FOUND', 'STATE_CORRUPT', 'AGENT_FAILED', 'LEAKAGE', 'UNKNOWN'] as const
+export type ErrorKind = typeof ERROR_KINDS[number]
 
 export class AutoResearchError extends Error {
   readonly kind: ErrorKind
@@ -80,7 +81,8 @@ export function safeResolve(runDir: string, ...parts: string[]): string {
   return target
 }
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const
+export type LogLevel = typeof LOG_LEVELS[number]
 
 export class Logger {
   private readonly file?: string
