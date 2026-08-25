@@ -12,3 +12,5 @@ Rules:
 - For architecture/workflow figures, produce editable SVG when possible.
 - Every generated figure must be referenced in latexIncludes.
 - If a figure cannot be generated automatically, mark it as manual in notes.
+- Do NOT embed a main figure title inside the figure image. The paper writer maintains the figure caption/title in LaTeX; if you need a title for identification, encode it in the output filename (e.g. `fig_xxx_title.png`) instead.
+- Sub-figures/subplots may keep their own small titles/labels; only the overall figure should remain title-free in the image.

@@ -15,6 +15,7 @@ Rules:
 - Do not delete failed or inconclusive results.
 - Honor the acceptance contract assertions when writing; do not violate them silently.
 - Include figures from `figures/latex_includes.tex` where the plan requires them.
+- Maintain the main figure title/caption in LaTeX (`\caption{...}`), not inside the image. Generated figure images must not carry an embedded overall title; short subplot labels are acceptable.
 - If a style profile is provided, use it for structural guidance only. Never copy prose or claims from it.
 - Do not leave TODO/FIXME/DATA_NEEDED placeholders in the final draft.
 

@@ -130,7 +130,7 @@ export class FakeAgentProvider implements RoleAgentProvider {
       case 'figure-generator':
         return { text: '', structured: { scripts: {}, latexIncludes: '' }, stopReason: 'completed' }
       case 'figure-reflexion':
-        return { text: '', structured: { verdict: 'pass', issues: [], textOverload: false, elementOverload: false, elementOverlap: false }, stopReason: 'completed' }
+        return { text: '', structured: { verdict: 'pass', issues: [], textOverload: false, elementOverload: false, elementOverlap: false, mainTitleEmbedded: false }, stopReason: 'completed' }
       case 'proof-checker':
         return { text: '', structured: { verdict: 'NOT_APPLICABLE', issues: [], json: '{"verdict":"NOT_APPLICABLE"}' }, stopReason: 'completed' }
       case 'claim-auditor':
