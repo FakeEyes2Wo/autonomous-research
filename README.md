@@ -46,7 +46,14 @@ DSH 插件 `@athena/autoresearch`：最小闭环研究自动化（`idea → plan
 
 ## 二、无头模式运行脚本
 
-> **重要：`npm run run:headless` 必须在 `packages/autoresearch` 目录下运行。** 仓库根目录没有 `package.json`，直接在根目录执行会报 `ENOENT`。
+### 目录说明
+
+| 目录 | 是否能运行 npm 脚本 |
+|---|---|
+| `C:\...\autonomous-research`（仓库根目录） | ❌ 没有 `package.json`，直接 `npm run` 会报 `ENOENT` |
+| `C:\...\autonomous-research\packages\autoresearch`（插件运行目录） | ✅ 有 `package.json`，可以运行 `npm run run:headless` |
+
+> **重要：`npm run run:headless` 必须在 `packages/autoresearch` 目录下运行。**
 
 ```powershell
 # 方式 1：进入插件目录（推荐）
@@ -62,11 +69,12 @@ npm --prefix packages/autoresearch run run:headless
 1. 构建插件（`npm run build`）；
 2. 创建运行目录 `.runs/run-<timestamp>`（可用 `--run-dir` 指定）；
 3. 如果没有传 `--candidate`，自动先生成 brainstorm 前置流程：挖论文 → paper wiki → 多视角 debate → vote → 生成 `input/idea.md`；
-4. 如果传了 `--idea`，用它作为 brainstorm 的初始 seed；不传则系统自动选择；
-5. 确保 DSH `headless` profile 存在并完成 `pnpm install`；
-6. 启动 `dsh --profile headless`，由 Agent 调用 `research_run` 完成研究闭环；
-7. 生成论文产物：优先 LaTeX 编译，缺失时用 pandoc + Chrome/Edge 以 HTML→PDF 兜底；
-8. 打印最终产物路径。
+4. 不传 `--idea` 时**完全从 0 开始，不预设 seed**：`paper-miner` 自行从近期文献中选定一个方向后再挖论文；
+5. 如果传了 `--idea`，则把该文本作为 brainstorm 的初始 seed；
+6. 确保 DSH `headless` profile 存在并完成 `pnpm install`；
+7. 启动 `dsh --profile headless`，由 Agent 调用 `research_run` 完成研究闭环；
+8. 生成论文产物：优先 LaTeX 编译，缺失时用 pandoc + Chrome/Edge 以 HTML→PDF 兜底；
+9. 打印最终产物路径。
 
 > 注意：`run:headless` 自动创建的 `headless` profile 会禁用 sandbox / permission 预设并改用本地 shell / fs provider，请在可信环境中运行。
 
@@ -76,7 +84,7 @@ npm --prefix packages/autoresearch run run:headless
 |---|---|---|
 | `--profile` | `headless` | DSH profile 名 |
 | `--run-dir` | `.runs/run-<timestamp>` | 运行输出目录 |
-| `--idea` | 无 | brainstorm 的初始人类 idea/seed 文本；不传则系统自动选择 |
+| `--idea` | 无 | brainstorm 的初始人类 idea/seed 文本；不传则完全从 0 开始 |
 | `--candidate` | 无 | 手动指定 `idea.md` 文件路径；传了会跳过 brainstorm |
 | `--profile-file` | 无 | 手动指定 `PROFILE.md` 文件路径 |
 | `--max-cycles` | `5` | 研究循环最大轮数 |
