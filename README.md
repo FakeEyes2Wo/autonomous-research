@@ -46,20 +46,27 @@ DSH 插件 `@athena/autoresearch`：最小闭环研究自动化（`idea → plan
 
 ## 二、无头模式运行脚本
 
+> **重要：`npm run run:headless` 必须在 `packages/autoresearch` 目录下运行。** 仓库根目录没有 `package.json`，直接在根目录执行会报 `ENOENT`。
+
 ```powershell
+# 方式 1：进入插件目录（推荐）
 cd packages/autoresearch
 npm run run:headless
+
+# 方式 2：在仓库根目录使用 npm --prefix
+npm --prefix packages/autoresearch run run:headless
 ```
 
 脚本会：
 
 1. 构建插件（`npm run build`）；
 2. 创建运行目录 `.runs/run-<timestamp>`（可用 `--run-dir` 指定）；
-3. 复制默认输入：`examples_articles/reliable_conflictive_multi_view_learning/` 下的 `idea.md` 与 `PROFILE.md`；
-4. 确保 DSH `headless` profile 存在并完成 `pnpm install`；
-5. 启动 `dsh --profile headless`，由 Agent 调用 `research_run` 完成研究闭环；
-6. 生成论文产物：优先 LaTeX 编译，缺失时用 pandoc + Chrome/Edge 以 HTML→PDF 兜底；
-7. 打印最终产物路径。
+3. 如果没有传 `--candidate`，自动先生成 brainstorm 前置流程：挖论文 → paper wiki → 多视角 debate → vote → 生成 `input/idea.md`；
+4. 如果传了 `--idea`，用它作为 brainstorm 的初始 seed；不传则系统自动选择；
+5. 确保 DSH `headless` profile 存在并完成 `pnpm install`；
+6. 启动 `dsh --profile headless`，由 Agent 调用 `research_run` 完成研究闭环；
+7. 生成论文产物：优先 LaTeX 编译，缺失时用 pandoc + Chrome/Edge 以 HTML→PDF 兜底；
+8. 打印最终产物路径。
 
 > 注意：`run:headless` 自动创建的 `headless` profile 会禁用 sandbox / permission 预设并改用本地 shell / fs provider，请在可信环境中运行。
 
@@ -69,8 +76,9 @@ npm run run:headless
 |---|---|---|
 | `--profile` | `headless` | DSH profile 名 |
 | `--run-dir` | `.runs/run-<timestamp>` | 运行输出目录 |
-| `--idea` | 默认示例的 `idea.md` | idea 输入文件 |
-| `--profile-file` | 默认示例的 `PROFILE.md` | 实验约束 profile 文件 |
+| `--idea` | 无 | brainstorm 的初始人类 idea/seed 文本；不传则系统自动选择 |
+| `--candidate` | 无 | 手动指定 `idea.md` 文件路径；传了会跳过 brainstorm |
+| `--profile-file` | 无 | 手动指定 `PROFILE.md` 文件路径 |
 | `--max-cycles` | `5` | 研究循环最大轮数 |
 | `--venue` | 无 | 目标会议，如 `ICLR` / `NeurIPS` / `ICML` |
 | `--assurance` | 无 | `draft` 或 `submission` |
@@ -84,7 +92,15 @@ npm run run:headless
 ### 示例
 
 ```powershell
-npm run run:headless -- --run-dir C:/tmp/my-run --idea C:/path/idea.md --profile-file C:/path/PROFILE.md --max-cycles 3 --venue ICLR --effort balanced
+# 全自动：先 brainstorm，再研究闭环
+cd packages/autoresearch
+npm run run:headless
+
+# 带人类 idea seed
+npm run run:headless -- --idea "conflictive multi-view learning"
+
+# 手动指定已有 idea 和 profile
+npm run run:headless -- --candidate C:/path/idea.md --profile-file C:/path/PROFILE.md --max-cycles 3 --venue ICLR --effort balanced
 ```
 
 ### 产物

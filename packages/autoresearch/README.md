@@ -20,26 +20,33 @@ npm test
 
 ## 无头模式运行
 
+> 必须在 `packages/autoresearch` 目录下执行 `npm run run:headless`；仓库根目录没有 `package.json`。
+
 ```bash
-npm run build
+cd packages/autoresearch
 npm run run:headless
 ```
 
 脚本会：
 
 1. 准备一个独立 run 目录（默认 `packages/autoresearch/.runs/run-*`）；
-2. 复制 `examples_articles/reliable_conflictive_multi_view_learning/idea.md` 和 `PROFILE.md`；
-3. 确保 DSH `headless` profile 存在并安装本插件；
-4. 调用 `dsh --profile headless "..."` 让 DSH Agent 调用 `research_run` 完成闭环；
-5. 如果 Runner 已生成 `paper/main.tex` 则直接使用；否则用 `pandoc` 把 `paper_draft.md` 转换为 `paper/main.tex`；
-6. 若本机有 `latexmk` / `pdflatex` / `xelatex` / `tectonic`，继续编译 `paper/main.pdf`；
+2. 未传 `--candidate` 时自动跑 brainstorm：挖论文 → paper wiki → debate → vote → 生成 `input/idea.md`；
+3. 未传 `--idea` 时系统自动选择 seed；传了则以 `--idea` 文本作为初始 seed；
+4. 确保 DSH `headless` profile 存在并安装本插件；
+5. 调用 `dsh --profile headless "..."` 让 DSH Agent 调用 `research_run` 完成闭环；
+6. 如果 Runner 已生成 `paper/main.tex` 则直接使用；否则用 `pandoc` 把 `paper_draft.md` 转换为 `paper/main.tex`；
+7. 若本机有 `latexmk` / `pdflatex` / `xelatex` / `tectonic`，继续编译 `paper/main.pdf`；
    - tectonic 在无网络且未缓存 bundle 时可能失败，此时会自动尝试用 Chrome/Edge Headless 将 Markdown 转 HTML 再打印为 `paper/main.pdf`；
-7. 打印最终产物路径。
+8. 打印最终产物路径。
 
 可传参：
 
 ```bash
 npm run run:headless -- --run-dir C:/tmp/my-run --max-cycles 3
+# 或指定 human seed
+npm run run:headless -- --idea "conflictive multi-view learning"
+# 或手动指定已有 idea 文件，跳过 brainstorm
+npm run run:headless -- --candidate C:/path/idea.md --profile-file C:/path/PROFILE.md
 ```
 
 ## DSH 会话使用
