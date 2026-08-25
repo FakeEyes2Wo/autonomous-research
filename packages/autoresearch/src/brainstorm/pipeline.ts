@@ -107,7 +107,7 @@ export class BrainstormPipeline {
         await appendHumanReview(runDir, { time: new Date().toISOString(), gate: 'idea', verdict: 'skipped', feedback: `seed ask failed: ${String(error)}` })
       }
     }
-    return 'AUTO: choose a recent, broad, falsifiable ML direction from the literature'
+    return ''
   }
 
   // ---------- phases ----------
@@ -118,7 +118,7 @@ export class BrainstormPipeline {
     const maxRelevant = this.options.maxRelevant ?? DEFAULTS.maxRelevant
     const result = await this.provider.run('paper-miner', {
       runDir,
-      plan: `Seed: ${seed}\nHard constraints: >= ${minPapers} papers; A-level papers must be ${minRelevant}-${maxRelevant}.`,
+      plan: `Seed: ${seed || 'None'}\nHard constraints: >= ${minPapers} papers; A-level papers must be ${minRelevant}-${maxRelevant}.`,
     }, context)
     const papers = ((result.structured as { papers?: Array<Record<string, unknown>> } | undefined)?.papers ?? [])
       .map((paper, index) => ({
@@ -158,7 +158,7 @@ export class BrainstormPipeline {
       const result = await this.provider.run('brainstorm', {
         runDir,
         perspective: `propose:${view}`,
-        plan: `Seed: ${seed}\nWiki index:\n${wikiIndex}`,
+        plan: `Seed: ${seed || 'None'}\nWiki index:\n${wikiIndex}`,
       }, context)
       for (const raw of (result.structured as { directions?: Array<Record<string, unknown>> } | undefined)?.directions ?? []) {
         const direction = this.toDirection(view, raw, candidates)
@@ -191,7 +191,7 @@ export class BrainstormPipeline {
         runDir,
         perspective: 'debate',
         plan: [
-          `Seed: ${seed}`,
+          `Seed: ${seed || 'None'}`,
           `Target direction to attack and revise (id ${candidate.id}): ${candidate.direction}`,
           'All candidates:',
           JSON.stringify(candidates, null, 2),
@@ -245,7 +245,7 @@ export class BrainstormPipeline {
       runDir,
       perspective: 'chair',
       plan: [
-        `Seed: ${seed}`,
+        `Seed: ${seed || 'None'}`,
         'Ranked candidates (rank 1 is the only reform target; rank 2/3 are backups):',
         JSON.stringify(ranked, null, 2),
         'Wiki index:',
