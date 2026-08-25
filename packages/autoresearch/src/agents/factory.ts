@@ -227,7 +227,6 @@ export function outputSchemaFor(role: RoleName): Record<string, unknown> | undef
         textOverload: { type: 'boolean', required: true },
         elementOverload: { type: 'boolean', required: true },
         elementOverlap: { type: 'boolean', required: true },
-        mainTitleEmbedded: { type: 'boolean', required: true },
       })
     case 'proof-checker':
       return objectSchema({

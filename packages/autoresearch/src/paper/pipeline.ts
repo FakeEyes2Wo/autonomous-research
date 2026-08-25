@@ -283,9 +283,9 @@ export class PaperPipeline {
           paperFigures: latexIncludes,
           plan: JSON.stringify(structured?.scripts ?? {}),
         }, context)
-        const r = review.structured as { verdict?: string; issues?: string[]; mainTitleEmbedded?: boolean } | undefined
-        if (r?.verdict === 'pass' && r?.mainTitleEmbedded !== true) break
-        feedback = `Fix figure quality issues (remove embedded main figure titles; keep only subplot labels):\n${(r?.issues ?? []).join('\n')}`
+        const r = review.structured as { verdict?: string; issues?: string[] } | undefined
+        if (r?.verdict === 'pass') break
+        feedback = `Fix figure quality issues (if any figure has an embedded main title, remove it and keep only subplot labels):\n${(r?.issues ?? []).join('\n')}`
         continue
       }
       feedback = `Fix figure errors:\n${errors.join('\n')}`

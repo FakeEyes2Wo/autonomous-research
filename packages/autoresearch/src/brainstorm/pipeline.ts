@@ -1,4 +1,3 @@
-import { join } from 'node:path'
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
 import { appendHumanReview, type HumanReviewer } from '../core/human-review.js'
 import { humanReviewEnabled } from '../session/auto-mode.js'
@@ -53,6 +52,7 @@ const poolPath = (runDir: string) => path(runDir, 'brainstorm', 'paper_pool.json
 const debatePath = (runDir: string) => path(runDir, 'brainstorm', 'DEBATE.md')
 const ideaPath = (runDir: string) => path(runDir, 'brainstorm', 'IDEA.md')
 const wikiIndexPath = (runDir: string) => path(runDir, 'paper_wiki', '_index.md')
+const VIEWS = ['gap', 'feasibility', 'novelty']
 
 /**
  * Minimal brainstorm pre-phase: mine papers, write a wiki, propose/debate/score
@@ -146,17 +146,15 @@ export class BrainstormPipeline {
     for (const [id, markdown] of Object.entries(wikis)) {
       await writeText(path(runDir, 'paper_wiki', `${id}.md`), markdown)
     }
-    const index = [
-      '# Paper Wiki Index', '', '| id | title | relevance | wiki |', '|---|---|---|---|',
-      ...pool.map((paper) => `| ${paper.id} | ${paper.title} | ${paper.relevance ?? '-'} | ${paper.relevance === 'A' ? `paper_wiki/${paper.id}.md` : ''} |`),
-    ].join('\n')
+    const rows = pool.map((paper) => `| ${paper.id} | ${paper.title} | ${paper.relevance ?? '-'} | ${paper.relevance === 'A' ? `paper_wiki/${paper.id}.md` : ''} |`)
+    const index = ['# Paper Wiki Index', '', '| id | title | relevance | wiki |', '|---|---|---|---|', ...rows].join('\n')
     await writeText(wikiIndexPath(runDir), index)
     return index
   }
 
   private async propose(runDir: string, seed: string, wikiIndex: string, context: RoleExecutionContext): Promise<CandidateDirection[]> {
     const candidates: CandidateDirection[] = []
-    for (const view of ['gap', 'feasibility', 'novelty']) {
+    for (const view of VIEWS) {
       const result = await this.provider.run('brainstorm', {
         runDir,
         perspective: `propose:${view}`,

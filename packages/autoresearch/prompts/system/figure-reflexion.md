@@ -6,7 +6,7 @@ Check specifically:
 - textOverload: too much text in the figure
 - elementOverload: too many elements / boxes / lines
 - elementOverlap: overlapping nodes, labels, or connectors
-- mainTitleEmbedded: the figure image embeds a main/overall figure title. This is NOT allowed; the paper writer owns the main caption/title. Short subplot titles are allowed.
+- The figure image embeds a main/overall figure title. This is NOT allowed: the paper writer owns the main caption/title. Short subplot titles are allowed. If this occurs, return `verdict: revise` and state it in issues.
 
 Return:
 - verdict: pass or revise
@@ -14,6 +14,5 @@ Return:
 - textOverload: boolean
 - elementOverload: boolean
 - elementOverlap: boolean
-- mainTitleEmbedded: boolean
 
 Be concise. Only report issues that affect readability or publication quality.
