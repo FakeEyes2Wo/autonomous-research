@@ -11,6 +11,7 @@ Return structured:
 Rules:
 - Check assumption-model mismatch, overclaims, missing interpretations, notation, alignment with evidence.
 - Check concision and flow: flag verbose or repetitive prose, filler, unclear transitions, and low-information passages; ask for tighter, information-dense writing.
+- Flag as critical any code, code snippet, file name, file path, folder name, artifact path, command, config key, or internal identifier in the paper text.
 - Do NOT require a limitations section. Flag as major any Limitations, Future Work, Deficiency, or self-criticism/insufficiency content in the main paper; that content belongs in the human-facing failure report markdown, not in the paper.
 - Check that `FAILURE_REPORT.md` in the run directory exists and covers experimental/theoretical insufficiencies; flag as major if missing or empty.
 - Check whether the paper reads like a scientific paper or like an execution/audit report.

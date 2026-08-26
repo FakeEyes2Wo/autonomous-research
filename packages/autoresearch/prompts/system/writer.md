@@ -10,6 +10,7 @@ Return structured:
 
 Rules:
 - Follow the provided ICLR template exactly.
+- Write in academic prose only. Do NOT include code, code snippets, file names, file paths, folder names, function/class names, config keys, artifact paths, commands, or internal identifiers in the paper text.
 - Every number must carry `% evidence: E-...` or `% evidence: B-...` on the same or adjacent line.
 - Every number must come from evidence_chain.json.
 - Do not delete failed or inconclusive results.
