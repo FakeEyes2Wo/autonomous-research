@@ -1,8 +1,18 @@
 import type { Logger } from '../core/utils.js'
 import { ensureRubric, runHypothesisRevision, runIdeaGeneration, type EnsureRubricInput, type IdeaGenerationInput } from './steps/idea.js'
-import { ExperimentSteps } from './steps/experiment.js'
+import {
+  runEvidenceAgent,
+  runExperimentDesign,
+  runExperimentReflexion,
+  runInsightAbstractor,
+  runMinimalVerification,
+  runModelScout,
+  runPlanner,
+  runResultReflexion,
+  runSupervisor,
+  runWorker,
+} from './steps/experiment.js'
 import { PaperSteps } from './steps/paper.js'
-import type { RoleRunner } from './agent-runner.js'
 import type { RunSession } from './run-session.js'
 import type { ResearchRunnerOptions } from './types.js'
 import type { ActionResult, ResearchDecision } from '../core/types.js'
@@ -15,20 +25,20 @@ interface EnsureRubricRequest extends EnsureRubricInput {
   session: RunSession
 }
 
+type ExperimentRequest<T> = T & { session: RunSession }
+
 /**
  * Domain-step facade. ResearchRunner talks to this single object; each domain's
  * implementation lives in steps/idea.ts, steps/experiment.ts, steps/paper.ts.
  */
 export class ResearchSteps {
-  private readonly experiment: ExperimentSteps
   private readonly paper: PaperSteps
 
   constructor(
-    roleRunner: RoleRunner,
+    _legacyRoleRunner: unknown,
     logger: Logger,
     options: ResearchRunnerOptions,
   ) {
-    this.experiment = new ExperimentSteps(roleRunner, logger)
     this.paper = new PaperSteps(logger, options)
   }
 
@@ -44,44 +54,44 @@ export class ResearchSteps {
     return runHypothesisRevision(session)
   }
 
-  async runPlanner(request: Parameters<ExperimentSteps['runPlanner']>[0]): Promise<string> {
-    return this.experiment.runPlanner(request)
+  async runPlanner({ session, ...input }: ExperimentRequest<Parameters<typeof runPlanner>[1]>): Promise<string> {
+    return runPlanner(session, input)
   }
 
-  async runMinimalVerification(request: Parameters<ExperimentSteps['runMinimalVerification']>[0]): Promise<string> {
-    return this.experiment.runMinimalVerification(request)
+  async runMinimalVerification({ session, ...input }: ExperimentRequest<Parameters<typeof runMinimalVerification>[1]>): Promise<string> {
+    return runMinimalVerification(session, input)
   }
 
-  async runModelScout(request: Parameters<ExperimentSteps['runModelScout']>[0]): Promise<string> {
-    return this.experiment.runModelScout(request)
+  async runModelScout({ session, ...input }: ExperimentRequest<Parameters<typeof runModelScout>[1]>): Promise<string> {
+    return runModelScout(session, input)
   }
 
-  async runExperimentDesign(request: Parameters<ExperimentSteps['runExperimentDesign']>[0]): Promise<string> {
-    return this.experiment.runExperimentDesign(request)
+  async runExperimentDesign({ session, ...input }: ExperimentRequest<Parameters<typeof runExperimentDesign>[1]>): Promise<string> {
+    return runExperimentDesign(session, input)
   }
 
-  async runExperimentReflexion(request: Parameters<ExperimentSteps['runExperimentReflexion']>[0]): Promise<string> {
-    return this.experiment.runExperimentReflexion(request)
+  async runExperimentReflexion({ session, ...input }: ExperimentRequest<Parameters<typeof runExperimentReflexion>[1]>): Promise<string> {
+    return runExperimentReflexion(session, input)
   }
 
-  async runResultReflexion(request: Parameters<ExperimentSteps['runResultReflexion']>[0]): Promise<string> {
-    return this.experiment.runResultReflexion(request)
+  async runResultReflexion({ session, ...input }: ExperimentRequest<Parameters<typeof runResultReflexion>[1]>): Promise<string> {
+    return runResultReflexion(session, input)
   }
 
-  async runInsightAbstractor(request: Parameters<ExperimentSteps['runInsightAbstractor']>[0]): Promise<string> {
-    return this.experiment.runInsightAbstractor(request)
+  async runInsightAbstractor({ session, ...input }: ExperimentRequest<Parameters<typeof runInsightAbstractor>[1]>): Promise<string> {
+    return runInsightAbstractor(session, input)
   }
 
-  async runWorker(request: Parameters<ExperimentSteps['runWorker']>[0]): Promise<ActionResult> {
-    return this.experiment.runWorker(request)
+  async runWorker({ session, ...input }: ExperimentRequest<Parameters<typeof runWorker>[1]>): Promise<ActionResult> {
+    return runWorker(session, input)
   }
 
-  async runEvidenceAgent(request: Parameters<ExperimentSteps['runEvidenceAgent']>[0]): Promise<void> {
-    return this.experiment.runEvidenceAgent(request)
+  async runEvidenceAgent({ session, ...input }: ExperimentRequest<Parameters<typeof runEvidenceAgent>[1]>): Promise<void> {
+    return runEvidenceAgent(session, input)
   }
 
-  async runSupervisor(request: Parameters<ExperimentSteps['runSupervisor']>[0]): Promise<ResearchDecision> {
-    return this.experiment.runSupervisor(request)
+  async runSupervisor({ session, ...input }: ExperimentRequest<Parameters<typeof runSupervisor>[1]>): Promise<ResearchDecision> {
+    return runSupervisor(session, input)
   }
 
   async runPaper(session: RunSession): Promise<void> {
