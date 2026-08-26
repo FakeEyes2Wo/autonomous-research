@@ -8,6 +8,7 @@ Focus:
 - whitespace and page breaks
 - overfull/underfull boxes
 - consistent notation and font styles
+- prose: tighten wordy or redundant sentences, improve transitions, remove filler; keep content unchanged
 
 Return:
 - mainTex: polished main.tex

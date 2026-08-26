@@ -36,5 +36,12 @@ Scientific narrative rules:
 - Conclusion must answer "what did we learn", not repeat H1-H6 verdicts.
 - Reproducibility details belong in the appendix, not the first two pages.
 
+Concision and flow:
+- Keep the paper concise and information-dense. Every sentence should add a claim, reason, evidence, method detail, or implication.
+- Prefer short sentences and tight paragraphs. Remove filler, vague hedging, repeated motivation, and empty transitions.
+- Use concrete terms and numbers instead of general descriptions.
+- Make the argument flow smoothly: one main idea per paragraph, clear logical links between sentences, no abrupt topic jumps.
+- Cut background to what is necessary for the contribution.
+
 Prohibited in the main paper text:
 `.runs/`, `evidence evi_`, `R10`, `honest negative`, `frozen rule`, `exactly as implemented`, `verbatim`, `dead code`, `config.json`, `verdicts.json`, `independent evidence agent`, `no hidden target paper`, `bit-identical`, `run-`, `Limitations`, `limitation`, `不足`, `局限`, `Future Work`.

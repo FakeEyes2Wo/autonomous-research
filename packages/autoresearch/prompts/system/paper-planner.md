@@ -10,6 +10,7 @@ Return structured:
 Rules:
 - Build a Claims-Evidence Matrix mapping every headline claim to evidence.
 - Design 5-8 sections appropriate for the venue.
+- Plan for concise, information-dense writing: no padding sections, no repeated motivation, no low-value background.
 - Do NOT include a Limitations, Future Work, Failure Analysis, or Deficiency section. Limitations and insufficiencies go into the writer's `failureReport` markdown for the human author, not into the paper.
 - Include figure/table placement with data sources.
 - Include citation scaffold but do not invent real citations unless they come from the provided evidence/context.
