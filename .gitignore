@@ -4,6 +4,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 .runs/
+.worktrees/
 
 # Generated LaTeX / document artifacts
 *.aux
