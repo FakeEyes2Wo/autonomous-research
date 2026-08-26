@@ -23,7 +23,7 @@ import {
   runResultReflexion,
   runSupervisor,
   runWorker,
-} from './steps/experiment.js'
+} from '../experiment/steps.js'
 import { runPaper } from './steps/paper.js'
 import type { ResearchRunnerOptions } from './types.js'
 

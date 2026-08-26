@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import type { RoleAgentProvider } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { isEvidenceVerdict } from '../core/types.js'
 import { loadCheckpoint } from '../paper/checkpoint.js'
 import { readLastRun } from '../session/last-run.js'
+import { runExperimentTask } from '../experiment/runner.js'
 import type { AutoResearchService } from '../service/autoresearch-service.js'
 import {
   evidenceVerdictSchema,
@@ -193,6 +195,39 @@ export const researchTreeQuery: ToolDefinitionLike = defineTool({
     })
   },
 })
+
+export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefinitionLike {
+  return defineTool({
+    name: 'experiment_run',
+    description: 'Run a standalone automatic experiment from a user task requirement.',
+    parameters: {
+      type: 'object',
+      properties: {
+        runDir: runDirSchema,
+        task: stringSchema('The user experiment task requirement'),
+        profile: stringSchema('Optional PROFILE.md content'),
+        maxRounds: { type: 'number', description: 'Optional maximum experiment rounds' },
+      },
+      required: ['runDir', 'task'],
+      additionalProperties: false,
+    },
+    output: jsonOutput,
+    async execute(args, exec) {
+      const parent = exec.agent as { id?: string } | undefined
+      if (!parent || typeof parent.id !== 'string') throw new TypeError('experiment_run requires a calling DSH agent')
+      return runExperimentTask({ provider }, {
+        runDir: String(args.runDir),
+        task: String(args.task),
+        profile: typeof args.profile === 'string' ? args.profile : undefined,
+        maxRounds: typeof args.maxRounds === 'number' ? args.maxRounds : undefined,
+        agentContext: {
+          parent: parent as never,
+          signal: exec.signal,
+        },
+      })
+    },
+  })
+}
 
 export const paperPipelineStatus: ToolDefinitionLike = defineTool({
   name: 'paper_pipeline_status',

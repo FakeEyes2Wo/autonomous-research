@@ -22,7 +22,7 @@ test('idea steps are functions, not a dependency-holding class', async () => {
 })
 
 test('experiment steps are functions, not a dependency-holding class', async () => {
-  const source = await readFile(join(process.cwd(), 'src/service/steps/experiment.ts'), 'utf8')
+  const source = await readFile(join(process.cwd(), 'src/experiment/steps.ts'), 'utf8')
   assert.doesNotMatch(source, /export class ExperimentSteps/)
   for (const name of ['runPlanner', 'runExperimentDesign', 'runWorker', 'runSupervisor']) {
     assert.match(source, new RegExp(`export async function ${name}`))

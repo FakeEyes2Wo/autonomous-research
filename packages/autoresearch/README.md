@@ -64,6 +64,7 @@ node scripts/start-session.mjs --profile autoresearch --prompt "继续上次研�
 
 会话内可用：
 
+- `experiment_run`
 - `research_run`
 - `paper_pipeline_status`
 - `paper_pipeline_last_run`
@@ -86,6 +87,7 @@ import { name, inject, apply } from '@athena/autoresearch'
 安装到 DSH profile 后，会自动注册：
 
 - 五个 research tools：`research_hypothesis_add` / `research_action_start` / `research_action_finish` / `research_evidence_add` / `research_tree_query`
+- 独立实验工具：`experiment_run`（输入任务要求后自动执行实验）
 - 一个控制工具：`research_run`
 - 每个 idea 由单个 combined reviewer 从方法论、统计、新颖性、可行性、可复现性等多角度审查
 

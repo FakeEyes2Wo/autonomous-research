@@ -2,7 +2,7 @@ import { AutoResearchService } from './service/autoresearch-service.js'
 import { ResearchRunner } from './service/runner.js'
 import { ResearchTree } from './core/research-tree.js'
 import { SubagentRoleAgentProvider } from './providers/subagent-provider.js'
-import { createPaperPipelineResumeTool, createResearchRunTool, paperPipelineLastRun, paperPipelineStatus, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
+import { createExperimentRunTool, createPaperPipelineResumeTool, createResearchRunTool, paperPipelineLastRun, paperPipelineStatus, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
 import type { HumanOpenRequest, HumanReviewAnswer, HumanReviewer, HumanReviewRequest } from './core/human-review.js'
 import { writeAutoMode } from './session/auto-mode.js'
 
@@ -120,6 +120,7 @@ export function apply(ctx: {
     researchActionFinish,
     researchEvidenceAdd,
     researchTreeQuery,
+    createExperimentRunTool(provider),
     paperPipelineStatus,
     paperPipelineLastRun,
     createPaperPipelineResumeTool(service),
@@ -131,6 +132,8 @@ export function apply(ctx: {
 
 export { AutoResearchService } from './service/autoresearch-service.js'
 export { ResearchRunner } from './service/runner.js'
+export { runExperimentTask } from './experiment/runner.js'
+export type { ExperimentDependencies, ExperimentRunRequest, ExperimentRunResult } from './experiment/runner.js'
 export { ResearchTree } from './core/research-tree.js'
 export * from './core/types.js'
 export * from './core/human-review.js'

@@ -1,11 +1,11 @@
 import { join } from 'node:path'
-import { AutoResearchError, readOptionalText, writeText } from '../../core/utils.js'
-import { recordResult } from '../../core/state.js'
-import type { ActionResult, ResearchDecision } from '../../core/types.js'
-import { parseDecision } from '../../core/types.js'
-import { readRubric } from '../../domain/files.js'
-import { runAgent, runStage, structuredText, treeSummary } from '../agent.js'
-import type { RunContext } from '../context.js'
+import { AutoResearchError, readOptionalText, writeText } from '../core/utils.js'
+import { recordResult } from '../core/state.js'
+import type { ActionResult, ResearchDecision } from '../core/types.js'
+import { parseDecision } from '../core/types.js'
+import { readRubric } from '../domain/files.js'
+import { runAgent, runStage, structuredText, treeSummary } from '../service/agent.js'
+import type { RunContext } from '../service/context.js'
 
 export async function runPlanner(
   ctx: RunContext,

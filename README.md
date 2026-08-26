@@ -40,7 +40,7 @@ DSH 插件 `@athena/autoresearch`：最小闭环研究自动化（`idea → plan
    dsh --profile web
    ```
 
-   会话内会自动注册 research 工具与 `research_run` 控制工具。
+   会话内会自动注册 research 工具、`experiment_run` 独立实验工具与 `research_run` 控制工具。
 
 > 说明：profile 必须已经存在（需先由 DSH 创建）。如果只跑无头模式，`run:headless` 会自动创建 `headless` profile，无需手动执行本节。
 
