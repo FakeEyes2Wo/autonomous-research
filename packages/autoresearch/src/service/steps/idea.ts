@@ -1,15 +1,14 @@
 import { join } from 'node:path'
-import { AutoResearchError, newId, writeText, type Logger } from '../../core/utils.js'
+import { AutoResearchError, newId, writeText } from '../../core/utils.js'
 import { recordResult, transition } from '../../core/state.js'
 import type { FalsifiabilityReport, IdeaDraft, IdeaPackage, SkepticReport, ValidationPlan } from '../../domain/idea.js'
 import { freezeRubric, readRubric, writeRubric } from '../../domain/files.js'
 import { blockingEvidence, lightHardGate, preGate, structuralCheck } from '../../domain/idea-gate.js'
-import type { RoleRunner } from '../agent-runner.js'
-import type { RunSession } from '../run-session.js'
+import { runAgent, structuredText, treeSummary } from '../agent.js'
+import type { RunContext } from '../context.js'
 import type { ResearchRunnerOptions } from '../types.js'
 
-export interface IdeaGenerationRequest {
-  session: RunSession
+export interface IdeaGenerationInput {
   idea: string
   profile: string
   failureDirections?: string
@@ -17,203 +16,219 @@ export interface IdeaGenerationRequest {
   feedback?: string
 }
 
-interface EnsureRubricRequest {
-  session: RunSession
+export interface EnsureRubricInput {
   idea: string
   profile: string
   feedback?: string
 }
 
 interface IdeaReviewerRequest {
-  session: RunSession
   pkg: IdeaPackage
   perspective: 'combined' | 'methodology' | 'statistics'
 }
 
-export class IdeaSteps {
-  constructor(
-    private readonly roleRunner: RoleRunner,
-    private readonly logger: Logger,
-    private readonly options: ResearchRunnerOptions,
-  ) {}
-
-  private assurance(): 'draft' | 'submission' {
-    const { assurance, effort } = this.options.paperOptions ?? {}
-    if (assurance === 'draft' || assurance === 'submission') return assurance
-    return effort === 'max' || effort === 'beast' ? 'submission' : 'draft'
-  }
-
-  async ensureRubric({ session, idea, profile, feedback }: EnsureRubricRequest): Promise<void> {
-    await transition(session.state, 'rubric', 'rubric-generate')
-    const treeSummary = this.roleRunner.treeSummary(session.tree)
-    const previousRubric = await readRubric(session.runDir).catch(() => '')
-    const generated = await this.roleRunner.run('rubric-generator', {
-      runDir: session.runDir,
+export async function ensureRubric(ctx: RunContext, { idea, profile, feedback }: EnsureRubricInput): Promise<void> {
+  await transition(ctx.state, 'rubric', 'rubric-generate')
+  const summary = treeSummary(ctx.tree)
+  const previousRubric = await readRubric(ctx.runDir).catch(() => '')
+  const generated = await runAgent(ctx, {
+    role: 'rubric-generator',
+    input: {
+      runDir: ctx.runDir,
       idea,
       profile,
-      treeSummary,
+      treeSummary: summary,
       ...(feedback ? { plan: `Human review feedback:\n${feedback}\n\nCurrent rubric to revise:\n${previousRubric}` } : {}),
-    }, session.context, feedback ? 'revise rubric from human feedback' : 'generate rubric')
-    let rubricText = this.roleRunner.structuredText(generated.structured, 'rubric') ?? generated.text
-    if (!feedback) {
-      try {
-        const onDisk = await readRubric(session.runDir)
-        if (onDisk.trim().length > rubricText.trim().length + 100) {
-          rubricText = onDisk
-        }
-      } catch {
-        // no file on disk; keep structured text
+    },
+    label: feedback ? 'revise rubric from human feedback' : 'generate rubric',
+  })
+  let rubricText = structuredText(generated.structured, 'rubric') ?? generated.text
+  if (!feedback) {
+    try {
+      const onDisk = await readRubric(ctx.runDir)
+      if (onDisk.trim().length > rubricText.trim().length + 100) {
+        rubricText = onDisk
       }
+    } catch {
+      // no file on disk; keep structured text
     }
-    await writeRubric(session.runDir, rubricText)
+  }
+  await writeRubric(ctx.runDir, rubricText)
 
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      await transition(session.state, 'rubric', `rubric-review-${attempt}`)
-      const review = await this.roleRunner.run('rubric-reviewer', {
-        runDir: session.runDir,
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await transition(ctx.state, 'rubric', `rubric-review-${attempt}`)
+    const review = await runAgent(ctx, {
+      role: 'rubric-reviewer',
+      input: {
+        runDir: ctx.runDir,
         idea,
         profile,
         rubric: rubricText,
-        treeSummary,
-      }, session.context, `review rubric attempt ${attempt}`)
-      const reviewValue = review.structured as { ok?: boolean; revised?: string } | undefined
-      const ok = reviewValue?.ok ?? false
-      if (ok) {
-        await freezeRubric(session.runDir)
-        return
-      }
-      const revised = reviewValue?.revised
-      if (revised && revised !== rubricText) {
-        rubricText = revised
-        await writeRubric(session.runDir, revised)
-        continue
-      }
-      break
+        treeSummary: summary,
+      },
+      label: `review rubric attempt ${attempt}`,
+    })
+    const reviewValue = review.structured as { ok?: boolean; revised?: string } | undefined
+    const ok = reviewValue?.ok ?? false
+    if (ok) {
+      await freezeRubric(ctx.runDir)
+      return
     }
-    if (this.assurance() === 'submission') {
-      throw new AutoResearchError('rubric review did not pass after three rounds', 'AGENT_FAILED')
+    const revised = reviewValue?.revised
+    if (revised && revised !== rubricText) {
+      rubricText = revised
+      await writeRubric(ctx.runDir, revised)
+      continue
     }
-    this.logger.warn('rubric review did not pass after three rounds; continuing with warning')
-    await writeText(join(session.runDir, 'RUBRIC_REVIEW_WARNING.md'), `# Rubric Review Warning\n\nRubric did not pass review after 3 rounds.\n\nFinal rubric:\n\n${rubricText}\n`)
-    await freezeRubric(session.runDir)
+    break
   }
+  if (resolveResearchAssurance(ctx.deps.paperOptions) === 'submission') {
+    throw new AutoResearchError('rubric review did not pass after three rounds', 'AGENT_FAILED')
+  }
+  ctx.logger.warn('rubric review did not pass after three rounds; continuing with warning')
+  await writeText(join(ctx.runDir, 'RUBRIC_REVIEW_WARNING.md'), `# Rubric Review Warning\n\nRubric did not pass review after 3 rounds.\n\nFinal rubric:\n\n${rubricText}\n`)
+  await freezeRubric(ctx.runDir)
+}
 
-  async runIdeaGeneration({ session, idea, profile, failureDirections, insight, feedback }: IdeaGenerationRequest): Promise<void> {
-    await transition(session.state, 'ideation', 'idea-generate')
-    const result = await this.roleRunner.run('idea-generator', {
-      runDir: session.runDir,
+export async function runIdeaGeneration(ctx: RunContext, { idea, profile, failureDirections, insight, feedback }: IdeaGenerationInput): Promise<void> {
+  await transition(ctx.state, 'ideation', 'idea-generate')
+  const result = await runAgent(ctx, {
+    role: 'idea-generator',
+    input: {
+      runDir: ctx.runDir,
       idea,
       profile,
-      treeSummary: this.roleRunner.treeSummary(session.tree),
+      treeSummary: treeSummary(ctx.tree),
       ...(failureDirections ? { failureDirections } : {}),
       ...(insight ? { insight } : {}),
       ...(feedback ? { plan: `Human review feedback on the previous idea generation:\n${feedback}` } : {}),
-    }, session.context, 'generate ideas')
-    const structured = result.structured as { hypotheses?: IdeaDraft[] } | undefined
-    const drafts = structured?.hypotheses ?? []
-    const rejections: string[] = []
-    const kept: IdeaPackage[] = []
+    },
+    label: 'generate ideas',
+  })
+  const structured = result.structured as { hypotheses?: IdeaDraft[] } | undefined
+  const drafts = structured?.hypotheses ?? []
+  const rejections: string[] = []
+  const kept: IdeaPackage[] = []
 
-    for (const draft of drafts.slice(0, 5)) {
-      const pkg: IdeaPackage = {
-        ...draft,
-        idea_id: newId('idea'),
-        generation_strategy: 'candidate_grounded',
-        lineage_op: 'generate',
-      }
-      const structural = structuralCheck(pkg)
-      const falsifiability = await this.runFalsifiability({ session, pkg })
-      const pre = preGate(structural, falsifiability)
-      if (pre.verdict !== 'PASS') {
-        rejections.push(`pre_gate ${pkg.idea_id}: ${pre.blocking_factor} - ${blockingEvidence(pre)}`)
-        continue
-      }
-
-      const reviews = [await this.runIdeaReviewer({ session, pkg, perspective: 'combined' })]
-      const validation: ValidationPlan = {
-        idea_id: pkg.idea_id,
-        minimal_test: pkg.intervention,
-        verifier: 'ablation_replication',
-        decision_rule: 'compare metric before/after intervention',
-      }
-      const decision = lightHardGate(structural, falsifiability, reviews, validation)
-      if (decision.verdict === 'PASS' || decision.verdict === 'EXPLORATORY') {
-        kept.push(pkg)
-      } else {
-        rejections.push(`${decision.verdict} ${pkg.idea_id}: ${decision.blocking_factor} - ${blockingEvidence(decision)}`)
-      }
+  for (const draft of drafts.slice(0, 5)) {
+    const pkg: IdeaPackage = {
+      ...draft,
+      idea_id: newId('idea'),
+      generation_strategy: 'candidate_grounded',
+      lineage_op: 'generate',
+    }
+    const structural = structuralCheck(pkg)
+    const falsifiability = await runFalsifiability(ctx, pkg)
+    const pre = preGate(structural, falsifiability)
+    if (pre.verdict !== 'PASS') {
+      rejections.push(`pre_gate ${pkg.idea_id}: ${pre.blocking_factor} - ${blockingEvidence(pre)}`)
+      continue
     }
 
-    for (const pkg of kept) {
-      session.tree.add('hypothesis', pkg.statement, { status: 'proposed', artifacts: pkg.sources })
+    const reviews = [await runIdeaReviewer(ctx, { pkg, perspective: 'combined' })]
+    const validation: ValidationPlan = {
+      idea_id: pkg.idea_id,
+      minimal_test: pkg.intervention,
+      verifier: 'ablation_replication',
+      decision_rule: 'compare metric before/after intervention',
     }
-    await session.tree.save()
-    await recordResult(session.state, 'idea-generate', { generated: drafts.length, kept: kept.length, rejections })
-    this.logger.info(`idea generation generated=${drafts.length} kept=${kept.length} rejections=${rejections.length}`)
+    const decision = lightHardGate(structural, falsifiability, reviews, validation)
+    if (decision.verdict === 'PASS' || decision.verdict === 'EXPLORATORY') {
+      kept.push(pkg)
+    } else {
+      rejections.push(`${decision.verdict} ${pkg.idea_id}: ${decision.blocking_factor} - ${blockingEvidence(decision)}`)
+    }
   }
 
-  private async runFalsifiability({ session, pkg }: { session: RunSession; pkg: IdeaPackage }): Promise<FalsifiabilityReport> {
-    const result = await this.roleRunner.run('idea-falsifiability', {
-      runDir: session.runDir,
+  for (const pkg of kept) {
+    ctx.tree.add('hypothesis', pkg.statement, { status: 'proposed', artifacts: pkg.sources })
+  }
+  await ctx.tree.save()
+  await recordResult(ctx.state, 'idea-generate', { generated: drafts.length, kept: kept.length, rejections })
+  ctx.logger.info(`idea generation generated=${drafts.length} kept=${kept.length} rejections=${rejections.length}`)
+}
+
+async function runFalsifiability(ctx: RunContext, pkg: IdeaPackage): Promise<FalsifiabilityReport> {
+  const result = await runAgent(ctx, {
+    role: 'idea-falsifiability',
+    input: {
+      runDir: ctx.runDir,
       ideaPackage: JSON.stringify(pkg, null, 2),
-    }, session.context, `falsifiability ${pkg.idea_id}`)
-    const value = result.structured as { testable_implication?: string; unobservable_variables?: string[]; is_falsifiable?: boolean } | undefined
-    return {
-      idea_id: pkg.idea_id,
-      testable_implication: value?.testable_implication ?? '',
-      unobservable_variables: value?.unobservable_variables ?? [],
-      is_falsifiable: value?.is_falsifiable ?? false,
-    }
+    },
+    label: `falsifiability ${pkg.idea_id}`,
+  })
+  const value = result.structured as { testable_implication?: string; unobservable_variables?: string[]; is_falsifiable?: boolean } | undefined
+  return {
+    idea_id: pkg.idea_id,
+    testable_implication: value?.testable_implication ?? '',
+    unobservable_variables: value?.unobservable_variables ?? [],
+    is_falsifiable: value?.is_falsifiable ?? false,
   }
+}
 
-  private async runIdeaReviewer({ session, pkg, perspective }: IdeaReviewerRequest): Promise<SkepticReport> {
-    const result = await this.roleRunner.run('idea-reviewer', {
-      runDir: session.runDir,
+async function runIdeaReviewer(ctx: RunContext, { pkg, perspective }: IdeaReviewerRequest): Promise<SkepticReport> {
+  const result = await runAgent(ctx, {
+    role: 'idea-reviewer',
+    input: {
+      runDir: ctx.runDir,
       ideaPackage: JSON.stringify({ ...pkg, review_perspective: perspective }, null, 2),
-    }, session.context, `review ${pkg.idea_id} ${perspective}`)
-    const value = result.structured as { perspective?: string; critique?: string; unaddressed_risks?: string[]; fatal_flaw_found?: boolean } | undefined
-    return {
-      idea_id: pkg.idea_id,
-      perspective: value?.perspective ?? perspective,
-      critique: value?.critique ?? '',
-      unaddressed_risks: value?.unaddressed_risks ?? [],
-      fatal_flaw_found: value?.fatal_flaw_found ?? false,
-      failed: false,
-    }
+    },
+    label: `review ${pkg.idea_id} ${perspective}`,
+  })
+  const value = result.structured as { perspective?: string; critique?: string; unaddressed_risks?: string[]; fatal_flaw_found?: boolean } | undefined
+  return {
+    idea_id: pkg.idea_id,
+    perspective: value?.perspective ?? perspective,
+    critique: value?.critique ?? '',
+    unaddressed_risks: value?.unaddressed_risks ?? [],
+    fatal_flaw_found: value?.fatal_flaw_found ?? false,
+    failed: false,
   }
+}
 
-  async runHypothesisRevision(session: RunSession): Promise<void> {
-    await transition(session.state, 'hypothesis_revision', `hypothesis-revise-${session.state.cycle}`)
-    const result = await this.roleRunner.run('hypothesis-reviser', {
-      runDir: session.runDir,
-      cycle: session.state.cycle,
-      treeSummary: this.roleRunner.treeSummary(session.tree),
-    }, session.context, `revise hypotheses cycle ${session.state.cycle}`)
-    const structured = result.structured as {
-      hypotheses?: Array<{
-        id?: string
-        statement: string
-        intervention: string
-        expected_effect: string
-        status: string
-        predicted_observations?: string[]
-        disconfirming_observations?: string[]
-        sources?: string[]
-      }>
-    } | undefined
-    const hypotheses = structured?.hypotheses ?? []
-    for (const h of hypotheses) {
-      if (h.id && session.tree.query({ id: h.id }).length > 0) {
-        session.tree.update(h.id, { status: h.status, content: h.statement, artifacts: h.sources })
-      } else {
-        session.tree.add('hypothesis', h.statement, {
-          status: h.status,
-          artifacts: h.sources,
-        })
-      }
+export async function runHypothesisRevision(ctx: RunContext): Promise<void> {
+  await transition(ctx.state, 'hypothesis_revision', `hypothesis-revise-${ctx.state.cycle}`)
+  const result = await runAgent(ctx, {
+    role: 'hypothesis-reviser',
+    input: {
+      runDir: ctx.runDir,
+      cycle: ctx.state.cycle,
+      treeSummary: treeSummary(ctx.tree),
+    },
+    label: `revise hypotheses cycle ${ctx.state.cycle}`,
+  })
+  const structured = result.structured as {
+    hypotheses?: Array<{
+      id?: string
+      statement: string
+      intervention: string
+      expected_effect: string
+      status: string
+      predicted_observations?: string[]
+      disconfirming_observations?: string[]
+      sources?: string[]
+    }>
+  } | undefined
+  const hypotheses = structured?.hypotheses ?? []
+  for (const h of hypotheses) {
+    if (h.id && ctx.tree.query({ id: h.id }).length > 0) {
+      ctx.tree.update(h.id, { status: h.status, content: h.statement, artifacts: h.sources })
+    } else {
+      ctx.tree.add('hypothesis', h.statement, {
+        status: h.status,
+        artifacts: h.sources,
+      })
     }
-    await session.tree.save()
-    await recordResult(session.state, `hypothesis-revise-${session.state.cycle}`, { revised: hypotheses.length })
-    this.logger.info(`hypothesis revision updated=${hypotheses.length}`)
   }
+  await ctx.tree.save()
+  await recordResult(ctx.state, `hypothesis-revise-${ctx.state.cycle}`, { revised: hypotheses.length })
+  ctx.logger.info(`hypothesis revision updated=${hypotheses.length}`)
+}
+
+function resolveResearchAssurance(
+  options: ResearchRunnerOptions['paperOptions'],
+): 'draft' | 'submission' {
+  const { assurance, effort } = options ?? {}
+  if (assurance === 'draft' || assurance === 'submission') return assurance
+  return effort === 'max' || effort === 'beast' ? 'submission' : 'draft'
 }

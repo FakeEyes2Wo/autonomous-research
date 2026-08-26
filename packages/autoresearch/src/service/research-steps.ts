@@ -1,5 +1,5 @@
 import type { Logger } from '../core/utils.js'
-import { IdeaSteps } from './steps/idea.js'
+import { ensureRubric, runHypothesisRevision, runIdeaGeneration, type EnsureRubricInput, type IdeaGenerationInput } from './steps/idea.js'
 import { ExperimentSteps } from './steps/experiment.js'
 import { PaperSteps } from './steps/paper.js'
 import type { RoleRunner } from './agent-runner.js'
@@ -7,14 +7,19 @@ import type { RunSession } from './run-session.js'
 import type { ResearchRunnerOptions } from './types.js'
 import type { ActionResult, ResearchDecision } from '../core/types.js'
 
-export type { IdeaGenerationRequest } from './steps/idea.js'
+export interface IdeaGenerationRequest extends IdeaGenerationInput {
+  session: RunSession
+}
+
+interface EnsureRubricRequest extends EnsureRubricInput {
+  session: RunSession
+}
 
 /**
  * Domain-step facade. ResearchRunner talks to this single object; each domain's
  * implementation lives in steps/idea.ts, steps/experiment.ts, steps/paper.ts.
  */
 export class ResearchSteps {
-  private readonly idea: IdeaSteps
   private readonly experiment: ExperimentSteps
   private readonly paper: PaperSteps
 
@@ -23,21 +28,20 @@ export class ResearchSteps {
     logger: Logger,
     options: ResearchRunnerOptions,
   ) {
-    this.idea = new IdeaSteps(roleRunner, logger, options)
     this.experiment = new ExperimentSteps(roleRunner, logger)
     this.paper = new PaperSteps(logger, options)
   }
 
-  async ensureRubric(request: Parameters<IdeaSteps['ensureRubric']>[0]): Promise<void> {
-    return this.idea.ensureRubric(request)
+  async ensureRubric({ session, ...input }: EnsureRubricRequest): Promise<void> {
+    return ensureRubric(session, input)
   }
 
-  async runIdeaGeneration(request: Parameters<IdeaSteps['runIdeaGeneration']>[0]): Promise<void> {
-    return this.idea.runIdeaGeneration(request)
+  async runIdeaGeneration({ session, ...input }: IdeaGenerationRequest): Promise<void> {
+    return runIdeaGeneration(session, input)
   }
 
   async runHypothesisRevision(session: RunSession): Promise<void> {
-    return this.idea.runHypothesisRevision(session)
+    return runHypothesisRevision(session)
   }
 
   async runPlanner(request: Parameters<ExperimentSteps['runPlanner']>[0]): Promise<string> {
