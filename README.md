@@ -227,6 +227,20 @@ figure_api_test
 | `paper_pipeline_last_run` | 查看最近 run |
 | `paper_pipeline_resume` | 恢复论文流水线 |
 
+DSH 还注册了 Slash 命令：
+
+```text
+/auto_research
+/auto_research config <projectDir>
+/auto_research status <runDir>
+/auto
+```
+
+- `/auto_research`：显示 AutoResearch 模式帮助
+- `/auto_research config <projectDir>`：查看项目设置
+- `/auto_research status <runDir>`：查看 run 状态
+- `/auto`：切换自动模式
+
 ---
 
 ## 五、目录与产物

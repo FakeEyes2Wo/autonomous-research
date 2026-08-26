@@ -189,6 +189,15 @@ node scripts/start-session.mjs --profile autoresearch --prompt "继续上次研�
 - `paper_pipeline_last_run`
 - `paper_pipeline_resume`
 
+Slash 命令：
+
+```text
+/auto_research
+/auto_research config <projectDir>
+/auto_research status <runDir>
+/auto
+```
+
 断点续传流程：
 
 1. `paper_pipeline_last_run` 查看最近 runDir

@@ -3,6 +3,8 @@ import { ResearchRunner } from './service/runner.js'
 import { ResearchTree } from './core/research-tree.js'
 import { SubagentRoleAgentProvider } from './providers/subagent-provider.js'
 import { createExperimentRunTool, createPaperPipelineResumeTool, createResearchRunTool, figureApiTest, paperPipelineLastRun, paperPipelineStatus, projectSettingsGet, projectSettingsSave, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
+import { loadState } from './core/state.js'
+import { loadProjectSecrets, loadProjectSettings } from './settings/project-settings.js'
 import type { HumanOpenRequest, HumanReviewAnswer, HumanReviewer, HumanReviewRequest } from './core/human-review.js'
 import { writeAutoMode } from './session/auto-mode.js'
 
@@ -111,6 +113,55 @@ export function apply(ctx: {
       const next = input === 'off' ? false : true
       const enabled = await writeAutoMode(next)
       return { kind: 'success', text: enabled ? 'Autoresearch auto mode ON: human review gates will be skipped.' : 'Autoresearch auto mode OFF: human review gates are active.' }
+    },
+  })
+
+  ctx.commands.register({
+    name: 'auto_research',
+    description: 'AutoResearch mode help/status/config. Examples: /auto_research, /auto_research config <projectDir>, /auto_research status <runDir>.',
+    async handler(invocation) {
+      const raw = invocation.rawInput.trim()
+      const lower = raw.toLowerCase()
+      if (lower.startsWith('config')) {
+        const projectDir = raw.slice('config'.length).trim() || process.cwd()
+        const settings = await loadProjectSettings(projectDir)
+        const secrets = await loadProjectSecrets(projectDir)
+        return {
+          kind: 'success',
+          text: [
+            `# AutoResearch Project Config`,
+            '',
+            `projectDir: ${projectDir}`,
+            `paperExploration: ${JSON.stringify(settings.paperExploration, null, 2)}`,
+            `figureApi: ${JSON.stringify({ ...settings.figureApi, apiKey: secrets.figureApiKey ? '****' : undefined }, null, 2)}`,
+            `model: ${JSON.stringify(settings.model, null, 2)}`,
+            `experiment: ${JSON.stringify(settings.experiment, null, 2)}`,
+          ].join('\n'),
+        }
+      }
+      if (lower.startsWith('status')) {
+        const runDir = raw.slice('status'.length).trim()
+        if (!runDir) return { kind: 'error', text: 'Usage: /auto_research status <runDir>' }
+        const state = await loadState(runDir)
+        return { kind: 'success', text: state ? JSON.stringify(state, null, 2) : 'no run state found' }
+      }
+      return {
+        kind: 'success',
+        text: [
+          '# AutoResearch Mode',
+          '',
+          'Usage:',
+          '  /auto_research config <projectDir>    show project settings',
+          '  /auto_research status <runDir>        show run state',
+          '',
+          'Tools:',
+          '  research_run                         full research loop',
+          '  experiment_run                       standalone experiment',
+          '  project_settings_get/save            project config',
+          '  figure_api_test                      test external figure API',
+          '  paper_pipeline_status/last_run/resume',
+        ].join('\n'),
+      }
     },
   })
 
