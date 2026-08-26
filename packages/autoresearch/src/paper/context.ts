@@ -1,4 +1,21 @@
-import type { RoleExecutionContext } from '../agents/types.js'
+import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
+import type { HumanReviewer } from '../core/human-review.js'
+import type { HumanReviewMode } from '../session/auto-mode.js'
+
+export interface PaperOptions {
+  venue?: string
+  assurance?: 'draft' | 'submission'
+  effort?: 'lite' | 'balanced' | 'max' | 'beast'
+  styleRef?: string
+  maxImprovementRounds?: number
+  humanReviewer?: HumanReviewer
+  humanReviewOverride?: HumanReviewMode
+}
+
+export interface PaperDependencies {
+  readonly provider: RoleAgentProvider
+  readonly options: Readonly<PaperOptions>
+}
 
 /**
  * Filesystem locations relevant to the paper-writing pipeline.
@@ -22,12 +39,12 @@ export interface PaperContent {
 }
 
 /**
- * One paper-writing session: location, already-loaded content, and the agent
- * runtime context. Methods that operate on a paper phase accept this object
- * instead of a long parameter list.
+ * One paper-writing session: stable dependencies, location, already-loaded
+ * content, and the agent runtime context.
  */
 export interface PaperContext {
-  paths: PaperPaths
-  content: PaperContent
-  agentContext: RoleExecutionContext
+  readonly deps: PaperDependencies
+  readonly paths: PaperPaths
+  readonly content: PaperContent
+  readonly agentContext: RoleExecutionContext
 }

@@ -5,10 +5,24 @@ import { ResearchTree } from '../core/research-tree.js'
 import { ensureDir, readText, writeText } from '../core/utils.js'
 import { generatePaperPlan, runCompileLoop } from './index.js'
 import { loadCheckpoint, saveCheckpoint, type PaperCheckpoint } from './checkpoint.js'
-import { PaperPhases, type PaperOptions } from './phases.js'
-import type { PaperContext } from './context.js'
+import {
+  enrichReferences,
+  generateFigures,
+  hasStyleRef,
+  improvePaper,
+  negotiateContract,
+  planPaper,
+  polishPaper,
+  readStyleProfile,
+  resolveAssurance,
+  reviewPaperDraft,
+  runPaperAudits,
+  writePaper,
+  writePaperReport,
+} from './phases.js'
+import type { PaperContext, PaperDependencies, PaperOptions } from './context.js'
 
-export type { PaperOptions } from './phases.js'
+export type { PaperOptions } from './context.js'
 
 export interface PaperPipelineResult {
   planFile: string
@@ -22,18 +36,19 @@ export interface PaperPipelineResult {
 /**
  * PaperPipeline orchestrates the paper-writing skill inside autoresearch.
  * `pipeline_checkpoint.json` doubles as the todo list and resume state.
- * The actual phases live in PaperPhases; this class remains responsible for
- * resume/checkpoint coordination and keeps the public run() signature stable.
+ * The actual phases are stateless functions in phases.ts; this class remains
+ * responsible for resume/checkpoint coordination and keeps the public run()
+ * signature stable.
  */
 export class PaperPipeline {
-  private readonly phases: PaperPhases
+  private readonly deps: PaperDependencies
 
   constructor(provider: RoleAgentProvider, options: PaperOptions = {}) {
-    this.phases = new PaperPhases(provider, options)
+    this.deps = { provider, options }
   }
 
   resolveAssurance(): 'draft' | 'submission' {
-    return this.phases.resolveAssurance()
+    return resolveAssurance(this.deps.options)
   }
 
   /**
@@ -84,6 +99,7 @@ export class PaperPipeline {
       ;({ planFile, matrixFile } = await generatePaperPlan(runDir, tree))
       matrixText = await readText(matrixFile)
       const planCtx: PaperContext = {
+        deps: this.deps,
         paths: { runDir, paperDir },
         content: {
           planText: '',
@@ -94,7 +110,7 @@ export class PaperPipeline {
         },
         agentContext: context,
       }
-      planText = await this.phases.plan(planCtx)
+      planText = await planPaper(planCtx)
       await writeText(planFile, planText)
       cp.phases.plan = 'done'
       cp.data.planFile = planFile
@@ -109,6 +125,7 @@ export class PaperPipeline {
     const needFigures = cp.phases.figures !== 'done'
     if (needContract || needFigures) {
       const partialCtx: PaperContext = {
+        deps: this.deps,
         paths: { runDir, paperDir },
         content: {
           planText,
@@ -120,8 +137,8 @@ export class PaperPipeline {
         agentContext: context,
       }
       const [c, f] = await Promise.all([
-        needContract ? this.phases.contract(partialCtx) : Promise.resolve(contractFile),
-        needFigures ? this.phases.figures(partialCtx) : Promise.resolve(figuresLatex),
+        needContract ? negotiateContract(partialCtx) : Promise.resolve(contractFile),
+        needFigures ? generateFigures(partialCtx) : Promise.resolve(figuresLatex),
       ])
       contractFile = c ?? contractFile
       figuresLatex = f ?? ''
@@ -135,13 +152,14 @@ export class PaperPipeline {
     if (!figuresLatex) figuresLatex = await readText(join(paperDir, 'figures', 'latex_includes.tex')).catch(() => '')
 
     const ctx: PaperContext = {
+      deps: this.deps,
       paths: { runDir, paperDir },
       content: {
         planText,
         matrixText,
         contractText: contractFile ? await readText(contractFile).catch(() => '') : '',
         figuresLatex,
-        styleProfile: this.phases.hasStyleRef() ? await this.phases.readStyleProfile(runDir) : undefined,
+        styleProfile: hasStyleRef(this.deps.options) ? await readStyleProfile(runDir) : undefined,
         evidencePath,
       },
       agentContext: context,
@@ -149,11 +167,11 @@ export class PaperPipeline {
 
     // Writing is only considered done after a successful compile. Until then,
     // resume will re-run the writer so missing sections/content can be repaired.
-    await this.runPhase(paperDir, cp, 'writing', () => this.phases.write(ctx), () => {})
+    await this.runPhase(paperDir, cp, 'writing', () => writePaper(ctx), () => {})
 
     // Compile. Missing sections are left for the writer to fix via the compile loop.
     const compileOk = (await this.runPhase(paperDir, cp, 'compile',
-      () => runCompileLoop(ctx.paths.paperDir, (feedback) => this.phases.write(ctx, feedback)).then((r) => r.ok),
+      () => runCompileLoop(ctx.paths.paperDir, (feedback) => writePaper(ctx, feedback)).then((r) => r.ok),
       (ok) => {
         cp.phases.compile = ok ? 'done' : 'failed'
         cp.data.compileOk = ok
@@ -168,17 +186,17 @@ export class PaperPipeline {
     // Human review of the compiled paper draft. Revise loops back through the
     // writer + compile loop; approve/skip records the phase as done.
     if (compileOk && cp.phases.human_review !== 'done') {
-      await this.phases.reviewPaperDraft(ctx)
+      await reviewPaperDraft(ctx)
       cp.phases.human_review = 'done'
       await save()
     }
 
     // Reference enrichment is best-effort and never blocks the pipeline.
-    await this.phases.enrichReferences(ctx)
+    await enrichReferences(ctx)
 
     // Audits (parallel inside).
     const audits = (await this.runPhase(paperDir, cp, 'audits',
-      () => this.phases.audit(ctx),
+      () => runPaperAudits(ctx),
       (value) => {
         cp.phases.audits = 'done'
         cp.data.audits = value
@@ -186,18 +204,18 @@ export class PaperPipeline {
     )) ?? {}
 
     // Improvement.
-    await this.runPhase(paperDir, cp, 'improvement', () => this.phases.improve(ctx, cp), () => {
+    await this.runPhase(paperDir, cp, 'improvement', () => improvePaper(ctx, cp), () => {
       cp.phases.improvement = 'done'
     })
 
     // Beautification: layout, tables, figures. Content stays unchanged.
-    await this.runPhase(paperDir, cp, 'polish', () => this.phases.polish(ctx), () => {
+    await this.runPhase(paperDir, cp, 'polish', () => polishPaper(ctx), () => {
       cp.phases.polish = 'done'
     })
 
     // Final report.
     const finalReport = (await this.runPhase(paperDir, cp, 'final',
-      () => this.phases.report(ctx, assurance, compileOk, audits),
+      () => writePaperReport(ctx, assurance, compileOk, audits),
       (value) => {
         cp.phases.final = 'done'
         cp.data.finalReport = value

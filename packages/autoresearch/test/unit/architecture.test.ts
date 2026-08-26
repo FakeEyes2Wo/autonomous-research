@@ -26,3 +26,10 @@ test('research orchestration has no forwarding classes', async () => {
   const paper = await readFile(join(process.cwd(), 'src/service/steps/paper.ts'), 'utf8')
   assert.doesNotMatch(paper, /export class PaperSteps/)
 })
+
+test('paper phases are stateless functions', async () => {
+  const source = await readFile(join(process.cwd(), 'src/paper/phases.ts'), 'utf8')
+  assert.doesNotMatch(source, /export class PaperPhases/)
+  assert.match(source, /export const PAPER_AUDITS/)
+  assert.match(source, /export async function writePaper/)
+})
