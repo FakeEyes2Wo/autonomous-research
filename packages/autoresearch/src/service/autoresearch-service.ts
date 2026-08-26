@@ -30,12 +30,10 @@ export interface AutoResearchServiceOptions {
 }
 
 export class AutoResearchService {
-  private readonly provider: RoleAgentProvider
-  private readonly options: AutoResearchServiceOptions
+  private readonly deps: Readonly<{ provider: RoleAgentProvider; options: AutoResearchServiceOptions }>
 
   constructor(provider: RoleAgentProvider, options: AutoResearchServiceOptions = {}) {
-    this.provider = provider
-    this.options = options
+    this.deps = { provider, options }
   }
 
   async run(options: ResearchRunOptions, context: ResearchRunContext): Promise<RunState> {
@@ -53,11 +51,11 @@ export class AutoResearchService {
     await saveState(runDir, state)
     const tree = await ResearchTree.load(runDir)
     const runner = new ResearchRunner({
-      provider: this.provider,
+      provider: this.deps.provider,
       maxCycles: options.maxCycles ?? DEFAULT_MAX_CYCLES,
       paperOptions: options.paper,
-      reviewer: this.options.reviewer,
-      reviewGates: this.options.reviewGates,
+      reviewer: this.deps.options.reviewer,
+      reviewGates: this.deps.options.reviewGates,
       humanReviewOverride: options.humanReview,
       idea: options.idea,
       brainstorm: options.brainstorm,

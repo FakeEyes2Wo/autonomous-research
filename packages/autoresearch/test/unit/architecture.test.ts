@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -16,4 +17,12 @@ test('experiment steps are functions, not a dependency-holding class', async () 
   for (const name of ['runPlanner', 'runExperimentDesign', 'runWorker', 'runSupervisor']) {
     assert.match(source, new RegExp(`export async function ${name}`))
   }
+})
+
+test('research orchestration has no forwarding classes', async () => {
+  for (const file of ['agent-runner.ts', 'research-steps.ts', 'run-session.ts']) {
+    assert.equal(existsSync(join(process.cwd(), 'src/service', file)), false)
+  }
+  const paper = await readFile(join(process.cwd(), 'src/service/steps/paper.ts'), 'utf8')
+  assert.doesNotMatch(paper, /export class PaperSteps/)
 })
