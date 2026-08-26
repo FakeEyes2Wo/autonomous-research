@@ -11,6 +11,7 @@
   "files": [
     "dist",
     "prompts",
+    "presets",
     "docs",
     "README.md"
   ],

@@ -59,6 +59,16 @@ DSH 插件 `@athena/autoresearch`：自动研究闭环。
 
 > 说明：profile 必须已经存在（需先由 DSH 创建）。如果只跑无头模式，`run:headless` 会自动创建 `headless` profile，无需手动执行本节。
 
+安装脚本还会安装 **AutoResearch DSH Agent Preset**：
+
+```text
+~/.dsh/.agent-presets/auto_research/
+  preset.yml
+  agent.cordis.yml
+```
+
+在 DSH 模式选择器中，选择 **AutoResearch** 即可进入 `/auto_research` 模式：它会先探索当前目录，必要时通过交互询问用户，然后使用 `research_run` / `experiment_run` 等工具自动执行任务。
+
 ---
 
 ## 二、无头模式运行脚本

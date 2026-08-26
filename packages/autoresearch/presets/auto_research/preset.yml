@@ -1,0 +1,3 @@
+name: AutoResearch
+description: 自动探索当前目录，与用户交互确定任务，然后使用 AutoResearch 工具执行论文调研、实验或论文生成。
+order: 7

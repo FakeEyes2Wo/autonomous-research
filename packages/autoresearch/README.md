@@ -11,6 +11,29 @@ npm run build
 npm test
 ```
 
+## AutoResearch 模式（DSH Preset）
+
+安装时会自动安装：
+
+```text
+~/.dsh/.agent-presets/auto_research/
+  preset.yml
+  agent.cordis.yml
+```
+
+在 DSH 模式选择器中选择 **AutoResearch**：
+
+- 会先探索当前目录
+- 会读取项目文件 / README / 现有 .autoresearch 配置
+- 不清楚时会通过 `ask_user_question` 与你交互
+- 然后使用 `research_run` / `experiment_run` 等工具自动执行
+
+如果安装后没有看到该模式，重新运行：
+
+```bash
+npm run install:dsh -- web
+```
+
 ## 默认论文模板
 
 - 默认使用 `templates/iclr2026.tex` 作为 ICLR LaTeX 模板；

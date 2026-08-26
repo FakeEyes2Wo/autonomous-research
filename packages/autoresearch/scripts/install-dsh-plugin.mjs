@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -42,4 +42,11 @@ if (normalized !== patch || !normalized.includes('@athena/autoresearch')) {
   console.log(`Added/normalized autoresearch plugin row in ${patchPath}`)
 }
 
+const presetSrc = join(pkgRoot, 'presets', 'auto_research')
+const presetDest = join(dshHome, '.agent-presets', 'auto_research')
+await mkdir(presetDest, { recursive: true })
+for (const name of ['preset.yml', 'agent.cordis.yml']) {
+  await copyFile(join(presetSrc, name), join(presetDest, name))
+}
+console.log(`Installed AutoResearch agent preset in ${presetDest}`)
 console.log(`\nNext step (optional): run in ${profileDir}:\n  pnpm install\n  dsh --profile ${profileName}`)
