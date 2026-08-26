@@ -6,6 +6,16 @@ import { isEvidenceVerdict } from '../core/types.js'
 import { loadCheckpoint } from '../paper/checkpoint.js'
 import { readLastRun } from '../session/last-run.js'
 import { runExperimentTask } from '../experiment/runner.js'
+import { testFigureApi } from '../figure/api-client.js'
+import {
+  loadProjectSecrets,
+  loadProjectSettings,
+  maskProjectSettings,
+  normalizeProjectSettings,
+  saveProjectSecrets,
+  saveProjectSettings,
+  type ProjectSettings,
+} from '../settings/project-settings.js'
 import type { AutoResearchService } from '../service/autoresearch-service.js'
 import {
   evidenceVerdictSchema,
@@ -204,6 +214,7 @@ export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefini
       type: 'object',
       properties: {
         runDir: runDirSchema,
+        projectDir: stringSchema('Optional project root containing .autoresearch/project-settings.yaml'),
         task: stringSchema('The user experiment task requirement'),
         profile: stringSchema('Optional PROFILE.md content'),
         maxRounds: { type: 'number', description: 'Optional maximum experiment rounds' },
@@ -217,6 +228,7 @@ export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefini
       if (!parent || typeof parent.id !== 'string') throw new TypeError('experiment_run requires a calling DSH agent')
       return runExperimentTask({ provider }, {
         runDir: String(args.runDir),
+        projectDir: typeof args.projectDir === 'string' ? args.projectDir : undefined,
         task: String(args.task),
         profile: typeof args.profile === 'string' ? args.profile : undefined,
         maxRounds: typeof args.maxRounds === 'number' ? args.maxRounds : undefined,
@@ -228,6 +240,83 @@ export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefini
     },
   })
 }
+
+export const projectSettingsGet: ToolDefinitionLike = defineTool({
+  name: 'project_settings_get',
+  description: 'Read the current project AutoResearch settings (secrets masked).',
+  parameters: {
+    type: 'object',
+    properties: {
+      projectDir: runDirSchema,
+    },
+    required: ['projectDir'],
+    additionalProperties: false,
+  },
+  output: jsonOutput,
+  async execute(args) {
+    const projectDir = requireRunDir(args)
+    const settings = await loadProjectSettings(projectDir)
+    const secrets = await loadProjectSecrets(projectDir)
+    return maskProjectSettings(settings, secrets)
+  },
+})
+
+export const projectSettingsSave: ToolDefinitionLike = defineTool({
+  name: 'project_settings_save',
+  description: 'Save project AutoResearch settings, optionally updating the figure API secret.',
+  parameters: {
+    type: 'object',
+    properties: {
+      projectDir: runDirSchema,
+      projectSettings: {
+        type: 'object',
+        description: 'Partial ProjectSettings object to merge and save.',
+        additionalProperties: true,
+      },
+      figureApiKey: stringSchema('Optional new API key for the external figure API'),
+    },
+    required: ['projectDir', 'projectSettings'],
+    additionalProperties: false,
+  },
+  output: jsonOutput,
+  async execute(args) {
+    const projectDir = requireRunDir(args)
+    const current = await loadProjectSettings(projectDir)
+    const patch = (args.projectSettings ?? {}) as Partial<ProjectSettings>
+    const next = normalizeProjectSettings({ ...current, ...patch })
+    const saved = await saveProjectSettings(projectDir, next)
+    if (typeof args.figureApiKey === 'string' && args.figureApiKey) {
+      const secrets = await loadProjectSecrets(projectDir)
+      await saveProjectSecrets(projectDir, { ...secrets, figureApiKey: args.figureApiKey })
+    }
+    const secrets = await loadProjectSecrets(projectDir)
+    return maskProjectSettings(saved, secrets)
+  },
+})
+
+export const figureApiTest: ToolDefinitionLike = defineTool({
+  name: 'figure_api_test',
+  description: 'Test the configured external figure generation API.',
+  parameters: {
+    type: 'object',
+    properties: {
+      projectDir: runDirSchema,
+    },
+    required: ['projectDir'],
+    additionalProperties: false,
+  },
+  output: jsonOutput,
+  async execute(args) {
+    const projectDir = requireRunDir(args)
+    const settings = await loadProjectSettings(projectDir)
+    const secrets = await loadProjectSecrets(projectDir)
+    const result = await testFigureApi({
+      ...settings.figureApi,
+      apiKey: secrets.figureApiKey,
+    })
+    return result
+  },
+})
 
 export const paperPipelineStatus: ToolDefinitionLike = defineTool({
   name: 'paper_pipeline_status',
@@ -298,6 +387,7 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
       type: 'object',
       properties: {
         runDir: runDirSchema,
+        projectDir: stringSchema('Optional project root containing .autoresearch/project-settings.yaml'),
         candidatePath: stringSchema('Optional candidate.md path relative to runDir'),
         profilePath: stringSchema('Optional PROFILE.md path relative to runDir'),
         maxCycles: { type: 'number', description: 'Optional max research cycles' },

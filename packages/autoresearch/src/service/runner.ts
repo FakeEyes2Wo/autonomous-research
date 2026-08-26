@@ -44,12 +44,21 @@ export class ResearchRunner {
 
     if (this.shouldBrainstorm(runDir)) {
       await transition(state, 'brainstorm', 'brainstorm-pipeline')
+      const brainstormOptions = {
+        idea: this.deps.idea,
+        reviewer: this.deps.reviewer,
+        humanReviewOverride: this.deps.humanReviewOverride,
+        ...(this.deps.projectSettings ? {
+          surveyMinPapers: this.deps.projectSettings.paperExploration.maxPapers,
+          surveyMinSurveys: this.deps.projectSettings.paperExploration.minSurveys,
+          surveyMinClusters: this.deps.projectSettings.paperExploration.minClusters,
+          latestWindowYears: this.deps.projectSettings.paperExploration.latestWindowYears,
+          latestPerDirection: this.deps.projectSettings.paperExploration.latestPerDirection,
+          maxSelectedDirections: this.deps.projectSettings.paperExploration.maxSelectedDirections,
+        } : {}),
+      }
       const ideaFile = await runBrainstorm(
-        { provider: this.deps.provider, options: {
-          idea: this.deps.idea,
-          reviewer: this.deps.reviewer,
-          humanReviewOverride: this.deps.humanReviewOverride,
-        } },
+        { provider: this.deps.provider, options: brainstormOptions },
         { runDir, agentContext: context },
       )
       ctx.logger.info(`brainstorm done idea=${ideaFile}`)

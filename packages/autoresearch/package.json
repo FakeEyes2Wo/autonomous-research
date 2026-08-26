@@ -42,6 +42,7 @@
     "graphology-communities-louvain": "^2.0.2",
     "graphology-layout-forceatlas2": "^0.10.1",
     "graphology-metrics": "^2.4.0",
-    "graphology-types": "^0.24.8"
+    "graphology-types": "^0.24.8",
+    "yaml": "^2.9.0"
   }
 }

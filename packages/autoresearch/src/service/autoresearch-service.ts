@@ -10,9 +10,11 @@ import { writeFailureReport } from '../domain/files.js'
 import { writeLastRun } from '../session/last-run.js'
 import { ResearchRunner } from './runner.js'
 import type { PaperOptions } from '../paper/pipeline.js'
+import { loadProjectSecrets, loadProjectSettings } from '../settings/project-settings.js'
 
 export interface ResearchRunOptions {
   runDir: string
+  projectDir?: string
   candidatePath?: string
   profilePath?: string
   maxCycles?: number
@@ -50,15 +52,30 @@ export class AutoResearchService {
     state.status = 'RUNNING'
     await saveState(runDir, state)
     const tree = await ResearchTree.load(runDir)
+    const projectDir = options.projectDir ?? runDir
+    const projectSettings = await loadProjectSettings(projectDir)
+    const projectSecrets = await loadProjectSecrets(projectDir)
+    const paperOptions: PaperOptions = {
+      ...(options.paper ?? {}),
+      ...(projectSettings.figureApi.enabled
+        ? {
+            figureApi: {
+              ...projectSettings.figureApi,
+              apiKey: projectSecrets.figureApiKey,
+            },
+          }
+        : {}),
+    }
     const runner = new ResearchRunner({
       provider: this.deps.provider,
       maxCycles: options.maxCycles ?? DEFAULT_MAX_CYCLES,
-      paperOptions: options.paper,
+      paperOptions,
       reviewer: this.deps.options.reviewer,
       reviewGates: this.deps.options.reviewGates,
       humanReviewOverride: options.humanReview,
       idea: options.idea,
       brainstorm: options.brainstorm,
+      projectSettings,
     })
     try {
       const result = await runner.run(runDir, state, tree, context)

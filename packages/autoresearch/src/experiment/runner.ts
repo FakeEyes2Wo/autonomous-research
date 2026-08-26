@@ -8,6 +8,7 @@ import { freezeRubric, writeFailureReport, writePlan, writeRubric } from '../dom
 import { exportEvidenceChain } from '../export/evidence-chain.js'
 import { createRunContext, reloadTree } from '../service/context.js'
 import type { ResearchRunnerOptions } from '../service/types.js'
+import { loadProjectSettings } from '../settings/project-settings.js'
 import {
   runEvidenceAgent,
   runExperimentDesign,
@@ -27,6 +28,7 @@ export interface ExperimentDependencies {
 
 export interface ExperimentRunRequest {
   runDir: string
+  projectDir?: string
   task: string
   profile?: string
   maxRounds?: number
@@ -57,8 +59,10 @@ export async function runExperimentTask(
   request: ExperimentRunRequest,
 ): Promise<ExperimentRunResult> {
   const { runDir, task, agentContext } = request
-  const maxRounds = request.maxRounds ?? DEFAULT_EXPERIMENT_MAX_ROUNDS
-  const profile = request.profile ?? '# PROFILE\n\n- Allowed: local experiments, public data, public literature.\n'
+  const projectDir = request.projectDir ?? runDir
+  const projectSettings = await loadProjectSettings(projectDir)
+  const maxRounds = request.maxRounds ?? projectSettings.experiment.maxRounds ?? DEFAULT_EXPERIMENT_MAX_ROUNDS
+  const profile = request.profile ?? (projectSettings.experiment.profile || '# PROFILE\n\n- Allowed: local experiments, public data, public literature.\n')
   const reportPath = join(runDir, 'EXPERIMENT_REPORT.md')
 
   await ensureDir(runDir)

@@ -65,6 +65,9 @@ node scripts/start-session.mjs --profile autoresearch --prompt "继续上次研�
 会话内可用：
 
 - `experiment_run`
+- `project_settings_get`
+- `project_settings_save`
+- `figure_api_test`
 - `research_run`
 - `paper_pipeline_status`
 - `paper_pipeline_last_run`

@@ -1,6 +1,7 @@
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
 import type { HumanReviewer } from '../core/human-review.js'
 import type { HumanReviewMode } from '../session/auto-mode.js'
+import type { FigureApiSettings } from '../settings/project-settings.js'
 
 export interface PaperOptions {
   venue?: string
@@ -10,6 +11,7 @@ export interface PaperOptions {
   maxImprovementRounds?: number
   humanReviewer?: HumanReviewer
   humanReviewOverride?: HumanReviewMode
+  figureApi?: FigureApiSettings
 }
 
 export interface PaperDependencies {

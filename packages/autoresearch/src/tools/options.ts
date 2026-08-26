@@ -78,6 +78,7 @@ function toPaperOptions(value: unknown): PaperOptions | undefined {
 export function toResearchRunOptions(args: Record<string, unknown>): ResearchRunOptions {
   return {
     runDir: String(args.runDir),
+    projectDir: asString(args.projectDir),
     candidatePath: asString(args.candidatePath),
     profilePath: asString(args.profilePath),
     maxCycles: asNumber(args.maxCycles),
