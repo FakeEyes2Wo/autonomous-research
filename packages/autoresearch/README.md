@@ -30,7 +30,14 @@ npm run run:headless
 脚本会：
 
 1. 准备一个独立 run 目录（默认 `packages/autoresearch/.runs/run-*`）；
-2. 未传 `--candidate` 时自动跑 brainstorm：广泛领域调研（先找相关综述）→ survey paper wiki + 知识图谱 → 选 direction → 查最新前沿 → 统一 paper wiki → debate → vote → 生成 `input/idea.md`；
+2. 未传 `--candidate` 时自动跑 brainstorm：
+   - 广泛领域调研（先找相关综述）
+   - survey paper wiki + 知识图谱
+   - 选 direction
+   - 查最新前沿
+   - 统一 paper wiki
+   - debate → vote
+   - 生成 `input/idea.md`
 3. 不传 `--idea` 时**完全从 0 开始、不预设 seed**，由 `paper-survey` 先做领域调研和找综述，再选择 direction 并查询最新前沿；传了则以 `--idea` 文本作为初始 seed；
 4. 确保 DSH `headless` profile 存在并安装本插件；
 5. 调用 `dsh --profile headless "..."` 让 DSH Agent 调用 `research_run` 完成闭环；
@@ -48,6 +55,115 @@ npm run run:headless -- --idea "conflictive multi-view learning"
 # 或手动指定已有 idea 文件，跳过 brainstorm
 npm run run:headless -- --candidate C:/path/idea.md --profile-file C:/path/PROFILE.md
 ```
+
+断点续跑：
+
+```bash
+npm run run:headless -- --run-dir .runs/run-1787742452500
+```
+
+---
+
+## 独立自动实验
+
+新增 `experiment_run` 工具，用户只需提供任务要求：
+
+```text
+experiment_run
+  runDir: /path/to/run
+  projectDir: /path/to/project   # 可选
+  task: "比较两个优化器在小型公开 ML benchmark 上的效果"
+  maxRounds: 3
+```
+
+它自动执行：
+
+```text
+任务要求
+  → 自动生成实验计划
+  → 最小可行性验证
+  → 模型选择
+  → 实验设计 + 反思
+  → 实际执行 worker
+  → 收集 evidence
+  → 结果反思 + insight
+  → supervisor 决策
+  → EXPERIMENT_REPORT.md
+```
+
+也可编程调用：
+
+```ts
+import { runExperimentTask } from '@athena/autoresearch'
+
+const result = await runExperimentTask(
+  { provider },
+  {
+    runDir,
+    task: '比较两个优化器',
+    agentContext,
+  },
+)
+```
+
+---
+
+## 项目设置
+
+项目设置保存在：
+
+```text
+<project>/
+  .autoresearch/
+    project-settings.yaml
+    project-secrets.yaml
+```
+
+```yaml
+version: 1
+
+paperExploration:
+  maxPapers: 80
+  minSurveys: 3
+  minClusters: 5
+  latestWindowYears: 1
+  latestPerDirection: 5
+  maxSelectedDirections: 3
+
+figureApi:
+  enabled: true
+  apiUrl: https://example.com/api/generate
+  model: ""
+  timeoutMs: 60000
+
+model:
+  useGlobal: true
+  overrides:
+    provider: deepseek-official
+    model: deepseek-v4-pro
+
+experiment:
+  maxRounds: 3
+  profile: "允许本地实验和公开数据"
+```
+
+DSH 工具：
+
+```text
+project_settings_get
+project_settings_save
+figure_api_test
+```
+
+其中：
+
+- `project_settings_get`：读取设置，API Key 脱敏
+- `project_settings_save`：局部更新设置
+- `figure_api_test`：测试外部生图 API 连通性
+- `model.useGlobal=true` 时复用 DSH `setting.yaml` 的 `agent-default-model`
+- API Key 保存在 `project-secrets.yaml`，不应进入 git
+
+---
 
 ## DSH 会话使用
 
@@ -79,6 +195,8 @@ node scripts/start-session.mjs --profile autoresearch --prompt "继续上次研�
 2. `paper_pipeline_status` 查看 checkpoint
 3. `paper_pipeline_resume` 继续
 
+---
+
 ## DSH 插件加载
 
 插件导出 Cordis 插件结构：`name` / `inject` / `apply`。
@@ -90,18 +208,30 @@ import { name, inject, apply } from '@athena/autoresearch'
 安装到 DSH profile 后，会自动注册：
 
 - 五个 research tools：`research_hypothesis_add` / `research_action_start` / `research_action_finish` / `research_evidence_add` / `research_tree_query`
-- 独立实验工具：`experiment_run`（输入任务要求后自动执行实验）
+- 独立实验工具：`experiment_run`
+- 项目设置工具：`project_settings_get` / `project_settings_save` / `figure_api_test`
 - 一个控制工具：`research_run`
 - 每个 idea 由单个 combined reviewer 从方法论、统计、新颖性、可行性、可复现性等多角度审查
 
+---
+
 ## 目录
 
-- `src/core/`：纯领域核心（ResearchTree、state、错误、工具函数）
-- `src/domain/`：各阶段领域逻辑
-- `src/agents/`：DSH 角色 Agent 封装
-- `src/service/`：闭环编排与恢复
-- `src/tools/`：DSH 工具注册
-- `src/export/`：evidence_chain 与报告导出
-- `src/security/`：目标论文泄漏过滤与检测
-- `prompts/`：角色 Agent 的 System Prompt
-- `test/`：单元与集成测试
+```text
+src/
+  experiment/      独立实验编排与实验步骤
+  settings/        项目设置读写
+  figure/          外部生图 API Client
+  brainstorm/      Paper 调研、paper wiki、知识图谱
+  paper/           论文生成与审计
+  service/         研究闭环编排与恢复
+  agents/          角色 Agent 封装
+  tools/           DSH 工具注册
+  export/          evidence_chain 与报告导出
+  security/        目标论文泄漏过滤与检测
+prompts/
+  system/          角色 System Prompt
+test/
+  unit/            单元测试
+  integration/     集成测试
+```
