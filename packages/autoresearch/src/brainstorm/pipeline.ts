@@ -1,6 +1,4 @@
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
-import type { HumanReviewer } from '../core/human-review.js'
-import type { HumanReviewMode } from '../session/auto-mode.js'
 import {
   atomicWriteJson,
   AutoResearchError,
@@ -52,9 +50,6 @@ const DEFAULTS = {
 }
 
 export interface BrainstormOptions {
-  idea?: string
-  reviewer?: HumanReviewer
-  humanReviewOverride?: HumanReviewMode
   ranking?: RankingStrategy
   // Two-stage survey options
   surveyMinSurveys?: number
@@ -132,10 +127,9 @@ export async function runBrainstorm(
   const { runDir, agentContext } = request
   await ensureDir(brainstormDirPath(runDir))
 
-  const base: BrainstormContext = { runDir, seed: '', wikiIndex: '', agentContext }
+  const base: BrainstormContext = { runDir, wikiIndex: '', agentContext }
   let state: BrainstormState = {
     ...base,
-    seed: '',
     surveyPapers: [],
     frontierPapers: [],
     records: [],

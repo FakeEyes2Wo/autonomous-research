@@ -6,7 +6,6 @@ import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js
  */
 export interface BrainstormContext {
   readonly runDir: string
-  readonly seed: string
   readonly wikiIndex: string
   readonly agentContext: RoleExecutionContext
 }

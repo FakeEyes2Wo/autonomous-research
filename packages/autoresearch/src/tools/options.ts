@@ -83,7 +83,6 @@ export function toResearchRunOptions(args: Record<string, unknown>): ResearchRun
     profilePath: asString(args.profilePath),
     maxCycles: asNumber(args.maxCycles),
     humanReview: asHumanReviewMode(args.humanReview),
-    idea: asString(args.idea),
     brainstorm: asHumanReviewMode(args.brainstorm),
     paper: toPaperOptions(args.paper),
   }

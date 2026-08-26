@@ -13,7 +13,6 @@ function parseArgs(argv) {
     runDir: undefined,
     candidate: undefined,
     profileFile: undefined,
-    idea: undefined,
     maxCycles: 5,
     paper: undefined,
   }
@@ -24,7 +23,6 @@ function parseArgs(argv) {
       case '--run-dir': args.runDir = argv[++i]; break
       case '--candidate': args.candidate = argv[++i]; break
       case '--profile-file': args.profileFile = argv[++i]; break
-      case '--idea': args.idea = argv[++i]; break
       case '--max-cycles': args.maxCycles = Number(argv[++i]); break
       case '--venue': (args.paper ??= {}).venue = argv[++i]; break
       case '--assurance': (args.paper ??= {}).assurance = argv[++i]; break
@@ -255,7 +253,7 @@ async function compilePaper(runDir) {
   }
 }
 
-function buildPrompt(runDir, maxCycles, paper, idea, hasCandidate) {
+function buildPrompt(runDir, maxCycles, paper, hasCandidate) {
   const absolute = resolve(runDir)
   const lines = [
     'Run the autonomous research loop in the directory below.',
@@ -287,7 +285,7 @@ async function main() {
   process.env.DSH_AUTORESEARCH_AUTO ??= '1'
   await ensureHeadlessProfile(args.profile)
 
-  const prompt = buildPrompt(runDir, args.maxCycles, args.paper, args.idea, Boolean(candidate))
+  const prompt = buildPrompt(runDir, args.maxCycles, args.paper, Boolean(candidate))
   const nodeDir = dirname(process.execPath)
   const dshBin = join(nodeDir, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
   let result

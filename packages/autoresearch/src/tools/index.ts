@@ -392,7 +392,6 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
         profilePath: stringSchema('Optional PROFILE.md path relative to runDir'),
         maxCycles: { type: 'number', description: 'Optional max research cycles' },
         humanReview: { ...humanReviewModeSchema, description: 'auto follows /auto command, on forces human gates, off skips them' },
-        idea: stringSchema('Deprecated: brainstorm is topic-agnostic; use candidatePath to start from a fixed direction'),
         brainstorm: { ...humanReviewModeSchema, description: 'auto runs brainstorm when no candidate.md exists' },
         paper: {
           type: 'object',

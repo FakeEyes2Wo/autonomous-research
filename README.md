@@ -142,7 +142,6 @@ npm --prefix packages/autoresearch run run:headless
 |---|---|---|
 | `--profile` | `headless` | DSH profile 名 |
 | `--run-dir` | `.runs/run-<timestamp>` | 运行输出目录 |
-| `--idea` | 无 | 已弃用：brainstorm 为无主题探索，不再接收 seed；固定方向请用 `--candidate` |
 | `--candidate` | 无 | 手动指定 `idea.md` 文件路径；传了会跳过 brainstorm |
 | `--profile-file` | 无 | 手动指定 `PROFILE.md` 文件路径 |
 | `--max-cycles` | `5` | 研究循环最大轮数 |

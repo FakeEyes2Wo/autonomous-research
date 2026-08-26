@@ -11,7 +11,6 @@ export interface ResearchRunnerOptions {
   reviewer?: HumanReviewer
   reviewGates?: ReviewGateId[]
   humanReviewOverride?: HumanReviewMode
-  idea?: string
   brainstorm?: HumanReviewMode
   projectSettings?: ProjectSettings
 }

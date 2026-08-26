@@ -20,7 +20,6 @@ export interface ResearchRunOptions {
   maxCycles?: number
   paper?: PaperOptions
   humanReview?: HumanReviewMode
-  idea?: string
   brainstorm?: HumanReviewMode
 }
 
@@ -73,7 +72,6 @@ export class AutoResearchService {
       reviewer: this.deps.options.reviewer,
       reviewGates: this.deps.options.reviewGates,
       humanReviewOverride: options.humanReview,
-      idea: options.idea,
       brainstorm: options.brainstorm,
       projectSettings,
     })

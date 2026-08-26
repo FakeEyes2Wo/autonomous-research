@@ -18,7 +18,6 @@ test('rankCandidates sorts by total, then evidence, then novelty', async () => {
   }
   const ctx: BrainstormContext = {
     runDir: '/tmp/ar-ranking',
-    seed: '',
     wikiIndex: '',
     agentContext: {
       parent: { id: 'agent-1', session: { id: 'agent-1' } },
