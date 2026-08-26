@@ -1,4 +1,3 @@
-import type { RoleName } from '../types.js'
 import type { RoleSpec } from './types.js'
 import { generalRoleSpecs } from './general.js'
 import { brainstormRoleSpecs } from './brainstorm.js'
@@ -7,11 +6,14 @@ import { paperRoleSpecs } from './paper.js'
 
 /**
  * Single flat registry. Adding/removing a role is a one-line change in the
- * matching domain module; TypeScript enforces that every RoleName is present.
+ * matching domain module.
  */
 export const roleSpecs = {
   ...generalRoleSpecs,
   ...brainstormRoleSpecs,
   ...researchRoleSpecs,
   ...paperRoleSpecs,
-} satisfies Record<RoleName, RoleSpec>
+} as const satisfies Record<string, RoleSpec>
+
+export type RoleName = keyof typeof roleSpecs
+export const roleNames = Object.freeze(Object.keys(roleSpecs) as RoleName[])

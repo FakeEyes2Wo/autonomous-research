@@ -1,43 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { outputSchemaFor } from '../../dist/agents/factory.js'
+import { roleNames, roleSpecs } from '../../dist/agents/roles/index.js'
 
-const roles = [
-  'rubric-generator',
-  'rubric-reviewer',
-  'idea-generator',
-  'idea-falsifiability',
-  'idea-reviewer',
-  'hypothesis-reviser',
-  'planner',
-  'minimal-verifier',
-  'experiment-designer',
-  'experiment-reflexion',
-  'model-scout',
-  'result-reflexion',
-  'insight-abstractor',
-  'research-worker',
-  'evidence-agent',
-  'supervisor',
-  'writer',
-  'paper-planner',
-  'contract-negotiator',
-  'contract-reviewer',
-  'figure-generator',
-  'figure-reflexion',
-  'proof-checker',
-  'claim-auditor',
-  'citation-auditor',
-  'kill-argument-reviewer',
-  'paper-reviewer',
-  'paper-polisher',
-  'final-report-writer',
-  'paper-survey',
-  'direction-select',
-  'paper-frontier-miner',
-  'paper-wiki-writer',
-  'brainstorm',
-] as const
+test('role names come from the role spec registry', () => {
+  assert.deepEqual(roleNames, Object.keys(roleSpecs))
+  assert.equal(new Set(roleNames).size, roleNames.length)
+})
 
 function findInvalidRequired(node: unknown, path: string): string[] {
   const errors: string[] = []
@@ -59,7 +28,7 @@ function findInvalidRequired(node: unknown, path: string): string[] {
 }
 
 test('all role output schemas are valid JSON Schema (no boolean required)', () => {
-  for (const role of roles) {
+  for (const role of roleNames) {
     const schema = outputSchemaFor(role)
     if (!schema) continue
     const errors = findInvalidRequired(schema, role)
