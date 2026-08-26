@@ -21,18 +21,29 @@ npm test
   agent.cordis.yml
 ```
 
-在 DSH 模式选择器中选择 **AutoResearch**：
+在 DSH 模式选择器中选择 **AutoResearch**，而不是直接输入 `/auto_research`：
 
 - 会先探索当前目录
-- 会读取项目文件 / README / 现有 .autoresearch 配置
+- 会读取项目文件 / README / 现有 `.autoresearch` 配置
 - 不清楚时会通过 `ask_user_question` 与你交互
-- 然后使用 `research_run` / `experiment_run` 等工具自动执行
+- 然后使用 `research_run` / `experiment_run` / `project_settings_*` / `paper_pipeline_*` 等工具自动执行
+- 需要人工决策时会暂停询问
+
+例如：
+
+```text
+请先看看当前目录，然后继续我们之前的研究。
+帮我调研这个领域的综述和最新前沿，并写入 paper_wiki。
+围绕当前项目做一组对比实验，输出 EXPERIMENT_REPORT.md。
+```
 
 如果安装后没有看到该模式，重新运行：
 
 ```bash
 npm run install:dsh -- web
 ```
+
+> `/auto_research` 是插件注册的轻量 Slash 命令，仅用于查看帮助 / 配置 / run 状态；要自动探索目录并执行任务，请选择 **AutoResearch** Agent Preset。
 
 ## 默认论文模板
 
@@ -220,6 +231,8 @@ Slash 命令：
 /auto_research status <runDir>
 /auto
 ```
+
+其中 `/auto_research` 是轻量帮助命令；实际的“自动探索当前目录并执行研究”入口是 DSH 模式选择器中的 **AutoResearch** Agent Preset。
 
 断点续传流程：
 

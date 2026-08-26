@@ -67,7 +67,31 @@ DSH 插件 `@athena/autoresearch`：自动研究闭环。
   agent.cordis.yml
 ```
 
-在 DSH 模式选择器中，选择 **AutoResearch** 即可进入 `/auto_research` 模式：它会先探索当前目录，必要时通过交互询问用户，然后使用 `research_run` / `experiment_run` 等工具自动执行任务。
+### 使用 AutoResearch 模式
+
+在 DSH 模式选择器中选择 **AutoResearch**（不是输入 `/auto_research`），该模式会：
+
+1. 先探索当前工作目录，读取 `README`、源码布局、包文件以及已有 `.autoresearch/` 配置；
+2. 如果任务意图不明确，通过 `ask_user_question` 与你交互确认；
+3. 然后自动调用 `research_run` / `experiment_run` / `project_settings_*` / `paper_pipeline_*` 等工具执行论文调研、自动实验或论文生成；
+4. 遇到需要人工决策时会暂停询问。
+
+典型触发方式：
+
+```text
+请先看看当前目录，然后继续我们之前的研究。
+帮我调研这个领域的综述和最新前沿，并写入 paper_wiki。
+围绕当前项目做一组对比实验，输出 EXPERIMENT_REPORT.md。
+```
+
+如果 DSH 模式选择器中没有出现 **AutoResearch**，重新运行安装脚本：
+
+```powershell
+cd packages/autoresearch
+npm run install:dsh -- web
+```
+
+> `/auto_research` 是插件注册的轻量 Slash 命令，只用于查看帮助 / 配置 / run 状态；实际“探索目录 + 自动执行”请选择 **AutoResearch** Agent Preset。
 
 ---
 
@@ -246,7 +270,7 @@ DSH 还注册了 Slash 命令：
 /auto
 ```
 
-- `/auto_research`：显示 AutoResearch 模式帮助
+- `/auto_research`：显示 AutoResearch 模式帮助（实际自动探索请使用 **AutoResearch** Agent Preset）
 - `/auto_research config <projectDir>`：查看项目设置
 - `/auto_research status <runDir>`：查看 run 状态
 - `/auto`：切换自动模式
