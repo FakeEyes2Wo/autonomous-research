@@ -3,7 +3,7 @@ import { saveState } from '../../core/state.js'
 import { DEFAULT_REVIEW_GATES } from '../../core/human-review.js'
 import { writeFailureReport } from '../../domain/files.js'
 import { exportEvidenceChain } from '../../export/evidence-chain.js'
-import { PaperPipeline } from '../../paper/pipeline.js'
+import { runPaperPipeline } from '../../paper/pipeline.js'
 import type { RunContext } from '../context.js'
 
 export async function runPaper(ctx: RunContext): Promise<void> {
@@ -15,11 +15,14 @@ export async function runPaper(ctx: RunContext): Promise<void> {
   ctx.state.evidencePath = evidencePath
   await saveState(ctx.runDir, ctx.state)
 
-  const pipeline = new PaperPipeline(ctx.deps.provider, {
+  const options = {
     ...(ctx.deps.paperOptions ?? {}),
     ...((ctx.deps.reviewGates ?? DEFAULT_REVIEW_GATES).includes('paper_draft') && ctx.deps.reviewer ? { humanReviewer: ctx.deps.reviewer } : {}),
     ...(ctx.deps.humanReviewOverride ? { humanReviewOverride: ctx.deps.humanReviewOverride } : {}),
-  })
-  const result = await pipeline.run(ctx.runDir, ctx.tree, evidencePath, ctx.context)
+  }
+  const result = await runPaperPipeline(
+    { provider: ctx.deps.provider, options },
+    { runDir: ctx.runDir, tree: ctx.tree, evidencePath, agentContext: ctx.context },
+  )
   ctx.logger.info(`paper pipeline done plan=${result.planFile} compileOk=${result.compileOk} audits=${Object.keys(result.audits).length}`)
 }

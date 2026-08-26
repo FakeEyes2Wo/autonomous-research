@@ -33,3 +33,10 @@ test('paper phases are stateless functions', async () => {
   assert.match(source, /export const PAPER_AUDITS/)
   assert.match(source, /export async function writePaper/)
 })
+
+test('paper pipeline is a functional checkpoint orchestrator', async () => {
+  const source = await readFile(join(process.cwd(), 'src/paper/pipeline.ts'), 'utf8')
+  assert.doesNotMatch(source, /export class PaperPipeline/)
+  assert.match(source, /export async function runPaperPipeline/)
+  assert.match(source, /async function runCheckpointPhase/)
+})
