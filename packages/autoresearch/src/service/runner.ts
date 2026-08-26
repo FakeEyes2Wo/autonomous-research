@@ -7,7 +7,7 @@ import { ResearchTree } from '../core/research-tree.js'
 import { recordDecision, recordResult, saveState, transition, writeDecision } from '../core/state.js'
 import type { RunState } from '../core/types.js'
 import { readCandidate, readPlan, readRubric, writeFailureReport, writePlan } from '../domain/files.js'
-import { BrainstormPipeline } from '../brainstorm/pipeline.js'
+import { runBrainstorm } from '../brainstorm/pipeline.js'
 import { treeSummary } from './agent.js'
 import { createRunContext, reloadTree, type RunContext } from './context.js'
 import { reviewGate } from './review.js'
@@ -44,11 +44,14 @@ export class ResearchRunner {
 
     if (this.shouldBrainstorm(runDir)) {
       await transition(state, 'brainstorm', 'brainstorm-pipeline')
-      const ideaFile = await new BrainstormPipeline(this.deps.provider, {
-        idea: this.deps.idea,
-        reviewer: this.deps.reviewer,
-        humanReviewOverride: this.deps.humanReviewOverride,
-      }).run(runDir, context)
+      const ideaFile = await runBrainstorm(
+        { provider: this.deps.provider, options: {
+          idea: this.deps.idea,
+          reviewer: this.deps.reviewer,
+          humanReviewOverride: this.deps.humanReviewOverride,
+        } },
+        { runDir, agentContext: context },
+      )
       ctx.logger.info(`brainstorm done idea=${ideaFile}`)
     }
 

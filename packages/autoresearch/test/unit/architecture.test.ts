@@ -40,3 +40,11 @@ test('paper pipeline is a functional checkpoint orchestrator', async () => {
   assert.match(source, /export async function runPaperPipeline/)
   assert.match(source, /async function runCheckpointPhase/)
 })
+
+test('brainstorm orchestration and ranking do not hold dependency attrs', async () => {
+  const pipeline = await readFile(join(process.cwd(), 'src/brainstorm/pipeline.ts'), 'utf8')
+  const ranking = await readFile(join(process.cwd(), 'src/brainstorm/ranking.ts'), 'utf8')
+  assert.doesNotMatch(pipeline, /export class BrainstormPipeline/)
+  assert.doesNotMatch(ranking, /export class DefaultRankingStrategy/)
+  assert.match(pipeline, /export async function runBrainstorm/)
+})
