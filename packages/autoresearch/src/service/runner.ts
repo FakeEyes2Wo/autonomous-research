@@ -12,6 +12,7 @@ import { humanReviewEnabled } from '../session/auto-mode.js'
 import { freezeRubric, readCandidate, readPlan, readRubric, writeFailureReport, writePlan, writeRubric } from '../domain/files.js'
 import { BrainstormPipeline } from '../brainstorm/pipeline.js'
 import { RoleRunner } from './agent-runner.js'
+import { createRunContext } from './context.js'
 import { ResearchSteps } from './research-steps.js'
 import { reloadSessionTree, type RunSession } from './run-session.js'
 import type { ResearchRunnerOptions } from './types.js'
@@ -29,8 +30,8 @@ export interface ReviewGateRequest {
 
 export class ResearchRunner {
   private readonly options: ResearchRunnerOptions
-  private readonly roleRunner: RoleRunner
-  private readonly steps: ResearchSteps
+  private roleRunner: RoleRunner
+  private steps: ResearchSteps
   private logger: Logger
 
   constructor(options: ResearchRunnerOptions) {
@@ -47,11 +48,11 @@ export class ResearchRunner {
   }
 
   async run(runDir: string, state: RunState, tree: ResearchTree, context: RoleExecutionContext): Promise<RunState> {
-    this.logger = createLogger(runDir)
-    this.roleRunner.setLogger(this.logger)
+    const session: RunSession = createRunContext(this.options, runDir, state, tree, context)
+    this.logger = session.logger
+    this.roleRunner = new RoleRunner(this.options.provider, this.logger)
+    this.steps = new ResearchSteps(this.roleRunner, this.logger, this.options)
     this.logger.info(`run started runDir=${runDir} runId=${state.runId} status=${state.status} cycle=${state.cycle}`)
-
-    const session: RunSession = { runDir, state, tree, context }
 
     if (this.shouldBrainstorm(runDir)) {
       await transition(state, 'brainstorm', 'brainstorm-pipeline')
