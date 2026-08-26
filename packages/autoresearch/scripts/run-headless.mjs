@@ -266,7 +266,6 @@ function buildPrompt(runDir, maxCycles, paper, idea, hasCandidate) {
     'Call the `research_run` tool with `runDir` set to that absolute path and `maxCycles` set to the value above.',
   ]
   if (!hasCandidate) lines.push('Do not create candidate.md yourself: research_run will run the brainstorm pre-phase automatically.')
-  if (idea) lines.push(`Pass the human idea/seed to research_run as the "idea" argument: ${JSON.stringify(idea)}`)
   if (paper && Object.keys(paper).length > 0) {
     lines.push('', `Pass this paper pipeline configuration to research_run as the "paper" argument: ${JSON.stringify(paper)}`)
   }

@@ -14,6 +14,7 @@ export interface FakeAgentScript {
 
 export class FakeAgentProvider implements RoleAgentProvider {
   calls: RoleName[] = []
+  inputs: Array<{ role: RoleName; input: RoleInput }> = []
   private readonly script: FakeAgentScript
   private lastActionId: string | undefined
   constructor(script: FakeAgentScript) {
@@ -22,6 +23,7 @@ export class FakeAgentProvider implements RoleAgentProvider {
 
   async run(role: RoleName, _input: RoleInput, _context: RoleExecutionContext): Promise<RoleOutput> {
     this.calls.push(role)
+    this.inputs.push({ role, input: _input })
     switch (role) {
       case 'rubric-generator':
         return { text: '', structured: { rubric: this.script.rubric ?? '# Rubric\n\n- metric: accuracy' }, stopReason: 'completed' }

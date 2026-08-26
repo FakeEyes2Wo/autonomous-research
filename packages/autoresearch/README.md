@@ -72,7 +72,7 @@ npm run run:headless
    - 统一 paper wiki
    - debate → vote
    - 生成 `input/idea.md`
-3. 不传 `--idea` 时**完全从 0 开始、不预设 seed**，由 `paper-survey` 先做领域调研和找综述，再选择 direction 并查询最新前沿；传了则以 `--idea` 文本作为初始 seed；
+3. Brainstorm 为**无主题探索**：不接收种子课题/方向，完全从广泛文献调研开始；已有确定课题请用 `--candidate` 跳过 brainstorm；
 4. 确保 DSH `headless` profile 存在并安装本插件；
 5. 调用 `dsh --profile headless "..."` 让 DSH Agent 调用 `research_run` 完成闭环；
 6. 如果 Runner 已生成 `paper/main.tex` 则直接使用；否则用 `pandoc` 把 `paper_draft.md` 转换为 `paper/main.tex`；
@@ -84,8 +84,6 @@ npm run run:headless
 
 ```bash
 npm run run:headless -- --run-dir C:/tmp/my-run --max-cycles 3
-# 或指定 human seed
-npm run run:headless -- --idea "conflictive multi-view learning"
 # 或手动指定已有 idea 文件，跳过 brainstorm
 npm run run:headless -- --candidate C:/path/idea.md --profile-file C:/path/PROFILE.md
 ```

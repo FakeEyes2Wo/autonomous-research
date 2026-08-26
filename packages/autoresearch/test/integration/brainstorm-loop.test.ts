@@ -6,6 +6,33 @@ import { join } from 'node:path'
 import { AutoResearchService } from '../../dist/service/autoresearch-service.js'
 import { FakeAgentProvider } from './fake-agent-provider.ts'
 
+test('brainstorm prompts are topic-isolated and do not receive a seed or prior direction', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-brainstorm-isolated-'))
+  try {
+    const provider = new FakeAgentProvider({
+      decisions: ['finish'],
+      writerText: '\\documentclass{article}\n\\begin{document}\nIsolated Brainstorm.\n\\end{document}',
+    })
+    const service = new AutoResearchService(provider)
+    const context = { parent: { id: 'agent-isolated', session: { id: 'agent-isolated' } }, signal: new AbortController().signal }
+
+    await service.run({ runDir: dir, idea: 'conflictive multi-view learning' }, context)
+
+    const brainstormRoles = new Set(['paper-survey', 'direction-select', 'paper-frontier-miner', 'paper-wiki-writer', 'brainstorm'])
+    const plans = provider.inputs
+      .filter((entry) => brainstormRoles.has(entry.role))
+      .map((entry) => String(entry.input.plan ?? ''))
+    assert.equal(plans.length > 0, true)
+    for (const plan of plans) {
+      assert.equal(plan.includes('conflictive multi-view learning'), false)
+      assert.equal(plan.includes('multi-view'), false)
+      assert.equal(plan.includes('Seed:'), false)
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
 test('brainstorm pre-phase surveys field, selects directions, mines latest, writes unified wiki, and reforms a winner', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-brainstorm-'))
   try {

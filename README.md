@@ -127,8 +127,8 @@ npm --prefix packages/autoresearch run run:headless
    - 统一 paper wiki
    - 多视角 debate → vote
    - 生成 `input/idea.md`
-4. 不传 `--idea` 时**完全从 0 开始，不预设 seed**；
-5. 如果传了 `--idea`，则把该文本作为 brainstorm 的初始 seed；
+4. Brainstorm 为**无主题探索**：不接收种子课题/方向，完全从广泛文献调研开始；
+5. 如果已有确定课题，请使用 `--candidate` 跳过 brainstorm；
 6. 确保 DSH `headless` profile 存在并完成 `pnpm install`；
 7. 启动 `dsh --profile headless`，由 Agent 调用 `research_run` 完成研究闭环；
 8. 生成论文产物：优先 LaTeX 编译，缺失时用 pandoc + Chrome/Edge 以 HTML→PDF 兜底；
@@ -142,7 +142,7 @@ npm --prefix packages/autoresearch run run:headless
 |---|---|---|
 | `--profile` | `headless` | DSH profile 名 |
 | `--run-dir` | `.runs/run-<timestamp>` | 运行输出目录 |
-| `--idea` | 无 | brainstorm 的初始人类 idea/seed 文本；不传则完全从 0 开始 |
+| `--idea` | 无 | 已弃用：brainstorm 为无主题探索，不再接收 seed；固定方向请用 `--candidate` |
 | `--candidate` | 无 | 手动指定 `idea.md` 文件路径；传了会跳过 brainstorm |
 | `--profile-file` | 无 | 手动指定 `PROFILE.md` 文件路径 |
 | `--max-cycles` | `5` | 研究循环最大轮数 |
@@ -162,10 +162,7 @@ npm --prefix packages/autoresearch run run:headless
 cd packages/autoresearch
 npm run run:headless
 
-# 带人类 idea seed
-npm run run:headless -- --idea "conflictive multi-view learning"
-
-# 手动指定已有 idea 和 profile
+# 手动指定已有 idea（跳过 brainstorm）和 profile
 npm run run:headless -- --candidate C:/path/idea.md --profile-file C:/path/PROFILE.md --max-cycles 3 --venue ICLR --effort balanced
 ```
 

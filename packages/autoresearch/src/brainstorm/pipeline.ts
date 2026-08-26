@@ -1,6 +1,6 @@
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
-import { appendHumanReview, type HumanReviewer } from '../core/human-review.js'
-import { humanReviewEnabled, type HumanReviewMode } from '../session/auto-mode.js'
+import type { HumanReviewer } from '../core/human-review.js'
+import type { HumanReviewMode } from '../session/auto-mode.js'
 import {
   atomicWriteJson,
   AutoResearchError,
@@ -16,7 +16,6 @@ import {
   ideaPath,
   paperWikiPath,
   renderUnifiedWikiIndex,
-  seedPath,
   wikiIndexPath,
   writeBrainstormHandoff,
   type IdeaHandoff,
@@ -134,10 +133,9 @@ export async function runBrainstorm(
   await ensureDir(brainstormDirPath(runDir))
 
   const base: BrainstormContext = { runDir, seed: '', wikiIndex: '', agentContext }
-  const seed = await resolveSeed(deps, base)
   let state: BrainstormState = {
     ...base,
-    seed,
+    seed: '',
     surveyPapers: [],
     frontierPapers: [],
     records: [],
@@ -201,33 +199,10 @@ export async function runBrainstorm(
   return ideaPath(runDir)
 }
 
-// ---------- seed ----------
-
-async function resolveSeed(deps: BrainstormDependencies, ctx: BrainstormContext): Promise<string> {
-  const idea = deps.options.idea?.trim()
-  if (idea) return idea
-  if (deps.options.reviewer?.askOpen && await humanReviewEnabled(deps.options.humanReviewOverride)) {
-    try {
-      const answer = await deps.options.reviewer.askOpen({
-        title: '请指定本次研究的 idea / seed（可留空，留空由系统自动选择）',
-        detail: 'Provide a one-sentence research idea or topic seed for the brainstorm.',
-      }, ctx.agentContext.signal, ctx.agentContext.parent)
-      if (answer) {
-        await appendHumanReview(ctx.runDir, { time: new Date().toISOString(), gate: 'idea', verdict: 'approve', feedback: `human seed: ${answer}` })
-        return answer
-      }
-    } catch (error) {
-      await appendHumanReview(ctx.runDir, { time: new Date().toISOString(), gate: 'idea', verdict: 'skipped', feedback: `seed ask failed: ${String(error)}` })
-    }
-  }
-  return ''
-}
-
 // ---------- Stage 1 ----------
 
 function surveyPlan(deps: BrainstormDependencies, ctx: BrainstormState): string {
   return [
-    `Seed: ${ctx.seed || 'None'}`,
     `Stage: survey`,
     `Goal: breadth first; find field surveys/reviews first`,
     `Min surveys: ${deps.options.surveyMinSurveys ?? DEFAULTS.surveyMinSurveys}`,
@@ -320,7 +295,6 @@ async function selectDirections(deps: BrainstormDependencies, ctx: BrainstormSta
   const result = await deps.provider.run('direction-select', {
     runDir: ctx.runDir,
     plan: [
-      `Seed: ${ctx.seed || 'None'}`,
       'Survey wiki index:',
       ctx.wikiIndex,
       '',
@@ -402,7 +376,7 @@ async function propose(deps: BrainstormDependencies, ctx: BrainstormState): Prom
     const result = await deps.provider.run('brainstorm', {
       runDir: ctx.runDir,
       perspective: `propose:${view}`,
-      plan: `Seed: ${ctx.seed || 'None'}\nWiki index:\n${ctx.wikiIndex}`,
+      plan: `Wiki index:\n${ctx.wikiIndex}`,
     }, ctx.agentContext)
     for (const raw of (result.structured as { directions?: Array<Record<string, unknown>> } | undefined)?.directions ?? []) {
       const direction = toDirection({ view, raw, existing: candidates })
@@ -441,7 +415,6 @@ async function debate(deps: BrainstormDependencies, ctx: BrainstormState): Promi
       runDir: ctx.runDir,
       perspective: 'debate',
       plan: [
-        `Seed: ${ctx.seed || 'None'}`,
         `Target direction to attack and revise (id ${candidate.id}): ${candidate.direction}`,
         'All candidates:',
         JSON.stringify(candidates, null, 2),
@@ -474,7 +447,6 @@ async function reform(deps: BrainstormDependencies, ctx: BrainstormState): Promi
     runDir: ctx.runDir,
     perspective: 'chair',
     plan: [
-      `Seed: ${ctx.seed || 'None'}`,
       'Ranked candidates (rank 1 is the only reform target; rank 2/3 are backups):',
       JSON.stringify(ranked, null, 2),
       'Wiki index:',
