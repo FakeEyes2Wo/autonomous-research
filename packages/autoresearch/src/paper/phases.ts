@@ -4,7 +4,7 @@ import { copyFile, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import type { RoleInput, RoleName } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
-import { ensureDir, FAILURE_REPORT_FILE, readText, writeText } from '../core/utils.js'
+import { ensureDir, FAILURE_REPORT_FILE, readOptionalText, readText, writeText } from '../core/utils.js'
 import { appendHumanReview, type HumanReviewAnswer } from '../core/human-review.js'
 import { humanReviewEnabled } from '../session/auto-mode.js'
 import { auditPaper, compilePaper, downloadReferencePdfs, runCompileLoop } from './index.js'
@@ -134,13 +134,12 @@ export async function generateFigures(ctx: PaperContext): Promise<string> {
 export async function writePaper(ctx: PaperContext, feedback?: string): Promise<void> {
   const { runDir, paperDir } = ctx.paths
   const { planText, matrixText, contractText, figuresLatex, styleProfile, evidencePath } = ctx.content
-  const readOptional = (name: string) => readText(join(runDir, name)).catch(() => undefined)
   const [experimentDesign, reflexion, insight, minimalVerification, modelScout] = await Promise.all([
-    readOptional('EXPERIMENT_DESIGN.md'),
-    readOptional('REFLEXION.md'),
-    readOptional('INSIGHT.md'),
-    readOptional('MINIMAL_VERIFICATION.md'),
-    readOptional('MODEL_SCOUT.md'),
+    readOptionalText(join(runDir, 'EXPERIMENT_DESIGN.md')),
+    readOptionalText(join(runDir, 'REFLEXION.md')),
+    readOptionalText(join(runDir, 'INSIGHT.md')),
+    readOptionalText(join(runDir, 'MINIMAL_VERIFICATION.md')),
+    readOptionalText(join(runDir, 'MODEL_SCOUT.md')),
   ])
   const result = await ctx.deps.provider.run('writer', {
     runDir,
@@ -217,7 +216,7 @@ export async function enrichReferences(ctx: PaperContext): Promise<void> {
   const { runDir, paperDir } = ctx.paths
   // PDFs are only supplementary reference material. Download failures are
   // recorded but never treated as citation failures.
-  const bib = await readText(join(paperDir, 'references.bib')).catch(() => '')
+  const bib = (await readOptionalText(join(paperDir, 'references.bib'))) ?? ''
   if (!bib) return
   try {
     await downloadReferencePdfs(runDir, bib, { strict: false })
@@ -301,7 +300,7 @@ export async function improvePaper(ctx: PaperContext, cp: PaperCheckpoint): Prom
     cp.data.improvementRounds = round
     await saveCheckpoint(paperDir, cp)
   }
-  const existing = await readText(join(paperDir, 'PAPER_IMPROVEMENT_LOG.md')).catch(() => '')
+  const existing = (await readOptionalText(join(paperDir, 'PAPER_IMPROVEMENT_LOG.md'))) ?? ''
   await writeText(join(paperDir, 'PAPER_IMPROVEMENT_LOG.md'), `${existing}${log.join('\n')}`)
 }
 

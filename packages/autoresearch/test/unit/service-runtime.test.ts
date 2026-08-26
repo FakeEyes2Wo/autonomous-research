@@ -8,6 +8,7 @@ import { ResearchTree } from '../../dist/core/research-tree.js'
 import { createInitialState } from '../../dist/core/state.js'
 import { createRunContext, type RunContext } from '../../dist/service/context.js'
 import { runAgent, runStage, structuredText } from '../../dist/service/agent.js'
+import { readOptionalText } from '../../dist/core/utils.js'
 
 async function makeContext(run: RoleAgentProvider['run']): Promise<RunContext> {
   const runDir = await mkdtemp(join(tmpdir(), 'ar-runtime-'))
@@ -58,4 +59,11 @@ test('runStage transitions and writes structured output', async (t) => {
   assert.equal(ctx.state.phase, 'experiment_reflexion')
   assert.deepEqual(JSON.parse(text), { verdict: 'proceed' })
   assert.equal(await readFile(join(ctx.runDir, 'EXPERIMENT_REFLEXION.md'), 'utf8'), text)
+})
+
+test('readOptionalText ignores only missing files', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-optional-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  assert.equal(await readOptionalText(join(dir, 'missing.md')), undefined)
+  await assert.rejects(() => readOptionalText(dir))
 })

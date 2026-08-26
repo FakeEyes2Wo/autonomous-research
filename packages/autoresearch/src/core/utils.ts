@@ -72,6 +72,19 @@ export async function readText(file: string): Promise<string> {
   return readFile(file, 'utf8')
 }
 
+/**
+ * Read a text file, treating only a missing file as an optional result.
+ * Any other I/O error is intentionally propagated.
+ */
+export async function readOptionalText(file: string): Promise<string | undefined> {
+  try {
+    return await readText(file)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
 export function safeResolve(runDir: string, ...parts: string[]): string {
   const root = resolve(runDir)
   const target = resolve(root, ...parts)

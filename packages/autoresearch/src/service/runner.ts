@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { RoleExecutionContext } from '../agents/types.js'
-import { DEFAULT_MAX_CYCLES, IDEA_FILE, INPUT_DIR, WORK_DIR, ensureDir, readText, safeResolve, writeText } from '../core/utils.js'
+import { DEFAULT_MAX_CYCLES, IDEA_FILE, INPUT_DIR, WORK_DIR, ensureDir, readOptionalText, safeResolve, writeText } from '../core/utils.js'
 import { HypothesisPool } from '../core/hypothesis-pool.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { recordDecision, recordResult, saveState, transition, writeDecision } from '../core/state.js'
 import type { RunState } from '../core/types.js'
-import { readCandidate, readPlan, readRubric, writeFailureReport, writePlan } from '../domain/files.js'
+import { planPath, readCandidate, readRubric, writeFailureReport, writePlan } from '../domain/files.js'
 import { runBrainstorm } from '../brainstorm/pipeline.js'
 import { treeSummary } from './agent.js'
 import { createRunContext, reloadTree, type RunContext } from './context.js'
@@ -265,19 +265,10 @@ export class ResearchRunner {
   }
 
   private async readProfile(runDir: string): Promise<string> {
-    try {
-      const file = safeResolve(runDir, 'PROFILE.md')
-      return await readText(file)
-    } catch {
-      return ''
-    }
+    return (await readOptionalText(safeResolve(runDir, 'PROFILE.md'))) ?? ''
   }
 
   private async readPlanText(runDir: string, version: number): Promise<string> {
-    try {
-      return await readPlan(runDir, version)
-    } catch {
-      return ''
-    }
+    return (await readOptionalText(planPath(runDir, version))) ?? ''
   }
 }

@@ -1,8 +1,8 @@
 import { join } from 'node:path'
-import { AutoResearchError, newId, writeText } from '../../core/utils.js'
+import { AutoResearchError, newId, readOptionalText, writeText } from '../../core/utils.js'
 import { recordResult, transition } from '../../core/state.js'
 import type { FalsifiabilityReport, IdeaDraft, IdeaPackage, SkepticReport, ValidationPlan } from '../../domain/idea.js'
-import { freezeRubric, readRubric, writeRubric } from '../../domain/files.js'
+import { freezeRubric, readRubric, rubricPath, writeRubric } from '../../domain/files.js'
 import { blockingEvidence, lightHardGate, preGate, structuralCheck } from '../../domain/idea-gate.js'
 import { runAgent, structuredText, treeSummary } from '../agent.js'
 import type { RunContext } from '../context.js'
@@ -30,7 +30,7 @@ interface IdeaReviewerRequest {
 export async function ensureRubric(ctx: RunContext, { idea, profile, feedback }: EnsureRubricInput): Promise<void> {
   await transition(ctx.state, 'rubric', 'rubric-generate')
   const summary = treeSummary(ctx.tree)
-  const previousRubric = await readRubric(ctx.runDir).catch(() => '')
+  const previousRubric = (await readOptionalText(rubricPath(ctx.runDir))) ?? ''
   const generated = await runAgent(ctx, {
     role: 'rubric-generator',
     input: {

@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { test } from 'node:test'
+
+async function sourceFiles(dir: string): Promise<string[]> {
+  const out: string[] = []
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...await sourceFiles(full))
+    if (entry.isFile() && entry.name.endsWith('.ts')) out.push(full)
+  }
+  return out
+}
 
 test('idea steps are functions, not a dependency-holding class', async () => {
   const source = await readFile(join(process.cwd(), 'src/service/steps/idea.ts'), 'utf8')
@@ -47,4 +57,12 @@ test('brainstorm orchestration and ranking do not hold dependency attrs', async 
   assert.doesNotMatch(pipeline, /export class BrainstormPipeline/)
   assert.doesNotMatch(ranking, /export class DefaultRankingStrategy/)
   assert.match(pipeline, /export async function runBrainstorm/)
+})
+
+test('removed wrappers and duplicate optional reads cannot return', async () => {
+  assert.equal(existsSync(join(process.cwd(), 'src/domain/idea-file.ts')), false)
+  const files = await sourceFiles(join(process.cwd(), 'src'))
+  const joined = (await Promise.all(files.map((file) => readFile(file, 'utf8')))).join('\n')
+  assert.doesNotMatch(joined, /readText\([^\n]+\)\.catch\(\(\) => ''\)/)
+  assert.doesNotMatch(joined, /export type RoleName\s*=\s*\|/)
 })

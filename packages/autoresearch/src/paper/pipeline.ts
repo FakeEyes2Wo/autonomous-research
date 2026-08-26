@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { RoleExecutionContext } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
-import { ensureDir, readText, writeText } from '../core/utils.js'
+import { ensureDir, readOptionalText, readText, writeText } from '../core/utils.js'
 import { generatePaperPlan, runCompileLoop } from './index.js'
 import { loadCheckpoint, saveCheckpoint, type PaperCheckpoint } from './checkpoint.js'
 import {
@@ -147,7 +147,7 @@ export async function runPaperPipeline(
     if (needFigures) cp.phases.figures = 'done'
     await save()
   }
-  if (!figuresLatex) figuresLatex = await readText(join(paperDir, 'figures', 'latex_includes.tex')).catch(() => '')
+  if (!figuresLatex) figuresLatex = (await readOptionalText(join(paperDir, 'figures', 'latex_includes.tex'))) ?? ''
 
   const ctx: PaperContext = {
     deps,
@@ -155,7 +155,7 @@ export async function runPaperPipeline(
     content: {
       planText,
       matrixText,
-      contractText: contractFile ? await readText(contractFile).catch(() => '') : '',
+      contractText: contractFile ? (await readOptionalText(contractFile)) ?? '' : '',
       figuresLatex,
       styleProfile: hasStyleRef(deps.options) ? await readStyleProfile(runDir) : undefined,
       evidencePath,

@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { AutoResearchError, readText, writeText } from '../../core/utils.js'
+import { AutoResearchError, readOptionalText, writeText } from '../../core/utils.js'
 import { recordResult } from '../../core/state.js'
 import type { ActionResult, ResearchDecision } from '../../core/types.js'
 import { parseDecision } from '../../core/types.js'
@@ -12,7 +12,7 @@ export async function runPlanner(
   { idea, profile }: { idea: string; profile: string },
 ): Promise<string> {
   const rubric = await readRubric(ctx.runDir)
-  const feedback = (await readText(join(ctx.runDir, 'PLAN_FEEDBACK.md')).catch(() => '')).trim() || undefined
+  const feedback = ((await readOptionalText(join(ctx.runDir, 'PLAN_FEEDBACK.md'))) ?? '').trim() || undefined
   if (feedback) await writeText(join(ctx.runDir, 'PLAN_FEEDBACK.md'), '')
   const result = await runAgent(ctx, {
     role: 'planner',
