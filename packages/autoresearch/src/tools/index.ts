@@ -388,7 +388,7 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
       properties: {
         runDir: runDirSchema,
         projectDir: stringSchema('Optional project root containing .autoresearch/project-settings.yaml'),
-        candidatePath: stringSchema('Optional candidate.md path relative to runDir'),
+        candidatePath: stringSchema('Optional external idea file; copied into input/idea.md'),
         profilePath: stringSchema('Optional PROFILE.md path relative to runDir'),
         maxCycles: { type: 'number', description: 'Optional max research cycles' },
         humanReview: { ...humanReviewModeSchema, description: 'auto follows /auto command, on forces human gates, off skips them' },

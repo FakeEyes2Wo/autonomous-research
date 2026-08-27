@@ -47,6 +47,8 @@ async function prepareRunDir(runDir, candidatePath, profilePath) {
   await mkdir(runDir, { recursive: true })
   if (candidatePath) {
     await mkdir(join(runDir, 'input'), { recursive: true })
+    // ResearchRunner reads input/idea.md; keep candidate.md as a compatibility copy.
+    await cp(candidatePath, join(runDir, 'input', 'idea.md'), { force: true })
     await cp(candidatePath, join(runDir, 'input', 'candidate.md'), { force: true })
   }
   if (profilePath) {

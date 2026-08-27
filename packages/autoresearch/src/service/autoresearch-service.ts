@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs'
+import { copyFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 import { createLogger, DEFAULT_MAX_CYCLES } from '../core/utils.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { createInitialState, loadState, saveState } from '../core/state.js'
@@ -25,6 +28,16 @@ export interface ResearchRunOptions {
 
 export type ResearchRunContext = RoleExecutionContext
 
+async function copyExternalIdea(runDir: string, candidatePath: string): Promise<void> {
+  const runRelative = resolve(runDir, candidatePath)
+  const source = existsSync(runRelative) ? runRelative : resolve(candidatePath)
+  if (!existsSync(source)) throw new Error(`candidate idea not found: ${source}`)
+  const inputDir = join(runDir, 'input')
+  await ensureDir(inputDir)
+  await copyFile(source, join(inputDir, 'idea.md'))
+  await copyFile(source, join(inputDir, 'candidate.md'))
+}
+
 export interface AutoResearchServiceOptions {
   reviewer?: HumanReviewer
   reviewGates?: ReviewGateId[]
@@ -42,6 +55,9 @@ export class AutoResearchService {
     const logger = createLogger(runDir)
     logger.info(`AutoResearchService.run start runDir=${runDir}`)
     await ensureDir(runDir)
+    if (options.candidatePath) {
+      await copyExternalIdea(runDir, options.candidatePath)
+    }
     const existing = await loadState(runDir)
     const state = existing ?? await createInitialState(runDir)
     if (state.status === 'COMPLETED' || state.status === 'FAILED') {
