@@ -1,86 +1,110 @@
 # 基于 DSH 生态的可替换内容与替换 Plan
 
-> 核心判断：保留研究领域逻辑，替换基础设施层。
+> 核心原则：**效率优先**。
+> 只做能实际减少失败、减少重复计算、提升可恢复性的 DSH 适配；
+> 不为“看起来原生”而引入额外复杂度和性能开销。
 
 ---
 
-## 1. 可替换内容总览
+## 0. 什么是“效率优先”
 
-| 当前自定义内容 | DSH 原生替代 | 优先级 |
-|---|---|---|
-| `SubagentRoleAgentProvider` | `dsh-tool-subagent` + `dsh-subagent` | P0 |
-| 自定义等待/超时 | `wait_agent` / `send_message` / `list_agents` | P0 |
-| 自定义 run state / resume | `dsh-session` + `dsh-session-persistence-jsonl` | P0 |
-| 自定义 checkpoint | `dsh-session-checkpoint-policy` + `dsh-session-query` | P1 |
-| 自定义 human review | `dsh-tool-ask-user` / `dsh-user-questions` / `dsh-user-approval` | P1 |
-| 自定义 auto mode | DSH permission / approval presets | P1 |
-| 自定义 roles / prompt 分发 | `dsh-skill` + `dsh-skill-filesystem` + `dsh-tool-skill` | P1 |
-| 自定义后台实验任务 | `dsh-jobs` / `dsh-tool-jobs` / continuable subagent | P1 |
-| 自定义 goal / 循环驱动 | `dsh-goal` + `dsh-tool-goal` + `dsh-command-goal` | P2 |
-| 自定义 plan / 审批 | `dsh-plan-mode` | P2 |
-| 自定义项目设置 | `dsh-settings` + `dsh-settings-file` | P2 |
-| 自定义多 agent 协作 | `dsh-workflow` + `dsh-tool-workflow` | P2 |
-| 自定义文件/workspace | `dsh-fs` / `dsh-workspace` / `dsh-storage` | P3 |
-| 自定义产物展示 | `dsh-client-ui-deliverables` / session export | P3 |
+1. 能确定性生成的，不用 LLM 重复调用。
+2. 能本地修复解析的，不重跑昂贵 subagent。
+3. 能轻量状态恢复的，不引入重编排框架。
+4. 只有 DSH 原生能解决真实问题时才替换。
+5. 每次替换都要有可量化收益。
 
 ---
 
-## 2. 分阶段 Plan
+## 1. 可替换内容总览（效率优先级）
 
-### Phase 0：能力调查（不写代码）
+| 当前自定义内容 | DSH 原生替代 | 优先级 | 收益 |
+|---|---|---|---|
+| 自研 subagent 超时/终止 | DSH `wait_agent` + continuable | P0 | 防止假 FAILED、允许长任务继续 |
+| JSON / structured parse 不健壮 | 本地解析修复 + 错误回退 | P0 | 避免重跑，保证流程稳定 |
+| `SubagentRoleAgentProvider` | `dsh-tool-subagent` + `dsh-subagent` | P0 | 生命周期交给 DSH，减少自研维护 |
+| 长任务实验 | `startContinuable` + durable session | P0 | 可恢复，避免整体重跑 |
+| 自研 run state / resume | `dsh-session` / persistence | P1 | 仅有在“确实需要跨进程恢复”时做 |
+| 自定义 checkpoint | DSH session checkpoint | P2 | 目前阶段性 checkpoint 已够用 |
+| human review | DSH ask-user | P2 | 现有轻量实现效率也高 |
+| roles / prompt 分发 | DSH skill | P2 | 收益不确定，先不做 |
+| goal / 循环驱动 | DSH goal | P3 | 会改变核心流程，慎用 |
+| workflow 多代理 | DSH workflow | P3 | 当前固定流程更可控 |
+| 项目设置 | DSH settings | P3 | 现有 YAML 足够 |
+| 文件 / workspace | DSH fs / storage | P3 | 无必要不迁移 |
+
+---
+
+## 2. 分阶段 Plan（效率优先）
+
+### Phase 0：只做“低成本高收益”适配（不重写流程）
 
 ```text
-TODO：
-- 验证 dsh-tool-subagent continuable 是否能替代 RoleAgentProvider
-- 验证 wait_agent timeout 是否只是父代理等待
-- 验证 list_agents / send_message / interrupt_agent 是否覆盖长任务管理
-- 验证 dsh-session-persistence 是否能存储 run state
-- 验证 dsh-skill 是否能挂载 brainstorm / paper 流程
+TODO（已完成或进行中）：
+- DSH subagent 生命周期适配 ✅
+- research-worker 迁移到 startContinuable ✅
+- structured / JSON parse 修复（下一步优先）
 ```
 
-产出：DSH 能力映射表 + 可删除代码清单 + 保留领域逻辑清单。
+原则：
 
-### Phase 1：替换 subagent 编排层
+- 先确保流程稳定，不引入额外代理；
+- 每一步都要能减少重跑或提高恢复能力。
 
-- 长任务使用 continuable / background；
-- 主 Agent 使用原生 subagent + wait + list + interrupt；
-- 保留 `RoleName → prompt` 映射。
+### Phase 1：JSON / structured 可靠性（最高性价比）
 
-### Phase 2：用 DSH Session 替代自研状态机
+- 统一 `tryParse → extract → repair → fallback`
+- 失败时保留原始输出，不静默重跑
+- 如果修复后仍失败，只在该作用域重试 1 次
+- 避免因一次格式错误导致整个长流程重跑
 
-- `state.json` → DSH session；
-- `events.jsonl` → session log；
-- run phase / checkpoint → session checkpoint；
-- 保留领域数据：research_tree、hypothesis_pool、paper_wiki、evidence_chain。
+### Phase 2：仅在有真实需求时引入 DSH 强基础设施
 
-### Phase 3：把研究流程变成 DSH Skill
+只有在以下情况才做：
 
-```text
-skills/
-  autoresearch-paper-survey/
-  autoresearch-direction-select/
-  autoresearch-frontier-miner/
-  autoresearch-experiment-runner/
-  autoresearch-paper-writer/
-```
+- 需要跨进程恢复长任务；
+- 需要 DSH UI 原生管理子代理；
+- 自研状态机成为维护瓶颈。
 
-每个 skill 包含触发条件、prompt、工具、输出规范、知识库。
+才考虑：
 
-### Phase 4：用 DSH Goal 替代研究循环驱动
+- `dsh-session` / persistence
+- `dsh-tool-subagent-control`
+- `dsh-jobs`
 
-替换 `ResearchRunner` 的 while 循环、maxCycles、supervisor decide。
+### Phase 3：暂不做的替换（观望）
 
-### Phase 5：替换 Human Review 与审批
+- DSH Skill 化
+- DSH Goal 循环驱动
+- DSH Workflow 多代理编排
+- 完全删除 `SubagentRoleAgentProvider`
 
-使用原生 ask-user / user-questions / approval / plan mode。
+原因：
 
-### Phase 6：删除自研代码并迁移数据
-
-确认每个阶段验证通过后，再删除自研基础设施。
+- 当前固定研究循环更可控；
+- 效率收益尚未验证；
+- 过度适配会引入额外上下文和不确定性。
 
 ---
 
-## 3. 最终目标形态
+## 3. 效率指标
+
+每次适配后衡量：
+
+| 指标 | 目标 |
+|---|---|
+| 子代理重跑次数 | 下降 |
+| 因 JSON 解析失败导致的重跑 | 归零 |
+| 长任务误 FAILED | 归零 |
+| 可断点恢复阶段 | 增加 |
+| 自定义基础设施代码量 | 不增加，优先减少 |
+| 单次研究总耗时 | 不因适配而上升 |
+
+只有满足这些指标，才继续下一阶段适配。
+
+---
+
+## 4. 最终目标形态（效率优先版）
 
 ```text
 DSH Agent（原生）
@@ -102,7 +126,7 @@ DSH Agent（原生）
 
 ---
 
-## 4. 风险
+## 5. 风险
 
 1. 不能一次性全部替换，先 P0/P1；
 2. 每个替换保留领域数据文件兼容；
