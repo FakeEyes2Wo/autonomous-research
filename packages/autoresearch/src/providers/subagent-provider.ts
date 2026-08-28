@@ -1,4 +1,5 @@
 import { buildPrompt, outputSchemaFor } from '../agents/factory.js'
+import { extractJson } from '../agents/json-repair.js'
 import { createLogger } from '../core/utils.js'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../agents/types.js'
 
@@ -131,10 +132,14 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       .filter((block): block is ContentBlockLike & { text: string } => block.type === 'text' && typeof block.text === 'string')
       .map((block) => block.text)
       .join('')
-    if (end.stopReason !== 'completed') {
+    const structured = extractJson(text)
+    if (end.stopReason !== 'completed' && structured === undefined) {
       throw new Error(`role agent ${role} ended with stopReason=${end.stopReason}`)
     }
-    return { text, structured: undefined, stopReason: end.stopReason }
+    if (end.stopReason !== 'completed' && structured !== undefined) {
+      logger.warn(`[subagent:${role}] accepting partial structured output despite stopReason=${end.stopReason}`)
+    }
+    return { text, structured, stopReason: end.stopReason }
   }
 
   private async runOneShot(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
@@ -153,15 +158,19 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     logger.info(`[subagent:${role}] started id=${String(run.id ?? '')}`)
     const result = await run.result
     logger.info(`[subagent:${role}] result stopReason=${result.stopReason} in ${Date.now() - started}ms`)
+    const text = result.output
+      .filter((block): block is ContentBlockLike & { text: string } => block.type === 'text' && typeof block.text === 'string')
+      .map((block) => block.text)
+      .join('')
+    const structured = result.structured ?? extractJson(text)
     await run.dispose()
-    if (result.stopReason !== 'completed') {
+    if (result.stopReason !== 'completed' && structured === undefined) {
       throw new Error(`role agent ${role} ended with stopReason=${result.stopReason}`)
     }
-    return {
-      text: result.output.filter((block): block is ContentBlockLike & { text: string } => block.type === 'text' && typeof block.text === 'string').map((block) => block.text).join(''),
-      structured: result.structured,
-      stopReason: result.stopReason,
+    if (result.stopReason !== 'completed' && structured !== undefined) {
+      logger.warn(`[subagent:${role}] accepting partial structured output despite stopReason=${result.stopReason}`)
     }
+    return { text, structured, stopReason: result.stopReason }
   }
 
   async run(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
