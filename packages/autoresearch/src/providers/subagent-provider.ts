@@ -1,10 +1,13 @@
 import { buildPrompt, outputSchemaFor } from '../agents/factory.js'
-import { extractJson } from '../agents/json-repair.js'
+import { parseJsonDetailed } from '../agents/json-repair.js'
 import { createLogger } from '../core/utils.js'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../agents/types.js'
 
 // TODO: 需要调查 DSH 原生 Agent 编排 vs 固定研究循环编排（RoleAgentProvider + ResearchRunner）的效果，
 // 确定是否应彻底删除本 provider 并改为 DSH Agent 直接编排 subagent。
+
+const MAX_JSON_ATTEMPTS = 3
+const LONG_TASK_ROLES = new Set<RoleName>(['research-worker'])
 
 interface ContentBlockLike {
   type: string
@@ -66,7 +69,23 @@ export interface SubagentProviderOptions {
   context?: SubagentEventContextLike
 }
 
-const LONG_TASK_ROLES = new Set<RoleName>(['research-worker'])
+function withFeedback(prompt: string, feedback: string | undefined): string {
+  return feedback ? `${prompt}\n\n## JSON Fix Required\n\n${feedback}` : prompt
+}
+
+function buildJsonFixFeedback(attempt: number, text: string, error: string): string {
+  return [
+    `Your previous response could not be parsed as structured JSON (attempt ${attempt}).`,
+    '',
+    'Previous output:',
+    text.slice(0, 4000),
+    '',
+    'Parse error:',
+    error,
+    '',
+    'Return ONLY a valid JSON object or array. Do not include prose, markdown fences, or explanations.',
+  ].join('\n')
+}
 
 export class SubagentRoleAgentProvider implements RoleAgentProvider {
   private readonly runtime: SubagentRuntimeLike
@@ -109,18 +128,24 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     })
   }
 
-  private async runContinuable(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
+  private async runContinuableAttempt(
+    role: RoleName,
+    input: RoleInput,
+    context: RoleExecutionContext,
+    feedback?: string,
+  ): Promise<RoleOutput> {
     if (!this.runtime.startContinuable || !this.eventContext) {
-      return this.runOneShot(role, input, context)
+      return this.runOneShotAttempt(role, input, context, feedback)
     }
     const logger = createLogger(input.runDir)
     const prompt = await buildPrompt(role, input)
+    const promptWithFeedback = withFeedback(prompt, feedback)
     logger.info(`[subagent:${role}] calling ctx.subagents.startContinuable provider=${this.providerName}`)
     const started = await this.runtime.startContinuable({
       provider: this.providerName,
       label: role,
       request: {
-        prompt: [{ type: 'text', text: prompt }],
+        prompt: [{ type: 'text', text: promptWithFeedback }],
         parent: context.parent,
       },
       signal: context.signal,
@@ -132,25 +157,26 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       .filter((block): block is ContentBlockLike & { text: string } => block.type === 'text' && typeof block.text === 'string')
       .map((block) => block.text)
       .join('')
-    const structured = extractJson(text)
-    if (end.stopReason !== 'completed' && structured === undefined) {
-      throw new Error(`role agent ${role} ended with stopReason=${end.stopReason}`)
-    }
-    if (end.stopReason !== 'completed' && structured !== undefined) {
-      logger.warn(`[subagent:${role}] accepting partial structured output despite stopReason=${end.stopReason}`)
-    }
+    const parsed = parseJsonDetailed(text)
+    const structured = parsed.ok ? parsed.value : undefined
     return { text, structured, stopReason: end.stopReason }
   }
 
-  private async runOneShot(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
+  private async runOneShotAttempt(
+    role: RoleName,
+    input: RoleInput,
+    context: RoleExecutionContext,
+    feedback?: string,
+  ): Promise<RoleOutput> {
     const logger = createLogger(input.runDir)
     const prompt = await buildPrompt(role, input)
+    const promptWithFeedback = withFeedback(prompt, feedback)
     const schema = outputSchemaFor(role)
     logger.info(`[subagent:${role}] calling ctx.subagents.start provider=${this.providerName}`)
     const started = Date.now()
     const run = await this.runtime.start(this.providerName, {
       label: role,
-      prompt: [{ type: 'text', text: prompt }],
+      prompt: [{ type: 'text', text: promptWithFeedback }],
       parent: context.parent,
       signal: context.signal,
       ...(schema !== undefined ? { outputSchema: schema } : {}),
@@ -162,21 +188,49 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       .filter((block): block is ContentBlockLike & { text: string } => block.type === 'text' && typeof block.text === 'string')
       .map((block) => block.text)
       .join('')
-    const structured = result.structured ?? extractJson(text)
     await run.dispose()
-    if (result.stopReason !== 'completed' && structured === undefined) {
-      throw new Error(`role agent ${role} ended with stopReason=${result.stopReason}`)
+    return { text, structured: result.structured, stopReason: result.stopReason }
+  }
+
+  private async retryJson<T extends RoleOutput>(
+    role: RoleName,
+    runDir: string,
+    attemptFn: (feedback?: string) => Promise<T>,
+  ): Promise<T> {
+    const logger = createLogger(runDir)
+    let feedback: string | undefined
+    for (let attempt = 1; attempt <= MAX_JSON_ATTEMPTS; attempt += 1) {
+      const output = await attemptFn(feedback)
+      const parsed = output.structured !== undefined
+        ? { ok: true as const, value: output.structured }
+        : parseJsonDetailed(output.text)
+      if (parsed.ok) {
+        return { ...output, structured: parsed.value }
+      }
+      if (attempt < MAX_JSON_ATTEMPTS) {
+        feedback = buildJsonFixFeedback(attempt, output.text, parsed.error)
+        logger.warn(`[subagent:${role}] JSON parse failed, retrying ${attempt + 1}/${MAX_JSON_ATTEMPTS}: ${parsed.error}`)
+      } else {
+        throw new Error(
+          `role agent ${role} produced no parseable JSON after ${MAX_JSON_ATTEMPTS} attempts: ${parsed.error}\nLast output:\n${output.text}`,
+        )
+      }
     }
-    if (result.stopReason !== 'completed' && structured !== undefined) {
-      logger.warn(`[subagent:${role}] accepting partial structured output despite stopReason=${result.stopReason}`)
-    }
-    return { text, structured, stopReason: result.stopReason }
+    throw new Error(`role agent ${role} JSON retry exhausted`)
+  }
+
+  private runOneShotWithRetry(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
+    return this.retryJson(role, input.runDir, (feedback) => this.runOneShotAttempt(role, input, context, feedback))
+  }
+
+  private runContinuableWithRetry(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
+    return this.retryJson(role, input.runDir, (feedback) => this.runContinuableAttempt(role, input, context, feedback))
   }
 
   async run(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
     if (LONG_TASK_ROLES.has(role)) {
-      return this.runContinuable(role, input, context)
+      return this.runContinuableWithRetry(role, input, context)
     }
-    return this.runOneShot(role, input, context)
+    return this.runOneShotWithRetry(role, input, context)
   }
 }
