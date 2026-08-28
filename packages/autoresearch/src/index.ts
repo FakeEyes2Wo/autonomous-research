@@ -55,7 +55,7 @@ export function apply(ctx: {
   userQuestions: DshUserQuestions
   provide(name: string, service: unknown): unknown
 }): void {
-  const provider = new SubagentRoleAgentProvider(ctx.subagents as never)
+  const provider = new SubagentRoleAgentProvider(ctx.subagents as never, { context: ctx as never })
 
   const reviewer: HumanReviewer = {
     async ask(request: HumanReviewRequest, signal: AbortSignal, agent?: unknown): Promise<HumanReviewAnswer> {
