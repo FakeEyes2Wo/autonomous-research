@@ -2,6 +2,9 @@ import { buildPrompt, outputSchemaFor } from '../agents/factory.js'
 import { createLogger } from '../core/utils.js'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../agents/types.js'
 
+// TODO: 需要调查 DSH 原生 Agent 编排 vs 固定研究循环编排（RoleAgentProvider + ResearchRunner）的效果，
+// 确定是否应彻底删除本 provider 并改为 DSH Agent 直接编排 subagent。
+
 interface ContentBlockLike {
   type: string
   text?: string
