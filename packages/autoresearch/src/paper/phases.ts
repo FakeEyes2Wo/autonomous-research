@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { copyFile, readFile, writeFile } from 'node:fs/promises'
+import { copyFile, readFile, readdir, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import type { RoleInput, RoleName } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
@@ -8,6 +8,8 @@ import { ensureDir, FAILURE_REPORT_FILE, readOptionalText, readText, writeText }
 import { appendHumanReview, type HumanReviewAnswer } from '../core/human-review.js'
 import { humanReviewEnabled } from '../session/auto-mode.js'
 import { auditPaper, compilePaper, downloadReferencePdfs, runCompileLoop } from './index.js'
+import { runReflexion } from '../service/agent-loop.js'
+import { writeFailureReflexion } from '../core/failure-reflexion.js'
 import type { PaperCheckpoint } from './checkpoint.js'
 import { saveCheckpoint } from './checkpoint.js'
 import { collectEvidenceIds, loadEvidenceChain, type EvidenceChain } from '../export/evidence-chain.js'
@@ -16,8 +18,17 @@ import type { PaperContext, PaperOptions } from './context.js'
 export type { PaperOptions } from './context.js'
 
 export const DEFAULT_VENUE = 'ICLR'
-const MAX_CONTRACT_ROUNDS = 3
 const MAX_FIGURE_RETRIES = 2
+
+const RASTER_RE = /\.(png|jpe?g|webp|gif)$/i
+
+async function collectFigureImages(paperDir: string): Promise<string[]> {
+  const figuresDir = join(paperDir, 'figures')
+  const entries = await readdir(figuresDir, { withFileTypes: true }).catch(() => [])
+  return entries
+    .filter((entry) => entry.isFile() && RASTER_RE.test(entry.name))
+    .map((entry) => join(figuresDir, entry.name))
+}
 
 export const PAPER_AUDITS = [
   { name: 'proof', role: 'proof-checker', file: 'PROOF_AUDIT.json' },
@@ -70,23 +81,36 @@ export async function negotiateContract(ctx: PaperContext): Promise<string> {
   const { runDir, paperDir } = ctx.paths
   const { planText, matrixText, evidencePath } = ctx.content
   const file = join(paperDir, 'PAPER_ACCEPTANCE_CONTRACT.md')
-  let contract = ''
-  for (let round = 0; round < MAX_CONTRACT_ROUNDS; round += 1) {
-    const draft = await ctx.deps.provider.run('contract-negotiator', {
-      runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText,
-      paperContract: contract || undefined, plan: round ? `Revise per demands:\n${contract}` : undefined,
-    }, ctx.agentContext)
-    contract = (draft.structured as { contract?: string } | undefined)?.contract ?? draft.text
-    await writeText(file, contract)
+  const base = { runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText }
 
-    const review = await ctx.deps.provider.run('contract-reviewer', {
-      runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText, paperContract: contract,
-    }, ctx.agentContext)
-    const verdict = review.structured as { accepted?: boolean; demands?: string[] } | undefined
-    if (verdict?.accepted) return file
-    contract = `## Reviewer Demands\n\n${(verdict?.demands ?? []).join('\n')}\n\n## Current Contract\n\n${contract}`
-  }
-  await writeText(file, `${contract}\n\n## Disputed\n\nNot accepted after ${MAX_CONTRACT_ROUNDS} rounds.\n`)
+  await runReflexion<string>(
+    (role, input) => ctx.deps.provider.run(role, input, ctx.agentContext),
+    'contract-negotiator',
+    {
+      reflexion: (contract, round) =>
+        `Self-reflexion round ${round}: review the contract below. Fix untestable assertions, missing evidence coverage, and overclaim risks. Return only the improved contract.\n\nCurrent contract:\n${contract}`,
+      buildInput: (current, round, reflexion) => ({
+        ...base,
+        ...(current ? { paperContract: current, plan: reflexion } : {}),
+      }),
+      parse: (result) => (result.structured as { contract?: string } | undefined)?.contract ?? result.text,
+      apply: async (contract) => {
+        await writeText(file, contract)
+      },
+      onAbnormalExit: async (info) => {
+        await writeFailureReflexion(runDir, {
+          role: info.role,
+          stage: 'paper-contract',
+          round: info.round,
+          stopReason: info.stopReason,
+          error: info.error instanceof Error ? info.error.message : info.error === undefined ? undefined : String(info.error),
+          context: { runDir, planText, matrixText, evidencePath },
+          result: info.result,
+        })
+      },
+    },
+  )
+
   return file
 }
 
@@ -97,14 +121,10 @@ export async function generateFigures(ctx: PaperContext): Promise<string> {
   await ensureDir(figuresDir)
   let latexIncludes = ''
   let feedback: string | undefined
-  for (let attempt = 0; attempt <= MAX_FIGURE_RETRIES; attempt += 1) {
-    const result = await ctx.deps.provider.run('figure-generator', {
-      runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText, plan: feedback,
-    }, ctx.agentContext)
-    const structured = result.structured as { scripts?: Record<string, string>; latexIncludes?: string } | undefined
-    latexIncludes = structured?.latexIncludes ?? ''
+
+  const writeAndRun = async (scripts: Record<string, string>): Promise<string[]> => {
     const errors: string[] = []
-    for (const [name, content] of Object.entries(structured?.scripts ?? {})) {
+    for (const [name, content] of Object.entries(scripts)) {
       const safe = basename(name).replace(/[^A-Za-z0-9._-]/g, '_')
       const scriptPath = join(figuresDir, safe)
       await writeText(scriptPath, content)
@@ -113,20 +133,68 @@ export async function generateFigures(ctx: PaperContext): Promise<string> {
         if (run.status !== 0) errors.push(`${safe}: ${(run.stderr ?? run.stdout ?? '').slice(0, 500)}`)
       }
     }
-    if (errors.length === 0) {
-      const review = await ctx.deps.provider.run('figure-reflexion', {
-        runDir,
-        paperPlan: planText,
-        paperFigures: latexIncludes,
-        plan: JSON.stringify(structured?.scripts ?? {}),
-      }, ctx.agentContext)
-      const r = review.structured as { verdict?: string; issues?: string[] } | undefined
-      if (r?.verdict === 'pass') break
-      feedback = `Fix figure quality issues (if any figure has an embedded main title, remove it and keep only subplot labels):\n${(r?.issues ?? []).join('\n')}`
+    return errors
+  }
+
+  const runFigure = async (input: RoleInput, label: string) => {
+    try {
+      return await ctx.deps.provider.run('figure-generator', input, ctx.agentContext)
+    } catch (error) {
+      await writeFailureReflexion(runDir, {
+        role: 'figure-generator',
+        stage: 'paper-figure',
+        round: 0,
+        stopReason: 'agent_error',
+        error: error instanceof Error ? error.message : String(error),
+        context: input,
+      })
+      throw error
+    }
+  }
+
+  for (let attempt = 0; attempt <= MAX_FIGURE_RETRIES; attempt += 1) {
+    const result = await runFigure({
+      runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText, plan: feedback,
+    }, 'figure-generator')
+    const structured = result.structured as { scripts?: Record<string, string>; latexIncludes?: string } | undefined
+    latexIncludes = structured?.latexIncludes ?? ''
+    const errors = await writeAndRun(structured?.scripts ?? {})
+    if (errors.length > 0) {
+      feedback = `Fix figure errors:\n${errors.join('\n')}`
       continue
     }
-    feedback = `Fix figure errors:\n${errors.join('\n')}`
+
+    const figureImages = ctx.deps.options.supportsImageInput
+      ? await collectFigureImages(paperDir)
+      : []
+
+    let retry = false
+    for (let round = 1; round <= 3; round += 1) {
+      const reflex = await runFigure({
+        runDir,
+        evidenceChainPath: evidencePath,
+        paperPlan: planText,
+        paperMatrix: matrixText,
+        paperFigures: latexIncludes,
+        ...(figureImages.length > 0 ? { figureImages } : {}),
+        plan: `Self-reflexion round ${round}: check textOverload, elementOverload, elementOverlap, and embedded main title. Return improved scripts and latexIncludes.\n\nCurrent latexIncludes:\n${latexIncludes}`,
+      }, 'figure-generator')
+      const improved = reflex.structured as { scripts?: Record<string, string>; latexIncludes?: string } | undefined
+      if (!improved?.scripts && !improved?.latexIncludes) break
+      const reflexErrors = await writeAndRun(improved.scripts ?? {})
+      if (reflexErrors.length > 0) {
+        feedback = `Fix figure errors after self-reflexion:\n${reflexErrors.join('\n')}`
+        retry = true
+        break
+      }
+      const nextLatex = improved.latexIncludes ?? ''
+      if (!nextLatex || nextLatex === latexIncludes) break
+      latexIncludes = nextLatex
+    }
+    if (retry) continue
+    break
   }
+
   await writeText(join(figuresDir, 'latex_includes.tex'), latexIncludes || '% No generated figures.\n')
   return latexIncludes
 }

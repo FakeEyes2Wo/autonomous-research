@@ -12,6 +12,7 @@ export interface PaperOptions {
   humanReviewer?: HumanReviewer
   humanReviewOverride?: HumanReviewMode
   figureApi?: FigureApiSettings
+  supportsImageInput?: boolean
 }
 
 export interface PaperDependencies {

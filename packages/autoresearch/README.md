@@ -88,6 +88,45 @@ npm run run:headless -- --run-dir C:/tmp/my-run --max-cycles 3
 npm run run:headless -- --candidate C:/path/idea.md --profile-file C:/path/PROFILE.md
 ```
 
+### 实验限制文件（`--profile-file`）
+
+`--profile-file` 指定本次实验的领域画像 / 限制文件。脚本会把它复制到：
+
+```text
+<runDir>/PROFILE.md
+```
+
+`PROFILE.md` 会被以下角色读取：
+
+- `idea-generator`
+- `rubric-generator`
+- `planner`
+- 后续研究流程
+
+其作用是告诉模型：
+
+- 这个研究方向/领域是什么；
+- 允许使用哪些方法和资源；
+- 禁止做什么；
+- 哪些内容算有效证据；
+- 最终交付物是什么。
+
+示例：
+
+```markdown
+# PROFILE
+
+- 允许：本地小规模数据实验、公开文献检索、代码分析与统计检验。
+- 禁止：读取或引用隐藏目标论文；删除阴性/失败结果。
+- 有效证据：可复现的日志、数据、代码或统计输出。
+- 交付：Markdown 论文草稿与最终/失败报告。
+```
+
+该参数是可选的：
+
+- 如果未传，runner 会尝试读取 `<runDir>/PROFILE.md`；
+- 如果仍不存在，则 profile 为空字符串。
+
 断点续跑：
 
 ```bash

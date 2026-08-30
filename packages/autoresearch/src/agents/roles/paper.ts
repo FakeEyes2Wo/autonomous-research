@@ -15,6 +15,7 @@ export const paperSectionTitles = {
   venue: 'Venue',
   assurance: 'Assurance',
   paperPath: 'Paper Directory',
+  figureImages: 'Figure Images',
 } as const
 
 /**
@@ -58,29 +59,12 @@ export const paperRoleSpecs = {
       contract: { type: 'string', required: true },
     }),
   },
-  'contract-reviewer': {
-    sections: ['evidenceChainPath', 'paperPlan', 'paperMatrix', 'paperContract'],
-    outputSchema: objectSchema({
-      accepted: { type: 'boolean', required: true },
-      demands: { type: 'array', items: { type: 'string' }, required: true },
-    }),
-  },
   'figure-generator': {
-    sections: ['plan', 'evidenceChainPath', 'paperPlan', 'paperMatrix'],
+    sections: ['plan', 'evidenceChainPath', 'paperPlan', 'paperMatrix', 'paperFigures', 'figureImages'],
     outputSchema: objectSchema({
       scripts: { type: 'object', additionalProperties: true, required: true },
       latexIncludes: { type: 'string' },
       notes: { type: 'string' },
-    }),
-  },
-  'figure-reflexion': {
-    sections: ['plan', 'paperPlan', 'paperFigures'],
-    outputSchema: objectSchema({
-      verdict: { type: 'string', enum: ['pass', 'revise'], required: true },
-      issues: { type: 'array', items: { type: 'string' }, required: true },
-      textOverload: { type: 'boolean', required: true },
-      elementOverload: { type: 'boolean', required: true },
-      elementOverlap: { type: 'boolean', required: true },
     }),
   },
   'proof-checker': {
@@ -132,12 +116,6 @@ export const paperRoleSpecs = {
       mainTex: { type: 'string', required: true },
       sections: { type: 'object', additionalProperties: true },
       changes: { type: 'array', items: { type: 'string' }, required: true },
-    }),
-  },
-  'final-report-writer': {
-    sections: ['evidenceChainPath', 'paperPath'],
-    outputSchema: objectSchema({
-      report: { type: 'string', required: true },
     }),
   },
 } satisfies Record<string, RoleSpec>

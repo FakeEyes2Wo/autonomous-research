@@ -18,7 +18,7 @@ test('brainstorm prompts are topic-isolated and do not receive a seed or prior d
 
     await service.run({ runDir: dir, idea: 'conflictive multi-view learning' }, context)
 
-    const brainstormRoles = new Set(['paper-survey', 'direction-select', 'paper-frontier-miner', 'paper-wiki-writer', 'brainstorm'])
+    const brainstormRoles = new Set(['paper-survey', 'direction-select', 'paper-frontier-miner', 'brainstorm'])
     const plans = provider.inputs
       .filter((entry) => brainstormRoles.has(entry.role))
       .map((entry) => String(entry.input.plan ?? ''))
@@ -49,7 +49,8 @@ test('brainstorm pre-phase surveys field, selects directions, mines latest, writ
     assert.equal(provider.calls.includes('paper-survey'), true)
     assert.equal(provider.calls.includes('direction-select'), true)
     assert.equal(provider.calls.includes('paper-frontier-miner'), true)
-    assert.equal(provider.calls.includes('paper-wiki-writer'), true)
+    // Default wiki generation is programmatic, so the slow LLM writer should not be called.
+    assert.equal(provider.calls.includes('paper-wiki-writer'), false)
     assert.equal(provider.calls.filter((role) => role === 'brainstorm').length >= 5, true)
 
     const idea = await readFile(join(dir, 'input', 'idea.md'), 'utf8')
@@ -68,6 +69,8 @@ test('brainstorm pre-phase surveys field, selects directions, mines latest, writ
     assert.equal(kg.edges.length > 0, true)
     const wiki = await readFile(join(dir, 'paper_wiki', '_index.md'), 'utf8')
     assert.match(wiki, /Paper Wiki Index/)
+    const sampleWiki = await readFile(join(dir, 'paper_wiki', 's001.md'), 'utf8')
+    assert.match(sampleWiki, /# /)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

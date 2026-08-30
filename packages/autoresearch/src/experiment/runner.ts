@@ -103,8 +103,10 @@ export async function runExperimentTask(
     await recordResult(state, `experiment-plan-${cycle}`, { planFile })
     ctx.logger.info(`experiment plan written ${planFile}`)
 
-    const minimalVerification = await runMinimalVerification(ctx, { planText })
-    const modelScout = await runModelScout(ctx, { planText })
+    const [minimalVerification, modelScout] = await Promise.all([
+      runMinimalVerification(ctx, { planText }),
+      runModelScout(ctx, { planText }),
+    ])
     const experimentDesign = await runExperimentDesign(ctx, { planText, minimalVerification, modelScout })
     await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
 

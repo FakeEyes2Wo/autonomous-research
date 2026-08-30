@@ -9,13 +9,11 @@ import { safeResolve, IDEA_FILE, INPUT_DIR, PROFILE_FILE, writeText } from '../c
  */
 export const BRAINSTORM_DIR = 'brainstorm'
 export const PAPER_WIKI_DIR = 'paper_wiki'
-export const SEED_FILE = 'SEED.md'
 export const DEBATE_FILE = 'DEBATE.md'
 export const IDEA_FILE_NAME = 'IDEA.md'
 export const WIKI_INDEX_FILE = '_index.md'
 
 export const brainstormDirPath = (runDir: string) => safeResolve(runDir, BRAINSTORM_DIR)
-export const seedPath = (runDir: string) => safeResolve(runDir, BRAINSTORM_DIR, SEED_FILE)
 export const debatePath = (runDir: string) => safeResolve(runDir, BRAINSTORM_DIR, DEBATE_FILE)
 export const ideaPath = (runDir: string) => safeResolve(runDir, BRAINSTORM_DIR, IDEA_FILE_NAME)
 export const wikiIndexPath = (runDir: string) => safeResolve(runDir, PAPER_WIKI_DIR, WIKI_INDEX_FILE)

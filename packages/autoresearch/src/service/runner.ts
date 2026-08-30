@@ -8,6 +8,7 @@ import { recordDecision, recordResult, saveState, transition, writeDecision } fr
 import type { RunState } from '../core/types.js'
 import { planPath, readCandidate, readRubric, writeFailureReport, writePlan } from '../domain/files.js'
 import { runBrainstorm } from '../brainstorm/pipeline.js'
+import { runInitialDeepDive } from '../brainstorm/deep-dive.js'
 import { treeSummary } from './agent.js'
 import { createRunContext, reloadTree, type RunContext } from './context.js'
 import { reviewGate } from './review.js'
@@ -42,7 +43,8 @@ export class ResearchRunner {
     const ctx = createRunContext(this.deps, runDir, state, tree, context)
     ctx.logger.info(`run started runDir=${runDir} runId=${state.runId} status=${state.status} cycle=${state.cycle}`)
 
-    if (this.shouldBrainstorm(runDir)) {
+    const shouldBrainstorm = this.shouldBrainstorm(runDir)
+    if (shouldBrainstorm) {
       await transition(state, 'brainstorm', 'brainstorm-pipeline')
       const brainstormOptions = {
         ...(this.deps.projectSettings ? {
@@ -75,6 +77,20 @@ export class ResearchRunner {
       return state
     }
 
+    let deepDive = { relatedPapers: '', baselines: '' }
+    if (!shouldBrainstorm && this.deps.deepDiveEnabled !== false) {
+      try {
+        deepDive = await runInitialDeepDive(
+          { provider: this.deps.provider, topN: this.deps.deepDiveTopN },
+          { runDir, idea: candidate.raw, profile, agentContext: context },
+        )
+        ctx.logger.info('initial deep-dive done')
+      } catch (error) {
+        ctx.logger.warn(`initial deep-dive failed; continuing with self-designed baseline: ${String(error)}`)
+        deepDive = { relatedPapers: '', baselines: 'No external baseline found. We will design a baseline ourselves.' }
+      }
+    }
+
     if (tree.query({ kind: 'hypothesis' }).length === 0) {
       tree.add('hypothesis', candidate.direction, { status: 'proposed' })
       await tree.save()
@@ -83,7 +99,7 @@ export class ResearchRunner {
     const pool = await HypothesisPool.load(runDir)
 
     if (tree.query({ kind: 'hypothesis' }).length <= 1) {
-      await runIdeaGeneration(ctx, { idea: candidate.raw, profile })
+      await runIdeaGeneration(ctx, { idea: candidate.raw, profile, relatedPapers: deepDive.relatedPapers, baselines: deepDive.baselines })
     }
     pool.syncFromTree(ctx.tree, state.runId)
     await pool.save()
@@ -99,7 +115,7 @@ export class ResearchRunner {
     }
     if (ideaVerdict.verdict === 'revise') {
       ctx.logger.info('human requested idea revision; re-running idea generation')
-      await runIdeaGeneration(ctx, { idea: candidate.raw, profile, feedback: ideaVerdict.feedback })
+      await runIdeaGeneration(ctx, { idea: candidate.raw, profile, relatedPapers: deepDive.relatedPapers, baselines: deepDive.baselines, feedback: ideaVerdict.feedback })
       pool.syncFromTree(ctx.tree, state.runId)
       await pool.save()
       await reloadTree(ctx)
@@ -135,8 +151,10 @@ export class ResearchRunner {
       }
 
       const planText = await this.readPlanText(runDir, state.planVersion)
-      const minimalVerification = await runMinimalVerification(ctx, { planText })
-      const modelScout = await runModelScout(ctx, { planText })
+      const [minimalVerification, modelScout] = await Promise.all([
+        runMinimalVerification(ctx, { planText }),
+        runModelScout(ctx, { planText }),
+      ])
       let experimentDesign = await runExperimentDesign(ctx, { planText, minimalVerification, modelScout })
       await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
 
@@ -180,7 +198,7 @@ export class ResearchRunner {
       const failureDirections = await runResultReflexion(ctx, { planText, experimentDesign })
       const insight = await runInsightAbstractor(ctx, { planText, experimentDesign, failureDirections })
 
-      await runIdeaGeneration(ctx, { idea: candidate.raw, profile, failureDirections, insight })
+      await runIdeaGeneration(ctx, { idea: candidate.raw, profile, relatedPapers: deepDive.relatedPapers, baselines: deepDive.baselines, failureDirections, insight })
       pool.syncFromTree(ctx.tree, state.runId)
       await pool.save()
       await reloadTree(ctx)

@@ -39,6 +39,8 @@ import {
   type KnowledgeCluster,
   type KnowledgeDirection,
 } from './knowledge-graph.js'
+import { renderPaperWiki } from './wiki-render.js'
+import { selectCuratedPapers, writeCuratedPapers } from './curated-papers.js'
 
 const DEFAULTS = {
   surveyMinSurveys: 3,
@@ -59,6 +61,9 @@ export interface BrainstormOptions {
   latestWindowYears?: number
   maxSelectedDirections?: number
   enableKnowledgeGraph?: boolean
+  curatedEnabled?: boolean
+  curatedTopN?: number
+  curatedMaxAgeYears?: number
 }
 
 export interface BrainstormDependencies {
@@ -147,7 +152,7 @@ export async function runBrainstorm(
   state = { ...state, surveyRaw, clusters, surveyPapers, records: surveyPapers }
 
   await atomicWriteJson(surveyPoolPath(runDir), surveyRaw)
-  await writeWikis(deps, state, surveyPapers, 'survey')
+  await writeWikis(deps, state, surveyPapers)
   await writeSurveyOverview(deps, state, surveyRaw)
 
   const surveyIndex = renderUnifiedWikiIndex(surveyPapers)
@@ -167,7 +172,19 @@ export async function runBrainstorm(
 
   await atomicWriteJson(frontierPoolPath(runDir), frontierRaw)
   await atomicWriteJson(paperRecordsPath(runDir), records)
-  await writeWikis(deps, state, frontierPapers, 'latest')
+
+  if (deps.options.curatedEnabled !== false) {
+    const curated = selectCuratedPapers(records, {
+      topN: deps.options.curatedTopN,
+      maxAgeYears: deps.options.curatedMaxAgeYears,
+    })
+    await writeCuratedPapers(runDir, curated, {
+      topN: deps.options.curatedTopN,
+      maxAgeYears: deps.options.curatedMaxAgeYears,
+    })
+  }
+
+  await writeWikis(deps, state, frontierPapers)
   await writeDirectionsOverview(state, directions)
 
   const mergedIndex = renderUnifiedWikiIndex(records)
@@ -243,20 +260,10 @@ async function writeWikis(
   deps: BrainstormDependencies,
   ctx: BrainstormState,
   records: readonly PaperRecord[],
-  stage: 'survey' | 'latest',
 ): Promise<void> {
   if (records.length === 0) return
-  const result = await deps.provider.run('paper-wiki-writer', {
-    runDir: ctx.runDir,
-    plan: JSON.stringify({ papers: records, stageHint: stage }, null, 2),
-  }, ctx.agentContext)
-  const wikis = (result.structured as { wikis?: Record<string, string> } | undefined)?.wikis ?? {}
-  const missing = records.filter((paper) => !wikis[paper.id])
-  if (missing.length > 0) {
-    throw new AutoResearchError(`paper wiki missing ${missing.length} ${stage} papers`, 'AGENT_FAILED')
-  }
-  for (const [id, markdown] of Object.entries(wikis)) {
-    await writeText(paperWikiPath(ctx.runDir, id), markdown)
+  for (const paper of records) {
+    await writeText(paperWikiPath(ctx.runDir, paper.id), renderPaperWiki(paper))
   }
 }
 
@@ -336,7 +343,9 @@ async function frontierMine(deps: BrainstormDependencies, ctx: BrainstormState):
     throw new AutoResearchError('paper-frontier-miner returned no latest papers', 'AGENT_FAILED')
   }
   if (papers.length < expected) {
-    raw.expectedMin = expected
+    // The structured output object may be non-extensible; return a copy instead
+    // of mutating it in place.
+    return { ...raw, expectedMin: expected }
   }
   return raw
 }
@@ -365,18 +374,22 @@ async function rebuildKnowledgeGraph(deps: BrainstormDependencies, ctx: Brainsto
 // ---------- existing ideation ----------
 
 async function propose(deps: BrainstormDependencies, ctx: BrainstormState): Promise<CandidateDirection[]> {
-  const candidates: CandidateDirection[] = []
-  for (const view of VIEWS) {
+  const rawsByView = await Promise.all(VIEWS.map(async (view) => {
     const result = await deps.provider.run('brainstorm', {
       runDir: ctx.runDir,
       perspective: `propose:${view}`,
       plan: `Wiki index:\n${ctx.wikiIndex}`,
     }, ctx.agentContext)
-    for (const raw of (result.structured as { directions?: Array<Record<string, unknown>> } | undefined)?.directions ?? []) {
+    return (result.structured as { directions?: Array<Record<string, unknown>> } | undefined)?.directions ?? []
+  }))
+
+  const candidates: CandidateDirection[] = []
+  VIEWS.forEach((view, index) => {
+    for (const raw of rawsByView[index] ?? []) {
       const direction = toDirection({ view, raw, existing: candidates })
       if (direction) candidates.push(direction)
     }
-  }
+  })
   if (candidates.length < 3) throw new AutoResearchError(`brainstorm proposals valid=${candidates.length}; need >= 3`, 'AGENT_FAILED')
   return candidates
 }
@@ -403,27 +416,28 @@ function toDirection(request: {
 
 async function debate(deps: BrainstormDependencies, ctx: BrainstormState): Promise<CandidateDirection[]> {
   const { candidates } = ctx
+  const results = await Promise.all(candidates.map((candidate) => deps.provider.run('brainstorm', {
+    runDir: ctx.runDir,
+    perspective: 'debate',
+    plan: [
+      `Target direction to attack and revise (id ${candidate.id}): ${candidate.direction}`,
+      'All candidates:',
+      JSON.stringify(candidates, null, 2),
+      'Wiki index:',
+      ctx.wikiIndex,
+    ].join('\n'),
+  }, ctx.agentContext)))
+
   const lines = ['# Brainstorm Debate', '']
-  for (const candidate of candidates) {
-    const result = await deps.provider.run('brainstorm', {
-      runDir: ctx.runDir,
-      perspective: 'debate',
-      plan: [
-        `Target direction to attack and revise (id ${candidate.id}): ${candidate.direction}`,
-        'All candidates:',
-        JSON.stringify(candidates, null, 2),
-        'Wiki index:',
-        ctx.wikiIndex,
-      ].join('\n'),
-    }, ctx.agentContext)
-    const value = result.structured as { attack?: string[]; support?: string[]; revisedDirection?: string } | undefined
+  candidates.forEach((candidate, index) => {
+    const value = results[index]?.structured as { attack?: string[]; support?: string[]; revisedDirection?: string } | undefined
     lines.push(`## Debate ${candidate.id}`)
     lines.push(...(value?.attack ?? []).map((x) => `- ATTACK: ${x}`))
     lines.push(...(value?.support ?? []).map((x) => `- SUPPORT: ${x}`))
     const revised = value?.revisedDirection?.trim()
     if (revised) candidate.direction = revised
     lines.push(`- REVISED: ${candidate.direction}`)
-  }
+  })
   await writeText(debatePath(ctx.runDir), `${lines.join('\n')}\n`)
   return candidates
 }

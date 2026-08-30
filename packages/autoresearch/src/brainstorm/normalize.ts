@@ -1,6 +1,7 @@
 import type {
   FrontierPaper,
   FrontierRole,
+  PaperInsight,
   PaperMeta,
   PaperRecord,
   SurveyPaper,
@@ -23,6 +24,14 @@ export interface RawSurveyPaper extends Partial<PaperMeta> {
   keyFinding?: string
   weakness?: string
   implication?: string
+  contributions?: string[]
+  methods?: string[]
+  experiments?: string[]
+  results?: string[]
+  limitations?: string[]
+  futureDirections?: string[]
+  insights?: string[]
+  relevance?: string
   surveyScope?: string
   taxonomy?: string[]
   openQuestions?: string[]
@@ -61,6 +70,14 @@ export interface RawFrontierPaper extends Partial<PaperMeta> {
   keyFinding?: string
   weakness?: string
   implication?: string
+  contributions?: string[]
+  methods?: string[]
+  experiments?: string[]
+  results?: string[]
+  limitations?: string[]
+  futureDirections?: string[]
+  insights?: string[]
+  relevance?: string
 }
 
 export interface RawFrontier {
@@ -115,17 +132,20 @@ function asFrontierRole(value: unknown): FrontierRole {
   return 'B'
 }
 
-function surveyInsight(paper: RawSurveyPaper): {
-  oneLiner: string
-  keyFinding: string
-  weakness: string
-  implication: string
-} {
+function surveyInsight(paper: RawSurveyPaper): PaperInsight {
   return {
     oneLiner: cleanString(paper.oneLiner) ?? cleanString(paper.abstract) ?? '',
     keyFinding: cleanString(paper.keyFinding) ?? cleanString(paper.abstract) ?? '',
     weakness: cleanString(paper.weakness) ?? '',
     implication: cleanString(paper.implication) ?? '',
+    contributions: cleanStringArray(paper.contributions) ?? [],
+    methods: cleanStringArray(paper.methods) ?? [],
+    experiments: cleanStringArray(paper.experiments) ?? [],
+    results: cleanStringArray(paper.results) ?? [],
+    limitations: cleanStringArray(paper.limitations) ?? [],
+    futureDirections: cleanStringArray(paper.futureDirections) ?? [],
+    insights: cleanStringArray(paper.insights) ?? [],
+    relevance: cleanString(paper.relevance) ?? '',
   }
 }
 
@@ -173,6 +193,14 @@ export function normalizeSurveyPapers(survey: RawSurvey, clusters: RawCluster[] 
       keyFinding: cleanString(info.scope) ?? '',
       weakness: '',
       implication: '',
+      contributions: [],
+      methods: [],
+      experiments: [],
+      results: [],
+      limitations: [],
+      futureDirections: [],
+      insights: [],
+      relevance: '',
       stage: 'survey',
       role: 'survey',
       clusterIds,
@@ -208,6 +236,14 @@ export function normalizeFrontierPapers(frontier: RawFrontier): FrontierPaper[] 
       keyFinding: cleanString(raw.keyFinding) ?? cleanString(raw.abstract) ?? '',
       weakness: cleanString(raw.weakness) ?? '',
       implication: cleanString(raw.implication) ?? '',
+      contributions: cleanStringArray(raw.contributions) ?? [],
+      methods: cleanStringArray(raw.methods) ?? [],
+      experiments: cleanStringArray(raw.experiments) ?? [],
+      results: cleanStringArray(raw.results) ?? [],
+      limitations: cleanStringArray(raw.limitations) ?? [],
+      futureDirections: cleanStringArray(raw.futureDirections) ?? [],
+      insights: cleanStringArray(raw.insights) ?? [],
+      relevance: cleanString(raw.relevance) ?? '',
       stage: 'latest',
       role: asFrontierRole(raw.role),
       directionId: cleanString(raw.directionId) ?? 'd1',

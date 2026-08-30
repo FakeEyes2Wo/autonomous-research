@@ -17,6 +17,14 @@ export interface StageRequest extends AgentRequest {
   outputFile?: string
 }
 
+let transitionQueue: Promise<void> = Promise.resolve()
+
+function serializeTransition<T>(fn: () => Promise<T>): Promise<T> {
+  const run = transitionQueue.then(fn, fn)
+  transitionQueue = run.then(() => undefined, () => undefined)
+  return run
+}
+
 export async function runAgent(ctx: RunContext, request: AgentRequest): Promise<RoleOutput> {
   ctx.logger.info(`[agent:${request.role}] start ${request.label}`)
   const started = Date.now()
@@ -31,7 +39,9 @@ export async function runAgent(ctx: RunContext, request: AgentRequest): Promise<
 }
 
 export async function runStage(ctx: RunContext, request: StageRequest): Promise<string> {
-  await transition(ctx.state, request.phase, request.stepId)
+  // Parallel stages must not write state.json concurrently. Transition is
+  // serialized; the actual AI calls still run concurrently after transition.
+  await serializeTransition(() => transition(ctx.state, request.phase, request.stepId))
   const result = await runAgent(ctx, request)
   const text = JSON.stringify(result.structured ?? { text: result.text }, null, 2)
   if (request.outputFile) await writeText(safeResolve(ctx.runDir, request.outputFile), text)

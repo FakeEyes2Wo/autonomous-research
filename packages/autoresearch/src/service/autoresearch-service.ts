@@ -72,6 +72,9 @@ export class AutoResearchService {
     const projectSecrets = await loadProjectSecrets(projectDir)
     const paperOptions: PaperOptions = {
       ...(options.paper ?? {}),
+      ...(projectSettings.model.supportsImageInput !== undefined
+        ? { supportsImageInput: projectSettings.model.supportsImageInput }
+        : {}),
       ...(projectSettings.figureApi.enabled
         ? {
             figureApi: {

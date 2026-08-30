@@ -61,12 +61,6 @@ export const brainstormRoleSpecs = {
       },
     }),
   },
-  'paper-wiki-writer': {
-    sections: ['plan'],
-    outputSchema: objectSchema({
-      wikis: { type: 'object', additionalProperties: true, required: true },
-    }),
-  },
   brainstorm: {
     sections: ['plan', 'perspective'],
     outputSchema: objectSchema({

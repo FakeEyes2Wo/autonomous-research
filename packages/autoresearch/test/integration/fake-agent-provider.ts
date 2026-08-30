@@ -27,8 +27,6 @@ export class FakeAgentProvider implements RoleAgentProvider {
     switch (role) {
       case 'rubric-generator':
         return { text: '', structured: { rubric: this.script.rubric ?? '# Rubric\n\n- metric: accuracy' }, stopReason: 'completed' }
-      case 'rubric-reviewer':
-        return { text: '', structured: { ok: this.script.reviewOk ?? true, issues: [] }, stopReason: 'completed' }
       case 'idea-generator':
         return {
           text: '',
@@ -46,15 +44,8 @@ export class FakeAgentProvider implements RoleAgentProvider {
           },
           stopReason: 'completed',
         }
-      case 'idea-falsifiability':
-        return { text: '', structured: { testable_implication: 'run experiment', unobservable_variables: [], is_falsifiable: true }, stopReason: 'completed' }
-      case 'idea-reviewer': {
-        const pkg = JSON.parse(_input.ideaPackage ?? '{}')
-        const perspective = pkg.review_perspective ?? 'methodology'
-        return { text: '', structured: { perspective, critique: 'ok', unaddressed_risks: [], fatal_flaw_found: false }, stopReason: 'completed' }
-      }
-      case 'hypothesis-reviser':
-        return { text: 'revised', structured: { summary: 'revised', hypotheses: [] }, stopReason: 'completed' }
+      case 'idea-reflexion':
+        return { text: '', structured: { is_falsifiable: true, testable_implication: 'run experiment', unobservable_variables: [], critique: 'ok', unaddressed_risks: [], fatal_flaw_found: false }, stopReason: 'completed' }
       case 'planner':
         return { text: '', structured: { plan: this.script.plan ?? '# Plan\n\n1. run analysis' }, stopReason: 'completed' }
       case 'model-scout':
@@ -127,12 +118,8 @@ export class FakeAgentProvider implements RoleAgentProvider {
         return { text: '', structured: { plan: '# PAPER PLAN\n\n1. Abstract\n2. Introduction\n3. Method\n4. Experiments\n5. Conclusion' }, stopReason: 'completed' }
       case 'contract-negotiator':
         return { text: '', structured: { contract: '# PAPER_ACCEPTANCE_CONTRACT\n\n- [ ] Every claim has evidence.' }, stopReason: 'completed' }
-      case 'contract-reviewer':
-        return { text: '', structured: { accepted: true, demands: [] }, stopReason: 'completed' }
       case 'figure-generator':
         return { text: '', structured: { scripts: {}, latexIncludes: '' }, stopReason: 'completed' }
-      case 'figure-reflexion':
-        return { text: '', structured: { verdict: 'pass', issues: [], textOverload: false, elementOverload: false, elementOverlap: false }, stopReason: 'completed' }
       case 'proof-checker':
         return { text: '', structured: { verdict: 'NOT_APPLICABLE', issues: [], json: '{"verdict":"NOT_APPLICABLE"}' }, stopReason: 'completed' }
       case 'claim-auditor':
@@ -145,8 +132,6 @@ export class FakeAgentProvider implements RoleAgentProvider {
         return { text: '', structured: { score: 8, critical: [], major: [], minor: [] }, stopReason: 'completed' }
       case 'paper-polisher':
         return { text: '', structured: { mainTex: this.script.writerText ?? '\\documentclass{article}\n\\begin{document}\nDone.\n\\end{document}', changes: [] }, stopReason: 'completed' }
-      case 'final-report-writer':
-        return { text: '', structured: { report: '# Final Report' }, stopReason: 'completed' }
       case 'paper-survey': {
         const clusters = Array.from({ length: 5 }, (_, i) => ({
           id: `c${String(i + 1).padStart(2, '0')}`,
@@ -188,6 +173,14 @@ export class FakeAgentProvider implements RoleAgentProvider {
             keyFinding: `finding ${n}`,
             weakness: `weak ${n}`,
             implication: `implication ${n}`,
+            contributions: [`contribution ${n}`],
+            methods: [`method ${n}`],
+            experiments: [`experiment ${n}`],
+            results: [`result ${n}`],
+            limitations: [`limitation ${n}`],
+            futureDirections: [`future ${n}`],
+            insights: [`insight ${n}`],
+            relevance: `relevance ${n}`,
           }
         })
         return {
@@ -231,24 +224,17 @@ export class FakeAgentProvider implements RoleAgentProvider {
             oneLiner: `one ${n}`,
             keyFinding: `finding ${n}`,
             implication: `implication ${n}`,
+            contributions: [`contribution ${n}`],
+            methods: [`method ${n}`],
+            experiments: [`experiment ${n}`],
+            results: [`result ${n}`],
+            limitations: [`limitation ${n}`],
+            futureDirections: [`future ${n}`],
+            insights: [`insight ${n}`],
+            relevance: `relevance ${n}`,
           }
         })
         return { text: '', structured: { papers }, stopReason: 'completed' }
-      }
-      case 'paper-wiki-writer': {
-        let papers: Array<{ id: string }> = []
-        try {
-          const parsed = JSON.parse(_input.plan ?? '{}') as { papers?: Array<{ id: string }> }
-          papers = parsed.papers ?? []
-        } catch {
-          papers = []
-        }
-        const wikis: Record<string, string> = {}
-        for (const paper of papers) {
-          const id = paper.id
-          wikis[id] = `# ${id}\n\n## 要点\npoint\n\n## 核心方法\nmethod\n\n## 失败点\nfailure\n\n## 可改进点\nimprove\n\n## Insight\ninsight\n\n## 与我方可能的结合点\nlink`
-        }
-        return { text: '', structured: { wikis }, stopReason: 'completed' }
       }
       case 'brainstorm': {
         const perspective = String(_input.perspective ?? '')

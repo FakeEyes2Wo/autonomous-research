@@ -25,6 +25,7 @@ export interface ModelSettings {
     model?: string
     reasoningEffort?: string
   }
+  supportsImageInput?: boolean
 }
 
 export interface ExperimentSettings {

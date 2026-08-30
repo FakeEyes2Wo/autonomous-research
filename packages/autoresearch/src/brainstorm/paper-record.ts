@@ -36,6 +36,14 @@ export interface PaperInsight {
   keyFinding: string
   weakness: string
   implication: string
+  contributions: string[]
+  methods: string[]
+  experiments: string[]
+  results: string[]
+  limitations: string[]
+  futureDirections: string[]
+  insights: string[]
+  relevance: string
 }
 
 /** Survey-stage fields: location in the field map + survey-specific taxonomy. */

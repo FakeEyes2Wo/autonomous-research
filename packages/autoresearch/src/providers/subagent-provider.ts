@@ -172,6 +172,9 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     const prompt = await buildPrompt(role, input)
     const promptWithFeedback = withFeedback(prompt, feedback)
     const schema = outputSchemaFor(role)
+    if (input.figureImages?.length) {
+      logger.warn(`[subagent:${role}] figureImages provided; using textual path fallback until native image blocks are wired`)
+    }
     logger.info(`[subagent:${role}] calling ctx.subagents.start provider=${this.providerName}`)
     const started = Date.now()
     const run = await this.runtime.start(this.providerName, {

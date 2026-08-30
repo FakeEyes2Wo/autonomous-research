@@ -35,6 +35,9 @@ export interface ResearchRoleInput {
   readonly failureDirections?: string
   readonly insight?: string
   readonly modelScout?: string
+  readonly relatedPapers?: string
+  readonly baselines?: string
+  readonly revisedIdeaPackage?: string
 }
 
 /**
@@ -58,6 +61,7 @@ export interface PaperRoleInput {
   readonly venue?: string
   readonly assurance?: string
   readonly paperPath?: string
+  readonly figureImages?: string[]
 }
 
 /**

@@ -1,5 +1,6 @@
 import type { ResearchIdea } from './idea.js'
-import { AutoResearchError, FAILURE_REPORT_FILE, FINAL_REPORT_FILE, IDEA_FILE, INPUT_DIR, PAPER_DRAFT_FILE, PLAN_PREFIX, RUBRIC_FILE } from '../core/utils.js'
+import { AutoResearchError, IDEA_FILE, INPUT_DIR, PLAN_PREFIX, RUBRIC_FILE } from '../core/utils.js'
+import { writeFailureReportWithReflexions } from '../core/failure-reflexion.js'
 import { readText, safeResolve, writeText } from '../core/utils.js'
 
 function mdPath(runDir: string, name: string): string {
@@ -12,12 +13,7 @@ async function writeMd(runDir: string, name: string, content: string): Promise<s
   return file
 }
 
-export const paperDraftPath = (runDir: string) => mdPath(runDir, PAPER_DRAFT_FILE)
-export const finalReportPath = (runDir: string) => mdPath(runDir, FINAL_REPORT_FILE)
-export const failureReportPath = (runDir: string) => mdPath(runDir, FAILURE_REPORT_FILE)
-export const writePaperDraft = (runDir: string, content: string) => writeMd(runDir, PAPER_DRAFT_FILE, content)
-export const writeFinalReport = (runDir: string, content: string) => writeMd(runDir, FINAL_REPORT_FILE, content)
-export const writeFailureReport = (runDir: string, content: string) => writeMd(runDir, FAILURE_REPORT_FILE, content)
+export const writeFailureReport = (runDir: string, content: string) => writeFailureReportWithReflexions(runDir, content)
 
 export const planPath = (runDir: string, version: number) => mdPath(runDir, `${PLAN_PREFIX}${version}.md`)
 export const writePlan = (runDir: string, version: number, plan: string) => writeMd(runDir, `${PLAN_PREFIX}${version}.md`, plan)
@@ -40,23 +36,28 @@ export async function readIdea(runDir: string, candidatePath?: string): Promise<
   const file = candidatePath ? safeResolve(runDir, candidatePath) : safeResolve(runDir, INPUT_DIR, IDEA_FILE)
   const raw = await readText(file)
   const directionMatch = raw.match(/^##\s+Direction\s*$/mi)
-  if (!directionMatch) {
-    throw new AutoResearchError('idea.md is missing a Direction section', 'INVALID_ARGUMENT')
-  }
-  const after = raw.slice((directionMatch.index ?? 0) + directionMatch[0].length)
-  const ideasMatch = raw.match(/^##\s+A-priori ideas.*$/mi)
-  const direction = after.split(/^##\s+/m)[0]?.trim() ?? ''
-  if (!direction) throw new AutoResearchError('candidate direction is empty', 'INVALID_ARGUMENT')
+  let direction = ''
   let aPrioriIdeas: string[] = []
-  if (ideasMatch && ideasMatch.index !== undefined) {
-    const ideasBlock = raw.slice(ideasMatch.index + ideasMatch[0].length)
-    const nextHeading = ideasBlock.search(/^##\s+/m)
-    const block = nextHeading >= 0 ? ideasBlock.slice(0, nextHeading) : ideasBlock
-    aPrioriIdeas = block
-      .split('\n')
-      .map((line) => line.replace(/^\s*[-*]\s+/, '').trim())
-      .filter(Boolean)
+
+  if (directionMatch) {
+    const after = raw.slice((directionMatch.index ?? 0) + directionMatch[0].length)
+    const ideasMatch = raw.match(/^##\s+A-priori ideas.*$/mi)
+    direction = after.split(/^##\s+/m)[0]?.trim() ?? ''
+    if (ideasMatch && ideasMatch.index !== undefined) {
+      const ideasBlock = raw.slice(ideasMatch.index + ideasMatch[0].length)
+      const nextHeading = ideasBlock.search(/^##\s+/m)
+      const block = nextHeading >= 0 ? ideasBlock.slice(0, nextHeading) : ideasBlock
+      aPrioriIdeas = block
+        .split('\n')
+        .map((line) => line.replace(/^\s*[-*]\s+/, '').trim())
+        .filter(Boolean)
+    }
+  } else {
+    // Accept a plain text idea file: treat the whole content as the direction.
+    direction = raw.trim()
   }
+
+  if (!direction) throw new AutoResearchError('candidate direction is empty', 'INVALID_ARGUMENT')
   return { direction, aPrioriIdeas, raw }
 }
 

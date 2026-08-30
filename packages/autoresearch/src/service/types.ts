@@ -12,5 +12,7 @@ export interface ResearchRunnerOptions {
   reviewGates?: ReviewGateId[]
   humanReviewOverride?: HumanReviewMode
   brainstorm?: HumanReviewMode
+  deepDiveEnabled?: boolean
+  deepDiveTopN?: number
   projectSettings?: ProjectSettings
 }

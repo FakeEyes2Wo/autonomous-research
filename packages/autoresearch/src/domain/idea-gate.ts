@@ -32,11 +32,14 @@ export function maxTotalRisks(perspectiveCount: number): number {
 
 export function structuralCheck(pkg: IdeaPackage): StructuralCheckReport {
   const violations: string[] = []
-  const premiseEvidenceOk = pkg.supported_premises.every((premise) =>
+  const supportedPremises = Array.isArray(pkg.supported_premises) ? pkg.supported_premises : []
+  const premiseEvidenceOk = supportedPremises.every((premise) =>
     premise.role === 'supported_premise' ? premise.supporting_refs.length > 0 : true,
   )
   if (!premiseEvidenceOk) violations.push('supported_premise_without_evidence')
-  const novelTestable = pkg.predicted_observations.length > 0 && pkg.disconfirming_observations.length > 0
+  const predictedObservations = Array.isArray(pkg.predicted_observations) ? pkg.predicted_observations : []
+  const disconfirmingObservations = Array.isArray(pkg.disconfirming_observations) ? pkg.disconfirming_observations : []
+  const novelTestable = predictedObservations.length > 0 && disconfirmingObservations.length > 0
   if (!novelTestable) violations.push('novel_hypothesis_not_testable')
   return {
     idea_id: pkg.idea_id,

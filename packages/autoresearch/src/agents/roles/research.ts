@@ -16,6 +16,9 @@ export const researchSectionTitles = {
   failureDirections: 'Failure Directions',
   insight: 'Insight',
   modelScout: 'Model Scout',
+  relatedPapers: 'Related Papers',
+  baselines: 'Baselines',
+  revisedIdeaPackage: 'Revised Idea Package',
 } as const
 
 /**
@@ -26,16 +29,8 @@ export const researchRoleSpecs = {
     sections: ['idea', 'profile', 'plan', 'treeSummary'],
     outputSchema: objectSchema({ rubric: { type: 'string', required: true } }),
   },
-  'rubric-reviewer': {
-    sections: ['idea', 'profile', 'rubric', 'treeSummary'],
-    outputSchema: objectSchema({
-      ok: { type: 'boolean', required: true },
-      issues: { type: 'array', items: { type: 'string' }, required: true },
-      revised: { type: 'string' },
-    }),
-  },
   'idea-generator': {
-    sections: ['idea', 'profile', 'plan', 'treeSummary', 'failureDirections', 'insight'],
+    sections: ['idea', 'profile', 'plan', 'treeSummary', 'relatedPapers', 'baselines', 'failureDirections', 'insight'],
     outputSchema: objectSchema({
       hypotheses: {
         type: 'array',
@@ -58,45 +53,16 @@ export const researchRoleSpecs = {
       eda_request: { type: 'string' },
     }),
   },
-  'idea-falsifiability': {
-    sections: ['ideaPackage'],
+  'idea-reflexion': {
+    sections: ['ideaPackage', 'revisedIdeaPackage', 'plan'],
     outputSchema: objectSchema({
+      is_falsifiable: { type: 'boolean', required: true },
       testable_implication: { type: 'string', required: true },
       unobservable_variables: { type: 'array', items: { type: 'string' }, required: true },
-      is_falsifiable: { type: 'boolean', required: true },
-    }),
-  },
-  'idea-reviewer': {
-    sections: ['ideaPackage'],
-    outputSchema: objectSchema({
-      perspective: { type: 'string', enum: ['methodology', 'statistics'], required: true },
       critique: { type: 'string', required: true },
       unaddressed_risks: { type: 'array', items: { type: 'string' }, required: true },
       fatal_flaw_found: { type: 'boolean', required: true },
-    }),
-  },
-  'hypothesis-reviser': {
-    sections: ['treeSummary'],
-    outputSchema: objectSchema({
-      summary: { type: 'string', required: true },
-      hypotheses: {
-        type: 'array',
-        required: true,
-        items: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            id: { type: 'string' },
-            statement: { type: 'string', required: true },
-            intervention: { type: 'string', required: true },
-            expected_effect: { type: 'string', required: true },
-            status: { type: 'string', required: true },
-            predicted_observations: { type: 'array', items: { type: 'string' } },
-            disconfirming_observations: { type: 'array', items: { type: 'string' } },
-            sources: { type: 'array', items: { type: 'string' } },
-          },
-        },
-      },
+      revised: { type: 'object', additionalProperties: true },
     }),
   },
   'experiment-designer': {

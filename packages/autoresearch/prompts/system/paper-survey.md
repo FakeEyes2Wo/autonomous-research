@@ -14,4 +14,5 @@ JSON:
 - overview: string
 - surveys: [{id,title,url,year,venue,scope,taxonomy,openQuestions,recommendedDirections}]
 - clusters: [{id,name,summary,sourceSurveyIds,representativePaperIds,openQuestions}]
-- papers: [{id,title,url,year,venue,abstract,clusterId,role,oneLiner,keyFinding,weakness,implication}]
+- papers: [{id,title,url,year,venue,abstract,clusterId,role,oneLiner,keyFinding,weakness,implication,contributions,methods,experiments,results,limitations,futureDirections,insights,relevance}]
+  - insights: concise high-signal takeaways; relevance: why this matters for our research direction.
