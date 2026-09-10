@@ -17,6 +17,7 @@ export async function runPaper(ctx: RunContext): Promise<void> {
 
   const options = {
     ...(ctx.deps.paperOptions ?? {}),
+    ...(ctx.deps.paperOptions?.maxImprovementRounds === undefined ? { maxImprovementRounds: ctx.policySnapshot.workflow.paperImprovementRounds } : {}),
     ...((ctx.deps.reviewGates ?? DEFAULT_REVIEW_GATES).includes('paper_draft') && ctx.deps.reviewer ? { humanReviewer: ctx.deps.reviewer } : {}),
     ...(ctx.deps.humanReviewOverride ? { humanReviewOverride: ctx.deps.humanReviewOverride } : {}),
   }

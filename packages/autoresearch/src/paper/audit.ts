@@ -49,10 +49,15 @@ function numericClaimAudit(text: string, knownEvidenceIds: Set<string>): AuditRe
   const lines = text.split('\n')
   const evidenceTagRe = /% evidence:\s*(E-[A-Za-z0-9_]+|B-[A-Za-z0-9_]+)/g
   const numberRe = /\d+\.\d+|\b\d+\b/g
+  // Macro arity markers such as `[1]` and `[2]` are LaTeX syntax, not
+  // scientific claims. Keep this anchored to command-definition lines so a
+  // normal sentence containing a formatting command is still audited.
+  const latexDefinitionRe = /^\s*\\(?:newcommand|renewcommand|providecommand|DeclareMathOperator\*?|newenvironment|renewenvironment|def|edef|gdef)\b/
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i] ?? ''
     if (line.trim().startsWith('%')) continue
+    if (latexDefinitionRe.test(line)) continue
     const numbers = line.match(numberRe)
     if (!numbers) continue
     const nearby = [lines[i - 1] ?? '', line, lines[i + 1] ?? ''].join('\n')

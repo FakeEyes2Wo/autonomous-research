@@ -14,6 +14,8 @@ export interface PaperCheckpoint {
     contractFile?: string
     compileOk?: boolean
     audits?: Record<string, unknown>
+    auditStatus?: 'passed' | 'failed'
+    submissionReady?: boolean
     improvementRounds?: number
     finalReport?: string
   }

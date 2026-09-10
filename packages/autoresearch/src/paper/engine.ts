@@ -20,6 +20,15 @@ export interface ResolvedLatexEngine {
   spec: LatexEngine
 }
 
+export interface LatexEngineLookupOptions {
+  /** Environment used for explicit compiler configuration and tests. */
+  env?: NodeJS.ProcessEnv
+  /** Injectable version probe keeps discovery testable without invoking a compiler. */
+  probe?: (command: string, args: readonly string[]) => boolean
+  /** Injectable path check keeps explicit path behavior testable. */
+  exists?: (command: string) => boolean
+}
+
 /**
  * Single source of truth for the engines the paper pipeline can use.
  * The array also acts as the lookup order: the first resolvable engine wins.
@@ -33,14 +42,10 @@ export const latexEngines = [
   },
   {
     name: 'tectonic',
-    candidates: ['tectonic', 'D:\\Tectonic\\bin\\tectonic.exe', 'C:\\Tectonic\\bin\\tectonic.exe'],
+    candidates: ['tectonic'],
     versionArgs: [['--version']],
     args: () => ['main.tex'],
-    env: () => ({
-      HTTP_PROXY: process.env.HTTP_PROXY ?? 'http://127.0.0.1:7890',
-      HTTPS_PROXY: process.env.HTTPS_PROXY ?? 'http://127.0.0.1:7890',
-      ALL_PROXY: process.env.ALL_PROXY ?? 'http://127.0.0.1:7890',
-    }),
+    env: () => proxyEnvironment(process.env),
   },
   {
     name: 'latexmk',
@@ -60,25 +65,39 @@ function looksLikeFileCandidate(command: string): boolean {
   return /[\\/]/.test(command)
 }
 
-export function findLatexEngine(): ResolvedLatexEngine | undefined {
-  // Preserve the original priority: probe every normal executable first, then
-  // fall back to known absolute-package paths in the same registry order.
+export function proxyEnvironment(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const name of ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY']) {
+    const value = env[name]
+    if (value !== undefined) result[name] = value
+  }
+  return result
+}
+
+export function findLatexEngine(options: LatexEngineLookupOptions = {}): ResolvedLatexEngine | undefined {
+  const env = options.env ?? process.env
+  const probe = options.probe ?? ((command: string, args: readonly string[]) => {
+    const result = spawnSync(command, [...args], { stdio: 'ignore' })
+    return !result.error && result.status === 0
+  })
+  const exists = options.exists ?? existsSync
+  const tectonic = latexEngines.find((spec) => spec.name === 'tectonic')
+  const explicit = typeof env.TECTONIC_PATH === 'string' ? env.TECTONIC_PATH.trim() : ''
+  if (explicit && tectonic) {
+    // An explicit setting is authoritative. A stale setting must report that
+    // no engine is available rather than silently selecting another compiler.
+    if (looksLikeFileCandidate(explicit) && !exists(explicit)) return undefined
+    if (tectonic.versionArgs.some((args) => probe(explicit, args))) return { name: tectonic.name, command: explicit, spec: tectonic }
+    return undefined
+  }
+
   for (const spec of latexEngines) {
     for (const candidate of spec.candidates) {
       if (looksLikeFileCandidate(candidate)) continue
       for (const versionArgs of spec.versionArgs) {
-        const probe = spawnSync(candidate, [...versionArgs], { stdio: 'ignore' })
-        if (!probe.error && probe.status === 0) {
+        if (probe(candidate, versionArgs)) {
           return { name: spec.name, command: candidate, spec }
         }
-      }
-    }
-  }
-  for (const spec of latexEngines) {
-    for (const candidate of spec.candidates) {
-      if (!looksLikeFileCandidate(candidate)) continue
-      if (existsSync(candidate)) {
-        return { name: spec.name, command: candidate, spec }
       }
     }
   }

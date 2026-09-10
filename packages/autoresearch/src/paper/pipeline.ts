@@ -17,6 +17,7 @@ import {
   resolveAssurance,
   reviewPaperDraft,
   runPaperAudits,
+  paperAuditStatus,
   writePaper,
   writePaperReport,
 } from './phases.js'
@@ -30,6 +31,9 @@ export interface PaperPipelineResult {
   contractFile?: string
   compileOk: boolean
   audits: Record<string, unknown>
+  auditStatus: 'passed' | 'failed'
+  submissionReady: boolean
+  completed: boolean
   finalReport: string
 }
 
@@ -177,11 +181,16 @@ export async function runPaperPipeline(
       cp.phases.compile = ok ? 'done' : 'failed'
       cp.data.compileOk = ok
     },
-  })) ?? false
+  })) ?? (cp.data.compileOk === true)
   if (compileOk) {
     cp.phases.writing = 'done'
     cp.data.compileOk = true
     await save()
+  }
+  if (!compileOk) {
+    // Keep the failed checkpoint for a future resume. Never let a compile
+    // failure fall through to an apparently completed/submission-ready run.
+    throw new Error('paper compilation failed; resume is required before submission')
   }
 
   // Human review of the compiled paper draft. Revise loops back through the
@@ -202,10 +211,16 @@ export async function runPaperPipeline(
     id: 'audits',
     run: () => runPaperAudits(ctx),
     commit: (value) => {
-      cp.phases.audits = 'done'
+      const status = paperAuditStatus(value)
+      cp.phases.audits = status === 'passed' ? 'done' : 'failed'
       cp.data.audits = value
+      cp.data.auditStatus = status
     },
-  })) ?? {}
+  })) ?? cp.data.audits ?? {}
+  const auditStatus = cp.data.auditStatus ?? paperAuditStatus(audits)
+  if (auditStatus !== 'passed') {
+    throw new Error('paper audit gate failed; resume is required after evidence or audit repair')
+  }
 
   // Improvement.
   await runCheckpointPhase({
@@ -234,12 +249,16 @@ export async function runPaperPipeline(
     paperDir,
     checkpoint: cp,
     id: 'final',
-    run: () => writePaperReport(ctx, assurance, compileOk, audits),
+    run: () => writePaperReport(ctx, assurance, compileOk, audits, auditStatus),
     commit: (value) => {
       cp.phases.final = 'done'
       cp.data.finalReport = value
     },
-  })) ?? ''
+  })) ?? cp.data.finalReport ?? ''
+
+  const submissionReady = compileOk && auditStatus === 'passed'
+  cp.data.submissionReady = submissionReady
+  await save()
 
   return {
     planFile: planFile ?? join(paperDir, 'PAPER_PLAN.md'),
@@ -247,6 +266,9 @@ export async function runPaperPipeline(
     contractFile,
     compileOk,
     audits,
+    auditStatus,
+    submissionReady,
+    completed: submissionReady,
     finalReport,
   }
 }

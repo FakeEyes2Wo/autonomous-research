@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { RoleAgentProvider } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { isEvidenceVerdict } from '../core/types.js'
@@ -16,6 +17,8 @@ import {
   saveProjectSettings,
   type ProjectSettings,
 } from '../settings/project-settings.js'
+import { patchProjectSettingsDocument, readProjectSettingsDocument, type SettingsPatchOperation } from '../settings/service.js'
+import { validateProjectSettingsCandidate } from '../settings/migration.js'
 import type { AutoResearchService } from '../service/autoresearch-service.js'
 import {
   evidenceVerdictSchema,
@@ -31,7 +34,7 @@ import { toResearchRunOptions } from './options.js'
 
 export interface ToolExecutionContextLike {
   signal: AbortSignal
-  agent?: unknown
+  agent?: Agent
 }
 
 export interface ToolDefinitionLike {
@@ -45,11 +48,14 @@ export interface ToolDefinitionLike {
   execute(args: Record<string, unknown>, exec: ToolExecutionContextLike): Promise<unknown>
 }
 
-function requireRunDir(args: Record<string, unknown>): string {
-  const value = args.runDir
-  if (typeof value !== 'string' || value.length === 0) throw new TypeError('runDir is required')
+function requirePath(args: Record<string, unknown>, key: 'runDir' | 'projectDir'): string {
+  const value = args[key]
+  if (typeof value !== 'string' || value.length === 0) throw new TypeError(`${key} is required`)
   return value
 }
+
+const requireRunDir = (args: Record<string, unknown>): string => requirePath(args, 'runDir')
+const requireProjectDir = (args: Record<string, unknown>): string => requirePath(args, 'projectDir')
 
 async function loadTree(runDir: string): Promise<ResearchTree> {
   return ResearchTree.load(runDir)
@@ -61,6 +67,15 @@ function defineTool(def: ToolDefinitionLike): ToolDefinitionLike {
 
 function strArray(value: unknown): string[] | undefined {
   return Array.isArray(value) ? value.map(String) : undefined
+}
+
+function mergeSettings(base: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...base }
+  for (const [key, value] of Object.entries(patch)) {
+    if (value && typeof value === 'object' && !Array.isArray(value) && result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) result[key] = mergeSettings(result[key] as Record<string, unknown>, value as Record<string, unknown>)
+    else result[key] = value
+  }
+  return result
 }
 
 export const researchHypothesisAdd: ToolDefinitionLike = defineTool({
@@ -254,10 +269,42 @@ export const projectSettingsGet: ToolDefinitionLike = defineTool({
   },
   output: jsonOutput,
   async execute(args) {
-    const projectDir = requireRunDir(args)
+    const projectDir = requireProjectDir(args)
     const settings = await loadProjectSettings(projectDir)
     const secrets = await loadProjectSecrets(projectDir)
     return maskProjectSettings(settings, secrets)
+  },
+})
+
+export const projectSettingsReadDocument: ToolDefinitionLike = defineTool({
+  name: 'project_settings_read_document',
+  description: 'Read project settings with source and content revision metadata.',
+  parameters: { type: 'object', properties: { projectDir: runDirSchema }, required: ['projectDir'], additionalProperties: false },
+  output: jsonOutput,
+  async execute(args) {
+    const document = await readProjectSettingsDocument(requireProjectDir(args))
+    const secrets = await loadProjectSecrets(requireProjectDir(args))
+    return { ...document, settings: maskProjectSettings(document.settings, secrets) }
+  },
+})
+
+export const projectSettingsValidate: ToolDefinitionLike = defineTool({
+  name: 'project_settings_validate',
+  description: 'Validate a project settings candidate without writing it.',
+  parameters: { type: 'object', properties: { projectSettings: { type: 'object', additionalProperties: true } }, required: ['projectSettings'], additionalProperties: false },
+  output: jsonOutput,
+  async execute(args) { return validateProjectSettingsCandidate(args.projectSettings) },
+})
+
+export const projectSettingsPatch: ToolDefinitionLike = defineTool({
+  name: 'project_settings_patch',
+  description: 'Atomically patch project settings using an expected content revision.',
+  parameters: { type: 'object', properties: { projectDir: runDirSchema, expectedRevision: stringSchema('SHA-256 revision of the document'), ops: { type: 'array', items: { type: 'object', additionalProperties: true } } }, required: ['projectDir', 'expectedRevision', 'ops'], additionalProperties: false },
+  output: jsonOutput,
+  async execute(args) {
+    const document = await patchProjectSettingsDocument(requireProjectDir(args), { expectedRevision: String(args.expectedRevision), ops: args.ops as SettingsPatchOperation[] })
+    const secrets = await loadProjectSecrets(requireProjectDir(args))
+    return { ...document, settings: maskProjectSettings(document.settings, secrets) }
   },
 })
 
@@ -280,10 +327,10 @@ export const projectSettingsSave: ToolDefinitionLike = defineTool({
   },
   output: jsonOutput,
   async execute(args) {
-    const projectDir = requireRunDir(args)
+    const projectDir = requireProjectDir(args)
     const current = await loadProjectSettings(projectDir)
     const patch = (args.projectSettings ?? {}) as Partial<ProjectSettings>
-    const next = normalizeProjectSettings({ ...current, ...patch })
+    const next = normalizeProjectSettings(mergeSettings(current as unknown as Record<string, unknown>, patch as unknown as Record<string, unknown>))
     const saved = await saveProjectSettings(projectDir, next)
     if (typeof args.figureApiKey === 'string' && args.figureApiKey) {
       const secrets = await loadProjectSecrets(projectDir)
@@ -307,7 +354,7 @@ export const figureApiTest: ToolDefinitionLike = defineTool({
   },
   output: jsonOutput,
   async execute(args) {
-    const projectDir = requireRunDir(args)
+    const projectDir = requireProjectDir(args)
     const settings = await loadProjectSettings(projectDir)
     const secrets = await loadProjectSecrets(projectDir)
     const result = await testFigureApi({
@@ -317,6 +364,8 @@ export const figureApiTest: ToolDefinitionLike = defineTool({
     return result
   },
 })
+
+export { bindToolWorkspacePaths } from './workspace-paths.js'
 
 export const paperPipelineStatus: ToolDefinitionLike = defineTool({
   name: 'paper_pipeline_status',

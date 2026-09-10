@@ -60,6 +60,7 @@ export async function ensureRubric(ctx: RunContext, { idea, profile, feedback }:
           result: info.result,
         })
       },
+      rounds: ctx.policySnapshot.workflow.reflexionRounds,
     },
   )
 
@@ -88,7 +89,8 @@ export async function runIdeaGeneration(ctx: RunContext, { idea, profile, relate
   const rejections: string[] = []
   const kept: IdeaPackage[] = []
 
-  for (const draft of drafts.slice(0, 5)) {
+  const candidateLimit = Math.max(1, Math.floor(ctx.policySnapshot.workflow.candidateLimit))
+  for (const draft of drafts.slice(0, candidateLimit)) {
     let pkg: IdeaPackage = {
       ...draft,
       idea_id: newId('idea'),
@@ -202,6 +204,7 @@ async function runIdeaReflexion(ctx: RunContext, pkg: IdeaPackage): Promise<Idea
     },
     validate: validateIdeaReflexionState,
     maxRetriesPerRound: 2,
+    rounds: ctx.policySnapshot.workflow.reflexionRounds,
     onAbnormalExit: async (info) => {
       await writeFailureReflexion(ctx.runDir, {
         role: info.role,

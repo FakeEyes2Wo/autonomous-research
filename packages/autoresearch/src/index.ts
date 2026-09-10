@@ -7,9 +7,13 @@ import { loadState } from './core/state.js'
 import { loadProjectSecrets, loadProjectSettings } from './settings/project-settings.js'
 import type { HumanOpenRequest, HumanReviewAnswer, HumanReviewer, HumanReviewRequest } from './core/human-review.js'
 import { writeAutoMode } from './session/auto-mode.js'
+import type { Context } from '@deepseek-ai/cordis'
+import { installRequestAccounting } from './providers/request-accounting.js'
+import { bindToolWorkspacePaths } from './tools/workspace-paths.js'
+import type { SessionStore } from '@deepseek-ai/dsh-session'
 
 export const name = 'autoresearch'
-export const inject = ['tools', 'subagents', 'commands', 'userQuestions']
+export const inject = ['tools', 'subagents', 'commands', 'userQuestions', 'llm']
 
 interface DshCommandInvocation {
   readonly rawInput: string
@@ -53,9 +57,16 @@ export function apply(ctx: {
   subagents: unknown
   commands: DshCommandRegistry
   userQuestions: DshUserQuestions
+  on: Context['on']
+  llm: unknown
+  sessions?: Pick<SessionStore, 'get'>
   provide(name: string, service: unknown): unknown
 }): void {
-  const provider = new SubagentRoleAgentProvider(ctx.subagents as never, { context: ctx as never })
+  installRequestAccounting(ctx as unknown as Context)
+  const provider = new SubagentRoleAgentProvider(ctx.subagents as never, {
+    context: ctx as unknown as Pick<Context, 'on'>,
+    repairToolFilter: { allow: [] },
+  })
 
   const reviewer: HumanReviewer = {
     async ask(request: HumanReviewRequest, signal: AbortSignal, agent?: unknown): Promise<HumanReviewAnswer> {
@@ -180,7 +191,7 @@ export function apply(ctx: {
     createPaperPipelineResumeTool(service),
     createResearchRunTool(service),
   ]) {
-    ctx.tools.register(tool)
+    ctx.tools.register(bindToolWorkspacePaths(tool, (agentId) => ctx.sessions?.get(agentId)?.header.cwd))
   }
 }
 

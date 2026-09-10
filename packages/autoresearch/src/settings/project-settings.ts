@@ -1,109 +1,35 @@
 import { parse, stringify } from 'yaml'
 import { safeResolve, writeText, readOptionalText } from '../core/utils.js'
+import { DEFAULT_PROJECT_SETTINGS, type ProjectSecrets, type ProjectSettings } from './schema.js'
+import { migrateProjectSettings, validateProjectSettingsCandidate } from './migration.js'
 
-export interface PaperExplorationSettings {
-  maxPapers: number
-  minSurveys: number
-  minClusters: number
-  latestWindowYears: number
-  latestPerDirection: number
-  maxSelectedDirections: number
-}
+export * from './schema.js'
+export { migrateProjectSettings, validateProjectSettingsCandidate } from './migration.js'
 
-export interface FigureApiSettings {
-  enabled: boolean
-  apiUrl: string
-  model?: string
-  timeoutMs?: number
-  apiKey?: string // runtime-only, not persisted in project-settings.yaml
-}
-
-export interface ModelSettings {
-  useGlobal: boolean
-  overrides?: {
-    provider?: string
-    model?: string
-    reasoningEffort?: string
-  }
-  supportsImageInput?: boolean
-}
-
-export interface ExperimentSettings {
-  maxRounds?: number
-  profile?: string
-}
-
-export interface ProjectSettings {
-  version: 1
-  paperExploration: PaperExplorationSettings
-  figureApi: FigureApiSettings
-  model: ModelSettings
-  experiment: ExperimentSettings
-}
-
-export interface ProjectSecrets {
-  figureApiKey?: string
-}
-
-export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
-  version: 1,
-  paperExploration: {
-    maxPapers: 60,
-    minSurveys: 3,
-    minClusters: 5,
-    latestWindowYears: 1,
-    latestPerDirection: 5,
-    maxSelectedDirections: 3,
-  },
-  figureApi: {
-    enabled: false,
-    apiUrl: '',
-    timeoutMs: 60_000,
-  },
-  model: {
-    useGlobal: true,
-  },
-  experiment: {
-    maxRounds: 1,
-    profile: '',
-  },
-}
-
-export function projectSettingsPath(projectDir: string): string {
-  return safeResolve(projectDir, '.autoresearch', 'project-settings.yaml')
-}
-
-export function projectSecretsPath(projectDir: string): string {
-  return safeResolve(projectDir, '.autoresearch', 'project-secrets.yaml')
-}
+export function projectSettingsPath(projectDir: string): string { return safeResolve(projectDir, '.autoresearch', 'project-settings.yaml') }
+export function projectSecretsPath(projectDir: string): string { return safeResolve(projectDir, '.autoresearch', 'project-secrets.yaml') }
 
 export async function loadProjectSettings(projectDir: string): Promise<ProjectSettings> {
   const file = projectSettingsPath(projectDir)
   const text = await readOptionalText(file)
   if (!text) return structuredClone(DEFAULT_PROJECT_SETTINGS)
-  try {
-    const parsed = parse(text) as Partial<ProjectSettings> | null
-    return normalizeProjectSettings(parsed ?? {})
-  } catch {
-    return structuredClone(DEFAULT_PROJECT_SETTINGS)
-  }
+  let parsed: unknown
+  try { parsed = parse(text) } catch (cause) { throw settingsCorrupt(file, [{ path: '/', code: 'YAML_PARSE', message: String(cause) }]) }
+  const result = validateProjectSettingsCandidate(parsed)
+  if (!result.valid || !result.settings) throw settingsCorrupt(file, result.errors)
+  return result.settings
 }
 
 export async function saveProjectSettings(projectDir: string, settings: ProjectSettings): Promise<ProjectSettings> {
-  const normalized = normalizeProjectSettings(settings)
-  await writeText(projectSettingsPath(projectDir), `${stringify(normalized)}\n`)
-  return normalized
+  const { readProjectSettingsDocument, saveProjectSettingsDocument } = await import('./service.js')
+  const current = await readProjectSettingsDocument(projectDir)
+  return (await saveProjectSettingsDocument(projectDir, settings, current.revision)).settings
 }
 
 export async function loadProjectSecrets(projectDir: string): Promise<ProjectSecrets> {
-  const file = projectSecretsPath(projectDir)
-  const text = await readOptionalText(file)
+  const text = await readOptionalText(projectSecretsPath(projectDir))
   if (!text) return {}
-  try {
-    return (parse(text) as ProjectSecrets) ?? {}
-  } catch {
-    return {}
-  }
+  try { return (parse(text) as ProjectSecrets) ?? {} } catch (cause) { throw settingsCorrupt(projectSecretsPath(projectDir), [{ path: '/', code: 'YAML_PARSE', message: String(cause) }]) }
 }
 
 export async function saveProjectSecrets(projectDir: string, secrets: ProjectSecrets): Promise<ProjectSecrets> {
@@ -111,51 +37,17 @@ export async function saveProjectSecrets(projectDir: string, secrets: ProjectSec
   return secrets
 }
 
-export function normalizeProjectSettings(settings: Partial<ProjectSettings>): ProjectSettings {
-  const base = JSON.parse(JSON.stringify(DEFAULT_PROJECT_SETTINGS)) as ProjectSettings
-  const paper: Partial<PaperExplorationSettings> = settings.paperExploration ?? {}
-  const figure: Partial<FigureApiSettings> = settings.figureApi ?? {}
-  const model: Partial<ModelSettings> = settings.model ?? {}
-  const experiment: Partial<ExperimentSettings> = settings.experiment ?? {}
-  return {
-    version: 1,
-    paperExploration: {
-      maxPapers: numOr(paper.maxPapers, base.paperExploration.maxPapers),
-      minSurveys: numOr(paper.minSurveys, base.paperExploration.minSurveys),
-      minClusters: numOr(paper.minClusters, base.paperExploration.minClusters),
-      latestWindowYears: numOr(paper.latestWindowYears, base.paperExploration.latestWindowYears),
-      latestPerDirection: numOr(paper.latestPerDirection, base.paperExploration.latestPerDirection),
-      maxSelectedDirections: numOr(paper.maxSelectedDirections, base.paperExploration.maxSelectedDirections),
-    },
-    figureApi: {
-      enabled: typeof figure.enabled === 'boolean' ? figure.enabled : base.figureApi.enabled,
-      apiUrl: typeof figure.apiUrl === 'string' ? figure.apiUrl : base.figureApi.apiUrl,
-      model: typeof figure.model === 'string' ? figure.model : undefined,
-      timeoutMs: numOr(figure.timeoutMs, base.figureApi.timeoutMs ?? 60_000),
-    },
-    model: {
-      useGlobal: typeof model.useGlobal === 'boolean' ? model.useGlobal : true,
-      overrides: model.overrides ? {
-        ...(typeof model.overrides.provider === 'string' ? { provider: model.overrides.provider } : {}),
-        ...(typeof model.overrides.model === 'string' ? { model: model.overrides.model } : {}),
-        ...(typeof model.overrides.reasoningEffort === 'string' ? { reasoningEffort: model.overrides.reasoningEffort } : {}),
-      } : undefined,
-    },
-    experiment: {
-      maxRounds: numOr(experiment.maxRounds, base.experiment.maxRounds ?? 1),
-      profile: typeof experiment.profile === 'string' ? experiment.profile : base.experiment.profile,
-    },
-  }
-}
+export function normalizeProjectSettings(settings: Partial<ProjectSettings>): ProjectSettings { return migrateProjectSettings(settings) }
 
 export function maskProjectSettings(settings: ProjectSettings, secrets: ProjectSecrets = {}): ProjectSettings & { figureApiKeyMasked?: string } {
   const masked: ProjectSettings & { figureApiKeyMasked?: string } = structuredClone(settings)
-  if (secrets.figureApiKey) {
-    masked.figureApiKeyMasked = `${secrets.figureApiKey.slice(0, 4)}****`
-  }
+  if (secrets.figureApiKey) masked.figureApiKeyMasked = `${secrets.figureApiKey.slice(0, 4)}****`
+  if (masked.figureApi && 'apiKey' in masked.figureApi) delete masked.figureApi.apiKey
   return masked
 }
 
-function numOr(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback
+export function settingsCorrupt(file: string, errors: Array<{ path: string; code: string; message: string }>): Error & { code: string; file: string; errors: typeof errors } {
+  const error = new Error(`invalid project settings at ${file}`) as Error & { code: string; file: string; errors: typeof errors }
+  error.name = 'ProjectSettingsCorruptError'; error.code = 'SETTINGS_CORRUPT'; error.file = file; error.errors = errors
+  return error
 }

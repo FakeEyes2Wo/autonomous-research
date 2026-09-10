@@ -1,14 +1,21 @@
 import type { RoleName } from './roles/index.js'
+import type { ProjectSettings } from '../settings/schema.js'
+import type { RequestLedger } from '../policy/request-ledger.js'
 export type { RoleName } from './roles/index.js'
 
 export interface ParentAgentLike {
   readonly id: string
   readonly session: { readonly id: string }
+  readonly options?: { readonly provider?: string; readonly model?: string }
 }
 
 export interface RoleExecutionContext {
   readonly parent: ParentAgentLike
   readonly signal: AbortSignal
+  readonly projectDir?: string
+  readonly runId?: string
+  readonly policySnapshot?: Pick<ProjectSettings, 'version'|'model'|'modelRouting'|'workflow'|'budget'>
+  readonly requestLedger?: RequestLedger
 }
 
 /**
@@ -16,6 +23,8 @@ export interface RoleExecutionContext {
  */
 export interface CommonRoleInput {
   readonly runDir: string
+  readonly projectDir?: string
+  readonly taskId?: string
   readonly cycle?: number
   readonly plan?: string
 }
@@ -75,6 +84,7 @@ export interface RoleOutput {
   readonly text: string
   readonly structured?: unknown
   readonly stopReason: string
+  readonly childId?: string
 }
 
 export interface RoleAgentProvider {

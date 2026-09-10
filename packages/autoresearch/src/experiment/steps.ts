@@ -30,6 +30,37 @@ export async function runPlanner(
   return structuredText(result.structured, 'plan') ?? result.text
 }
 
+export interface MinimalPlan {
+  plan: string
+  riskLevel: 'low' | 'medium' | 'high'
+}
+
+/**
+ * Minimal mode deliberately has one planning call.  The optional risk marker
+ * is advisory; local evidence remains authoritative for deciding whether a
+ * disabled review gate must pause the run.
+ */
+export async function runMinimalPlan(
+  ctx: RunContext,
+  { idea, profile }: { idea: string; profile: string },
+): Promise<MinimalPlan> {
+  const result = await runAgent(ctx, {
+    role: 'planner',
+    input: {
+      runDir: ctx.runDir,
+      cycle: ctx.state.cycle,
+      idea,
+      profile,
+      treeSummary: treeSummary(ctx.tree),
+    },
+    label: `minimal plan cycle ${ctx.state.cycle}`,
+  })
+  const structured = (result.structured ?? {}) as { plan?: unknown; riskLevel?: unknown }
+  const plan = typeof structured.plan === 'string' && structured.plan.trim() ? structured.plan : result.text
+  const riskLevel = structured.riskLevel === 'high' || structured.riskLevel === 'medium' ? structured.riskLevel : 'low'
+  return { plan, riskLevel }
+}
+
 export async function runMinimalVerification(
   ctx: RunContext,
   { planText }: { planText: string },
@@ -241,9 +272,9 @@ export async function runEvidenceAgent(
 
 export async function runSupervisor(
   ctx: RunContext,
-  { planText }: { planText: string },
+  { planText, evidence }: { planText: string; evidence?: string },
 ): Promise<ResearchDecision> {
-  const rubric = await readRubric(ctx.runDir)
+  const rubric = (await readOptionalText(join(ctx.runDir, 'RUBRIC.md'))) ?? ''
   const result = await runAgent(ctx, {
     role: 'supervisor',
     input: {
@@ -251,6 +282,7 @@ export async function runSupervisor(
       cycle: ctx.state.cycle,
       rubric,
       plan: planText,
+      ...(evidence ? { reflexion: evidence } : {}),
       treeSummary: treeSummary(ctx.tree),
     },
     label: `decide cycle ${ctx.state.cycle}`,

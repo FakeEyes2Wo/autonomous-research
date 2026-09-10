@@ -9,7 +9,10 @@ import { objectSchema } from '../schema.js'
 export const generalRoleSpecs = {
   planner: {
     sections: ['idea', 'profile', 'rubric', 'plan', 'treeSummary'],
-    outputSchema: objectSchema({ plan: { type: 'string', required: true } }),
+    outputSchema: objectSchema({
+      plan: { type: 'string', required: true },
+      riskLevel: { type: 'string', enum: ['low', 'medium', 'high'] },
+    }),
   },
   'minimal-verifier': {
     sections: ['plan', 'treeSummary'],

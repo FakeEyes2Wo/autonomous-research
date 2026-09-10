@@ -1,7 +1,7 @@
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, realpathSync, statSync } from 'node:fs'
+import { isAbsolute, join, relative, sep } from 'node:path'
 import type { RoleExecutionContext } from '../agents/types.js'
-import { DEFAULT_MAX_CYCLES, IDEA_FILE, INPUT_DIR, WORK_DIR, ensureDir, readOptionalText, safeResolve, writeText } from '../core/utils.js'
+import { DEFAULT_MAX_CYCLES, EVENTS_FILE, IDEA_FILE, INPUT_DIR, WORK_DIR, ensureDir, readOptionalText, safeResolve, writeText } from '../core/utils.js'
 import { HypothesisPool } from '../core/hypothesis-pool.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { recordDecision, recordResult, saveState, transition, writeDecision } from '../core/state.js'
@@ -19,6 +19,7 @@ import {
   runExperimentReflexion,
   runInsightAbstractor,
   runMinimalVerification,
+  runMinimalPlan,
   runModelScout,
   runPlanner,
   runResultReflexion,
@@ -43,12 +44,42 @@ export class ResearchRunner {
     const ctx = createRunContext(this.deps, runDir, state, tree, context)
     ctx.logger.info(`run started runDir=${runDir} runId=${state.runId} status=${state.status} cycle=${state.cycle}`)
 
+    // Minimal mode is an intentionally small path.  Keep it before the
+    // legacy brainstorm/deep-dive gates so optional roles cannot leak into a
+    // run whose settings explicitly disabled them.
+    if (ctx.policySnapshot.workflow.mode === 'minimal') {
+      let candidate = await readCandidate(runDir)
+      const profile = await this.readProfile(runDir)
+      // Minimal mode skips optional prelude work for auto/never.  An explicit
+      // enabled setting is honored so the UI never stores a silently ignored
+      // switch; its output is folded into the single minimal plan input.
+      if (ctx.policySnapshot.workflow.brainstorm === 'enabled') {
+        const brainstormOptions = this.deps.projectSettings ? {
+          surveyMinSurveys: this.deps.projectSettings.paperExploration.minSurveys,
+          surveyMinClusters: this.deps.projectSettings.paperExploration.minClusters,
+          latestWindowYears: this.deps.projectSettings.paperExploration.latestWindowYears,
+          latestPerDirection: this.deps.projectSettings.paperExploration.latestPerDirection,
+          maxSelectedDirections: this.deps.projectSettings.paperExploration.maxSelectedDirections,
+        } : {}
+        await runBrainstorm({ provider: this.deps.provider, options: brainstormOptions }, { runDir, agentContext: context })
+        candidate = await readCandidate(runDir)
+      }
+      if (ctx.policySnapshot.workflow.deepDive === 'enabled') {
+        const deepDive = await runInitialDeepDive(
+          { provider: this.deps.provider, topN: this.deps.deepDiveTopN },
+          { runDir, idea: candidate.raw, profile, agentContext: context },
+        )
+        const contextText = [deepDive.relatedPapers, deepDive.baselines].filter((value) => value.trim()).join('\n\n')
+        if (contextText) candidate = { ...candidate, raw: `${candidate.raw}\n\n## Explicit deep-dive context\n${contextText}` }
+      }
+      return this.runMinimal(ctx, candidate.raw, profile)
+    }
+
     const shouldBrainstorm = this.shouldBrainstorm(runDir)
     if (shouldBrainstorm) {
       await transition(state, 'brainstorm', 'brainstorm-pipeline')
       const brainstormOptions = {
         ...(this.deps.projectSettings ? {
-          surveyMinPapers: this.deps.projectSettings.paperExploration.maxPapers,
           surveyMinSurveys: this.deps.projectSettings.paperExploration.minSurveys,
           surveyMinClusters: this.deps.projectSettings.paperExploration.minClusters,
           latestWindowYears: this.deps.projectSettings.paperExploration.latestWindowYears,
@@ -288,6 +319,169 @@ export class ResearchRunner {
     return ctx.state
   }
 
+  private shouldRunPaper(ctx: RunContext, idea: string): boolean {
+    const toggle = ctx.policySnapshot.workflow.paper
+    if (toggle === 'enabled') return true
+    if (toggle === 'never') return false
+    return /(?:\b(?:write|produce|draft|submit|prepare)\s+(?:a\s+)?paper\b|明确论文|论文报告|论文稿|latex\s+(?:paper|manuscript)|pdf\s+(?:deliverable|report)|submission\s+(?:draft|package))/i.test(idea)
+  }
+
+  private async runMinimal(ctx: RunContext, idea: string, profile: string): Promise<RunState> {
+    const cycle = ctx.state.cycle
+    if (ctx.tree.query({ kind: 'hypothesis' }).length === 0) {
+      ctx.tree.add('hypothesis', idea, { status: 'proposed' })
+      await ctx.tree.save()
+    }
+    const planMarker = safeResolve(ctx.runDir, `MINIMAL_PLAN-${cycle}.json`)
+    const workMarker = safeResolve(ctx.runDir, `MINIMAL_WORK-${cycle}.json`)
+    let plan: { plan: string; riskLevel: 'low' | 'medium' | 'high'; planFile?: string }
+
+    const savedPlan = await readOptionalText(planMarker)
+    if (savedPlan) {
+      try {
+        const value = JSON.parse(savedPlan) as Partial<typeof plan>
+        if (typeof value.plan !== 'string' || value.plan.trim().length === 0) throw new Error('empty plan')
+        if (value.riskLevel !== undefined && value.riskLevel !== 'low' && value.riskLevel !== 'medium' && value.riskLevel !== 'high') throw new Error('invalid risk level')
+        plan = {
+          plan: value.plan,
+          riskLevel: value.riskLevel === 'high' || value.riskLevel === 'medium' ? value.riskLevel : 'low',
+          ...(typeof value.planFile === 'string' ? { planFile: value.planFile } : {}),
+        }
+      } catch {
+        throw new Error(`invalid minimal plan checkpoint: ${planMarker}`)
+      }
+    } else {
+      await transition(ctx.state, 'plan', `minimal-plan-${cycle}`)
+      plan = await runMinimalPlan(ctx, { idea, profile })
+      const planFile = await writePlan(ctx.runDir, ctx.state.planVersion, plan.plan)
+      plan.planFile = planFile
+      await writeText(planMarker, JSON.stringify({ ...plan, planFile }, null, 2))
+      await recordResult(ctx.state, `minimal-plan-${cycle}`, { planFile, riskLevel: plan.riskLevel })
+    }
+    if (!(await resultRecorded(ctx.runDir, `minimal-plan-${cycle}`))) {
+      await recordResult(ctx.state, `minimal-plan-${cycle}`, { ...(plan.planFile ? { planFile: plan.planFile } : {}), riskLevel: plan.riskLevel })
+    }
+
+    const review = ctx.policySnapshot.workflow.experimentReview
+    const pauseForEvidence = async (reason = 'worker evidence is insufficient or unsafe; supervisor cannot override the evidence gate'): Promise<RunState> => {
+      ctx.state.status = 'PAUSED'
+      ctx.state.lastError = reason
+      await saveState(ctx.runDir, ctx.state)
+      await writeFailureReport(ctx.runDir, `# PAUSED\n\n${ctx.state.lastError}.\n`)
+      return ctx.state
+    }
+    if (review === 'never' && plan.riskLevel !== 'low') {
+      return pauseForEvidence('independent review disabled for a non-low-risk plan; worker was not started')
+    }
+
+    let actionResult: { status: 'completed' | 'failed'; summary: string; artifacts: string[] }
+    const savedWork = await readOptionalText(workMarker)
+    if (savedWork) {
+      const value = JSON.parse(savedWork) as Partial<typeof actionResult>
+      if ((value.status !== 'completed' && value.status !== 'failed') || typeof value.summary !== 'string' || value.summary.trim().length === 0 || !Array.isArray(value.artifacts) || value.artifacts.length === 0 || !value.artifacts.every((item) => typeof item === 'string' && item.trim().length > 0)) {
+        throw new Error(`invalid minimal work checkpoint: ${workMarker}`)
+      }
+      actionResult = { status: value.status, summary: value.summary, artifacts: value.artifacts }
+    } else {
+      await transition(ctx.state, 'work', `minimal-work-${cycle}`)
+      const workDir = safeResolve(ctx.runDir, WORK_DIR, `cycle-${String(cycle).padStart(2, '0')}`)
+      await ensureDir(workDir)
+      actionResult = await runWorker(ctx, {
+        workDir,
+        planText: plan.plan,
+        experimentDesign: plan.plan,
+        minimalVerification: '',
+      })
+      await writeText(workMarker, JSON.stringify(actionResult, null, 2))
+      await recordResult(ctx.state, `minimal-work-${cycle}`, actionResult)
+    }
+    if (!(await resultRecorded(ctx.runDir, `minimal-work-${cycle}`))) {
+      await recordResult(ctx.state, `minimal-work-${cycle}`, actionResult)
+    }
+
+    await reloadTree(ctx)
+    const actions = ctx.tree.query({ kind: 'action' })
+    const evidenceNodes = ctx.tree.query({ kind: 'evidence' })
+    const runRoot = realpathSync(ctx.runDir)
+    const artifactsSafe = actionResult.artifacts.length > 0 && actionResult.artifacts.every((artifact) => {
+      try {
+        const artifactPath = safeResolve(ctx.runDir, artifact)
+        if (!existsSync(artifactPath) || !statSync(artifactPath).isFile()) return false
+        const artifactRootRelative = relative(runRoot, realpathSync(artifactPath))
+        return artifactRootRelative !== '..' && !artifactRootRelative.startsWith(`..${sep}`) && !isAbsolute(artifactRootRelative)
+      } catch {
+        return false
+      }
+    })
+    const validActions = actions.length > 0 && actions.every((action) => action.status === 'completed' && action.content.trim().length > 0)
+    const localRisk = actionResult.status === 'failed' || !validActions || !artifactsSafe ? 'high' : 'low'
+    const risk = plan.riskLevel === 'high' || localRisk === 'high' ? 'high' : plan.riskLevel === 'medium' ? 'medium' : 'low'
+    const evidence = `local evidence: ${actions.length} action node(s), ${evidenceNodes.length} recorded evidence node(s); worker status=${actionResult.status}; artifacts=${artifactsSafe ? 'valid' : 'invalid'}; risk=${risk}`
+    await transition(ctx.state, 'evidence', `minimal-evidence-${cycle}`)
+    await writeText(safeResolve(ctx.runDir, `MINIMAL_EVIDENCE-${cycle}.md`), `# Minimal evidence\n\n${evidence}\n`)
+    ctx.state.evidencePath = safeResolve(ctx.runDir, `MINIMAL_EVIDENCE-${cycle}.md`)
+    if (!(await resultRecorded(ctx.runDir, `minimal-evidence-${cycle}`))) {
+      await recordResult(ctx.state, `minimal-evidence-${cycle}`, { evidence, risk })
+    }
+
+    if (review === 'enabled' || (review === 'auto' && risk !== 'low')) {
+      await runExperimentReflexion(ctx, {
+        planText: plan.plan,
+        minimalVerification: evidence,
+        modelScout: '',
+        initialDesign: plan.plan,
+      })
+    } else if (review === 'never' && risk !== 'low') {
+      return pauseForEvidence('independent review disabled while critical risk remains')
+    }
+
+    if (ctx.policySnapshot.workflow.modelScout === 'enabled' || (ctx.policySnapshot.workflow.modelScout === 'auto' && risk !== 'low')) {
+      await runModelScout(ctx, { planText: plan.plan })
+    }
+    if (ctx.policySnapshot.workflow.postResultSynthesis === 'enabled' || (ctx.policySnapshot.workflow.postResultSynthesis === 'auto' && risk !== 'low')) {
+      await runResultReflexion(ctx, { planText: plan.plan, experimentDesign: plan.plan })
+    }
+    if (localRisk === 'high') return pauseForEvidence()
+
+    await transition(ctx.state, 'decide', `minimal-decide-${cycle}`)
+    const decision = await runSupervisor(ctx, { planText: plan.plan, evidence })
+    await writeDecision(ctx.runDir, `# Decision\n\n- action: ${decision.action}\n- reason: ${decision.reason}\n`)
+    await recordDecision(ctx.state, `minimal-decide-${cycle}`, decision as unknown as Record<string, unknown>)
+    if (decision.action === 'finish') {
+      if (this.shouldRunPaper(ctx, idea)) {
+        ctx.state.phase = 'paper'
+        await saveState(ctx.runDir, ctx.state)
+        await runPaper(ctx)
+      }
+      ctx.state.status = 'COMPLETED'
+      await saveState(ctx.runDir, ctx.state)
+      return ctx.state
+    }
+    if (decision.action === 'fail') {
+      ctx.state.status = 'FAILED'
+      ctx.state.phase = 'failed'
+      ctx.state.lastError = decision.reason
+      await saveState(ctx.runDir, ctx.state)
+      await writeFailureReport(ctx.runDir, `# FAILURE_REPORT\n\n${decision.reason}\n`)
+      return ctx.state
+    }
+    const maxCycles = this.deps.maxCycles ?? DEFAULT_MAX_CYCLES
+    if (ctx.context.signal.aborted || ctx.state.status !== 'RUNNING') return ctx.state
+    if (ctx.state.cycle >= maxCycles) {
+      ctx.state.status = 'FAILED'
+      ctx.state.phase = 'failed'
+      ctx.state.lastError = `max cycles reached (${maxCycles})`
+      await saveState(ctx.runDir, ctx.state)
+      await writeFailureReport(ctx.runDir, `# FAILURE_REPORT\n\n${ctx.state.lastError}.\n`)
+      return ctx.state
+    }
+    ctx.state.cycle += 1
+    ctx.state.planVersion += decision.action === 'revise' ? 1 : 0
+    ctx.state.phase = decision.action === 'revise' ? 'plan' : 'work'
+    await saveState(ctx.runDir, ctx.state)
+    return this.runMinimal(ctx, idea, profile)
+  }
+
   private async readProfile(runDir: string): Promise<string> {
     return (await readOptionalText(safeResolve(runDir, 'PROFILE.md'))) ?? ''
   }
@@ -295,4 +489,13 @@ export class ResearchRunner {
   private async readPlanText(runDir: string, version: number): Promise<string> {
     return (await readOptionalText(planPath(runDir, version))) ?? ''
   }
+}
+
+async function resultRecorded(runDir: string, stepId: string): Promise<boolean> {
+  const text = await readOptionalText(safeResolve(runDir, EVENTS_FILE))
+  if (!text) return false
+  return text.split(/\r?\n/).filter(Boolean).some((line) => {
+    const event = JSON.parse(line) as { type?: unknown; stepId?: unknown }
+    return event.type === 'result' && event.stepId === stepId
+  })
 }

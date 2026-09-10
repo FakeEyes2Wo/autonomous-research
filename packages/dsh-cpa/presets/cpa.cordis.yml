@@ -1,0 +1,31 @@
+# DSH user-settings snippet for @athena/dsh-cpa.
+# This is a settings.yaml section, not a second HTTP client or agent runtime.
+# Store the referenced credential through DSH credentials or the CPA_API_KEY
+# environment variable. Never put the secret itself in this file.
+llm-pi-ai:
+  providers:
+    cpa-gpt:
+      displayName: CPA GPT
+      api: openai-responses
+      baseURL: http://127.0.0.1:8317/v1
+      apiKeyEnv: CPA_API_KEY
+      models:
+        - id: gpt-self
+          contextWindow: 32768
+          maxTokens: 8192
+          input:
+            - text
+    cpa-gpt-deep:
+      displayName: CPA GPT Deep
+      api: openai-responses
+      baseURL: http://127.0.0.1:8317/v1
+      apiKeyEnv: CPA_API_KEY
+      reasoning: high
+      models:
+        - id: gpt-self
+          contextWindow: 32768
+          maxTokens: 8192
+          input:
+            - text
+          reasoningEfforts:
+            high: high

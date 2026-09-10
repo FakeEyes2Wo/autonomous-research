@@ -22,6 +22,18 @@ export interface ReflexionOptions<T> {
   onAbnormalExit?: (info: ReflexionAbnormalInfo) => Promise<void>
 }
 
+/** Stable, content-based identity for reflexion convergence checks. */
+export function contentFingerprint(value: unknown): string {
+  const normalize = (input: unknown): unknown => {
+    if (Array.isArray(input)) return input.map(normalize)
+    if (input && typeof input === 'object') {
+      return Object.fromEntries(Object.entries(input as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => [key, normalize(entry)]))
+    }
+    return input
+  }
+  return JSON.stringify(normalize(value))
+}
+
 export async function runReflexion<T>(
   call: AgentCall,
   role: RoleName,
@@ -71,7 +83,7 @@ export async function runReflexion<T>(
       await onAbnormalExit?.({ role, round, stopReason: 'invalid_output', context: { current }, result: next })
       break
     }
-    if (next === current) {
+    if (contentFingerprint(next) === contentFingerprint(current)) {
       converged = true
       break
     }

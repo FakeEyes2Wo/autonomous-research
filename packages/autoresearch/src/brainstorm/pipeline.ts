@@ -44,7 +44,9 @@ import { selectCuratedPapers, writeCuratedPapers } from './curated-papers.js'
 
 const DEFAULTS = {
   surveyMinSurveys: 3,
-  surveyMinPapers: 60,
+  // A paper count is a caller-owned upper bound, not a hidden quality gate.
+  // Keep the legacy lower-bound option opt-in for API compatibility only.
+  surveyMinPapers: 0,
   surveyMinClusters: 5,
   latestPerDirection: 5,
   latestWindowYears: 1,
@@ -55,6 +57,9 @@ export interface BrainstormOptions {
   ranking?: RankingStrategy
   // Two-stage survey options
   surveyMinSurveys?: number
+  /** Maximum number of survey papers retained (when supplied by project policy). */
+  maxPapers?: number
+  /** @deprecated Explicit legacy lower-bound; defaults to zero. */
   surveyMinPapers?: number
   surveyMinClusters?: number
   latestPerDirection?: number
@@ -165,12 +170,21 @@ export async function runBrainstorm(
   state = { ...state, directions }
   await atomicWriteJson(selectedDirectionsPath(runDir), directions)
 
-  const frontierRaw = await frontierMine(deps, state)
-  const frontierPapers = normalizeFrontierPapers(frontierRaw)
-  const records = mergePaperRecords(surveyPapers, frontierPapers)
+  const paperCap = deps.options.maxPapers
+  // Once the survey pool has consumed the caller's cap there is no reason to
+  // spend another model call mining a pool that must be discarded.
+  const frontierRaw = paperCap !== undefined && surveyPapers.length >= paperCap
+    ? { papers: [] }
+    : await frontierMine(deps, state)
+  const frontierLimit = paperCap === undefined ? undefined : Math.max(0, paperCap - surveyPapers.length)
+  const boundedFrontierRaw: RawFrontier = frontierLimit === undefined
+    ? frontierRaw
+    : { ...frontierRaw, papers: (frontierRaw.papers ?? []).slice(0, frontierLimit) }
+  const frontierPapers = normalizeFrontierPapers(boundedFrontierRaw)
+  const records = mergePaperRecords(surveyPapers, frontierPapers).slice(0, paperCap ?? Number.POSITIVE_INFINITY)
   state = { ...state, frontierRaw, frontierPapers, records }
 
-  await atomicWriteJson(frontierPoolPath(runDir), frontierRaw)
+  await atomicWriteJson(frontierPoolPath(runDir), boundedFrontierRaw)
   await atomicWriteJson(paperRecordsPath(runDir), records)
 
   if (deps.options.curatedEnabled !== false) {
@@ -218,7 +232,8 @@ function surveyPlan(deps: BrainstormDependencies, ctx: BrainstormState): string 
     `Goal: breadth first; find field surveys/reviews first`,
     `Min surveys: ${deps.options.surveyMinSurveys ?? DEFAULTS.surveyMinSurveys}`,
     `Min clusters: ${deps.options.surveyMinClusters ?? DEFAULTS.surveyMinClusters}`,
-    `Min papers: ${deps.options.surveyMinPapers ?? DEFAULTS.surveyMinPapers}`,
+    `Max papers: ${deps.options.maxPapers === undefined ? 'caller default' : deps.options.maxPapers}`,
+    `Legacy minimum papers (only if explicitly configured): ${deps.options.surveyMinPapers ?? DEFAULTS.surveyMinPapers}`,
   ].join('\n')
 }
 
@@ -230,7 +245,14 @@ async function survey(deps: BrainstormDependencies, ctx: BrainstormState): Promi
   const raw = (result.structured ?? {}) as RawSurvey
   const surveys = raw.surveys ?? []
   const clusters = raw.clusters ?? []
-  const papers = raw.papers ?? []
+  const maxPapers = deps.options.maxPapers
+  if (maxPapers !== undefined && (!Number.isInteger(maxPapers) || maxPapers < 0)) {
+    throw new AutoResearchError(`maxPapers must be a non-negative integer; got ${String(maxPapers)}`, 'INVALID_ARGUMENT')
+  }
+  // Apply the cap before normalization and persistence. This makes maxPapers
+  // a real resource bound even when a provider returns a larger pool.
+  const papers = maxPapers === undefined ? (raw.papers ?? []) : (raw.papers ?? []).slice(0, maxPapers)
+  const boundedRaw: RawSurvey = maxPapers === undefined ? raw : { ...raw, papers }
   const minSurveys = deps.options.surveyMinSurveys ?? DEFAULTS.surveyMinSurveys
   const minClusters = deps.options.surveyMinClusters ?? DEFAULTS.surveyMinClusters
   const minPapers = deps.options.surveyMinPapers ?? DEFAULTS.surveyMinPapers
@@ -243,7 +265,7 @@ async function survey(deps: BrainstormDependencies, ctx: BrainstormState): Promi
   if (papers.length < minPapers) {
     throw new AutoResearchError(`paper-survey must return >= ${minPapers} papers; got ${papers.length}`, 'AGENT_FAILED')
   }
-  return raw
+  return boundedRaw
 }
 
 function toClusters(raw: RawSurvey): KnowledgeCluster[] {

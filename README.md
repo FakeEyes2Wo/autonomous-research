@@ -1,6 +1,23 @@
 # Autonomous Research System
 
+Current implementation status: [status record](docs/drafts/current-status.md). Optional Web installation and explicit host `apply` steps: [Web package README](packages/autoresearch-web/README.md).
+
+The repository's Web package is a private source package: use local links and an explicit native Cordis `cordis.patch.yml` row; the HTML prototype remains an offline design reference.
+
+当前 DSH 适配锚点为 `0.1.5-alpha.1`；升级与临时环境验证记录见 [DSH upgrade record](docs/drafts/dsh-upgrade-record.md)。Web 配置插件、核心 settings bridge 与 minimal workflow 的实际状态以 [implementation plan](docs/drafts/implementation-plan.md) 和 [TODO](docs/drafts/TODO.md) 为准。
+
 DSH 插件 `@athena/autoresearch`：自动研究闭环。
+
+2026-09-09 [项目设计草稿](docs/drafts/README.md)（核心与可选包已通过本地测试；Web 已完成 Cordis/SlotCore、浏览器与真实 DSH profile 联调，CPA 真实端点仍待用户登录后验收）：
+
+- [CPA 接入与模块边界](docs/drafts/cpa-integration.md)：可选接入包、GPT 路由、Claude 扩展和接入验收。
+- [研究流程与模型策略](docs/drafts/research-runtime.md)：最小研究流程、模型分档表、上下文预算与重试收敛。
+- [详细实现计划](docs/drafts/implementation-plan.md)：文件级改造任务、阶段依赖与验收条件。
+- [科研工作台与迁移指南](docs/drafts/2026-09-09-workbench-guide.md)：精简配置页、左侧 LaTeX 编辑、右侧 PDF 预览与返回原生 DSH；[旧交互原型](docs/drafts/ui/dsh-settings-prototype.html)仅为历史设计参考。
+- [CLIProxyAPI / GPT Pro 自用接入](docs/drafts/2026-09-09-cliproxy-pro-guide.md)：订阅登录、代理本地 key 与 DSH 原生 Models 配置。
+- [额外功能 TODO](docs/drafts/TODO.md)：文献搜索阅读、全文检索等扩展；本次实现其中的论文编辑与 PDF 预览工作台。
+
+可选 Web 包：`packages/autoresearch-web` 提供精简的 DSH `settings.section`、项目设置 API 和科研工作台。设置通过核心 `@athena/autoresearch/settings` bridge 保存，桥接不可用时返回 503；工作台文件与编译接口独立运行，共用 loopback、同源与项目 allowlist。已按用户要求接入本机 DSH profile。
 
 核心能力：
 
@@ -21,7 +38,7 @@ DSH 插件 `@athena/autoresearch`：自动研究闭环。
 
 - Node.js ≥ 22.19.0
 - pnpm
-- DSH ≥ 0.1.0-rc.5（`dsh` CLI 可用）
+- DSH ≥ 0.1.5-alpha.1（`dsh` CLI 可用；当前适配锚点为 `0.1.5-alpha.1`）
 - 可选：pandoc、LaTeX（`latexmk` / `pdflatex` / `xelatex` / `tectonic`）或 Chrome/Edge，用于论文 PDF 生成
 
 ---

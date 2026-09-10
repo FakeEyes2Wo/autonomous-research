@@ -128,6 +128,12 @@ async function ensureHeadlessProfile(profileName) {
 }
 
 function findLatexEngine() {
+  const explicit = process.env.TECTONIC_PATH?.trim()
+  if (explicit) {
+    if (/[\\/]/.test(explicit) && !existsSync(explicit)) return undefined
+    const probe = spawnSync(explicit, ['--version'], { stdio: 'ignore' })
+    return !probe.error && probe.status === 0 ? explicit : undefined
+  }
   const candidates = ['xelatex', 'tectonic', 'latexmk', 'pdflatex']
   for (const name of candidates) {
     const probe = spawnSync(name, ['--version'], { stdio: 'ignore' })
@@ -137,33 +143,22 @@ function findLatexEngine() {
       if (!probe2.error && probe2.status === 0) return name
     }
   }
-  // Fallback: probe known absolute install paths even when the current PATH is stale.
-  const knownPaths = [
-    'D:\\Tectonic\\bin\\tectonic.exe',
-    'C:\\Tectonic\\bin\\tectonic.exe',
-    'C:\\Program Files\\Tectonic\\bin\\tectonic.exe',
-  ]
-  for (const candidate of knownPaths) {
-    if (existsSync(candidate)) return candidate
-  }
   return undefined
 }
 
 function findChrome() {
-  const candidates = [
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Users\\80163\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-  ]
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate
+  const explicit = [process.env.BROWSER_PATH, process.env.CHROME_PATH].filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim())
+  const defaults = process.platform === 'win32'
+    ? [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean).flatMap((root) => [join(root, 'Google/Chrome/Application/chrome.exe'), join(root, 'Microsoft/Edge/Application/msedge.exe')])
+    : process.platform === 'darwin'
+      ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium']
+      : ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/microsoft-edge']
+  for (const candidate of [...explicit, ...defaults]) if (existsSync(candidate)) return candidate
+  const names = process.platform === 'win32' ? ['chrome.exe', 'msedge.exe'] : ['google-chrome', 'chromium', 'chromium-browser', 'microsoft-edge']
+  for (const name of names) {
+    const probe = spawnSync(name, ['--version'], { stdio: 'ignore' })
+    if (!probe.error && probe.status === 0) return name
   }
-  const probe = spawnSync('chrome', ['--version'], { stdio: 'ignore' })
-  if (!probe.error && probe.status === 0) return 'chrome'
-  const edgeProbe = spawnSync('msedge', ['--version'], { stdio: 'ignore' })
-  if (!edgeProbe.error && edgeProbe.status === 0) return 'msedge'
   return undefined
 }
 
@@ -238,11 +233,7 @@ async function compilePaper(runDir) {
   if (engineName === 'latexmk') {
     compile = spawnSync(engine, ['-pdf', '-interaction=nonstopmode', '-halt-on-error', 'main.tex'], { cwd: paperDir, stdio: 'inherit' })
   } else if (engineName === 'tectonic') {
-    // Tectonic downloads its TeX bundle on demand. This machine reaches the
-    // Internet through a local proxy; without it the bundle fetch fails/panics.
-    if (!process.env.HTTP_PROXY) process.env.HTTP_PROXY = 'http://127.0.0.1:7890'
-    if (!process.env.HTTPS_PROXY) process.env.HTTPS_PROXY = 'http://127.0.0.1:7890'
-    if (!process.env.ALL_PROXY) process.env.ALL_PROXY = 'http://127.0.0.1:7890'
+    // Tectonic inherits the caller's proxy environment when one is configured.
     compile = spawnSync(engine, ['main.tex'], { cwd: paperDir, stdio: 'inherit' })
   } else {
     compile = spawnSync(engine, ['-interaction=nonstopmode', '-halt-on-error', 'main.tex'], { cwd: paperDir, stdio: 'inherit' })

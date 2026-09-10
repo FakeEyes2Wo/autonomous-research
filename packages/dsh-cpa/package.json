@@ -1,0 +1,22 @@
+{
+  "name": "@athena/dsh-cpa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Optional CPA provider-route compiler, diagnostics, and safe DSH settings installer",
+  "type": "module",
+  "main": "dist/index.mjs",
+  "exports": { ".": "./dist/index.mjs" },
+  "bin": {
+    "dsh-cpa": "scripts/install.mjs",
+    "dsh-cpa-doctor": "scripts/doctor.mjs"
+  },
+  "files": ["dist", "src", "scripts", "presets", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "node scripts/build.mjs --check",
+    "test": "node --test test/*.test.mjs",
+    "doctor": "node scripts/doctor.mjs"
+  },
+  "dependencies": { "yaml": "^2.8.1" },
+  "engines": { "node": ">=20" }
+}

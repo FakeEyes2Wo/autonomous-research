@@ -108,6 +108,7 @@ export async function negotiateContract(ctx: PaperContext): Promise<string> {
           result: info.result,
         })
       },
+      rounds: ctx.agentContext.policySnapshot?.workflow.reflexionRounds ?? 1,
     },
   )
 
@@ -344,10 +345,24 @@ export async function runPaperAudits(ctx: PaperContext): Promise<Record<string, 
   return audits
 }
 
+/** A single gate used by the pipeline and report; missing/invalid audits fail closed. */
+export function paperAuditStatus(audits: Record<string, unknown>): 'passed' | 'failed' {
+  for (const { name } of PAPER_AUDITS) {
+    const value = audits[name]
+    if (!value || typeof value !== 'object') return 'failed'
+    const verdict = (value as { verdict?: unknown }).verdict
+    if (verdict !== 'PASS' && verdict !== 'NOT_APPLICABLE') return 'failed'
+  }
+  const basic = audits.basic
+  if (!basic || typeof basic !== 'object') return 'failed'
+  const result = basic as { numeric?: { ok?: unknown }; citation?: { ok?: unknown } }
+  return result.numeric?.ok === true && result.citation?.ok === true ? 'passed' : 'failed'
+}
+
 export async function improvePaper(ctx: PaperContext, cp: PaperCheckpoint): Promise<void> {
   const { runDir, paperDir } = ctx.paths
   const { evidencePath } = ctx.content
-  const total = ctx.deps.options.maxImprovementRounds ?? 2
+  const total = ctx.deps.options.maxImprovementRounds ?? ctx.agentContext.policySnapshot?.workflow.paperImprovementRounds ?? 0
   const log: string[] = []
   for (let round = (cp.data.improvementRounds ?? 0) + 1; round <= total; round += 1) {
     const review = await ctx.deps.provider.run('paper-reviewer', {
@@ -361,6 +376,7 @@ export async function improvePaper(ctx: PaperContext, cp: PaperCheckpoint): Prom
     ].join('\n')
     await writePaper(ctx, feedback)
     const compile = await compilePaper(paperDir)
+    if (!compile.ok) throw new Error(`paper improvement round ${round} failed to compile`)
     if (compile.ok && existsSync(join(paperDir, 'main.pdf'))) {
       await copyFile(join(paperDir, 'main.pdf'), join(paperDir, `main_round${round}.pdf`))
     }
@@ -390,6 +406,7 @@ export async function polishPaper(ctx: PaperContext): Promise<void> {
   }
   await writeText(join(paperDir, 'PAPER_POLISH_LOG.md'), `# Paper Polish Log\n\n${(value.changes ?? []).map((x) => `- ${x}`).join('\n')}\n`)
   const compile = await compilePaper(paperDir)
+  if (!compile.ok) throw new Error('paper polish failed to compile')
   if (compile.ok && existsSync(join(paperDir, 'main.pdf'))) {
     await copyFile(join(paperDir, 'main.pdf'), join(paperDir, 'main_polished.pdf'))
   }
@@ -400,6 +417,7 @@ export async function writePaperReport(
   assurance: string,
   compileOk: boolean,
   audits: Record<string, unknown>,
+  auditStatus = paperAuditStatus(audits),
 ): Promise<string> {
   const { runDir } = ctx.paths
   const report = `# FINAL_REPORT — Paper Writing Pipeline Report
@@ -407,7 +425,8 @@ export async function writePaperReport(
 **Input**: ${runDir}
 **Venue**: ${ctx.deps.options.venue ?? DEFAULT_VENUE}
 **Assurance**: ${assurance}
-**Submission-ready**: ${compileOk ? 'yes' : 'no'}
+**Submission-ready**: ${compileOk && auditStatus === 'passed' ? 'yes' : 'no'}
+**Audit gate**: ${auditStatus}
 **Forensics**: ${assurance === 'submission' ? 'WARN' : 'skipped (draft)'}
 **Date**: ${new Date().toISOString()}
 

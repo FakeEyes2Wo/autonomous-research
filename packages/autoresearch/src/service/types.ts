@@ -3,6 +3,7 @@ import type { HumanReviewer, ReviewGateId } from '../core/human-review.js'
 import type { HumanReviewMode } from '../session/auto-mode.js'
 import type { PaperOptions } from '../paper/pipeline.js'
 import type { ProjectSettings } from '../settings/project-settings.js'
+import type { RoleExecutionContext } from '../agents/types.js'
 
 export interface ResearchRunnerOptions {
   provider: RoleAgentProvider
@@ -15,4 +16,5 @@ export interface ResearchRunnerOptions {
   deepDiveEnabled?: boolean
   deepDiveTopN?: number
   projectSettings?: ProjectSettings
+  policySnapshot?: RoleExecutionContext['policySnapshot']
 }

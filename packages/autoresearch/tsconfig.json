@@ -14,29 +14,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
-    "typeRoots": [
-      "C:/Users/80163/Desktop/挑战杯_2026/Athena/athena_ts/node_modules/@types",
-      "C:/nvm4w/nodejs/node_modules/@deepseek-ai/dsh/node_modules/@types"
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "@deepseek-ai/cordis": [
-        "../../../../../../../nvm4w/nodejs/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis"
-      ],
-      "@deepseek-ai/dsh-agent": [
-        "../../../../../../../nvm4w/nodejs/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-agent"
-      ],
-      "@deepseek-ai/dsh-llm": [
-        "../../../../../../../nvm4w/nodejs/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-llm"
-      ],
-      "@deepseek-ai/dsh-subagent": [
-        "../../../../../../../nvm4w/nodejs/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-subagent"
-      ],
-      "@deepseek-ai/dsh-tools": [
-        "../../../../../../../nvm4w/nodejs/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-tools"
-      ]
-    }
+    "types": ["node"]
   },
   "include": ["src"]
 }

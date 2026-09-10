@@ -2,7 +2,7 @@ import type { RoleInput, RoleName, RoleOutput } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { transition } from '../core/state.js'
 import type { RunPhase } from '../core/types.js'
-import { safeResolve, withRetry, writeText } from '../core/utils.js'
+import { safeResolve, writeText } from '../core/utils.js'
 import type { RunContext } from './context.js'
 
 export interface AgentRequest {
@@ -29,7 +29,12 @@ export async function runAgent(ctx: RunContext, request: AgentRequest): Promise<
   ctx.logger.info(`[agent:${request.role}] start ${request.label}`)
   const started = Date.now()
   try {
-    const result = await withRetry(() => ctx.deps.provider.run(request.role, request.input, ctx.context), request.role)
+    const input = {
+      ...request.input,
+      projectDir: request.input.projectDir ?? ctx.projectDir,
+      taskId: request.input.taskId ?? request.label,
+    }
+    const result = await ctx.deps.provider.run(request.role, input, ctx.context)
     ctx.logger.info(`[agent:${request.role}] done ${request.label} in ${Date.now() - started}ms`)
     return result
   } catch (error) {

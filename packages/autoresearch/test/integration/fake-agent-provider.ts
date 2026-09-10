@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { researchActionStart, researchActionFinish, researchEvidenceAdd, researchTreeQuery } from '../../dist/tools/index.js'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../../dist/agents/types.js'
 
@@ -8,8 +10,11 @@ export interface FakeAgentScript {
   reviewOk?: boolean
   plan?: string
   workerStatus?: 'completed' | 'failed'
+  workerArtifacts?: string[]
   decisions: Array<'continue' | 'revise' | 'finish' | 'fail'>
   writerText?: string
+  minimalRisk?: 'low' | 'medium' | 'high'
+  throwOnRole?: RoleName
 }
 
 export class FakeAgentProvider implements RoleAgentProvider {
@@ -24,6 +29,7 @@ export class FakeAgentProvider implements RoleAgentProvider {
   async run(role: RoleName, _input: RoleInput, _context: RoleExecutionContext): Promise<RoleOutput> {
     this.calls.push(role)
     this.inputs.push({ role, input: _input })
+    if (this.script.throwOnRole === role) throw new Error(`fake ${role} failure`)
     switch (role) {
       case 'rubric-generator':
         return { text: '', structured: { rubric: this.script.rubric ?? '# Rubric\n\n- metric: accuracy' }, stopReason: 'completed' }
@@ -47,7 +53,7 @@ export class FakeAgentProvider implements RoleAgentProvider {
       case 'idea-reflexion':
         return { text: '', structured: { is_falsifiable: true, testable_implication: 'run experiment', unobservable_variables: [], critique: 'ok', unaddressed_risks: [], fatal_flaw_found: false }, stopReason: 'completed' }
       case 'planner':
-        return { text: '', structured: { plan: this.script.plan ?? '# Plan\n\n1. run analysis' }, stopReason: 'completed' }
+        return { text: '', structured: { plan: this.script.plan ?? '# Plan\n\n1. run analysis', ...(this.script.minimalRisk ? { riskLevel: this.script.minimalRisk } : {}) }, stopReason: 'completed' }
       case 'model-scout':
         return {
           text: '',
@@ -83,24 +89,29 @@ export class FakeAgentProvider implements RoleAgentProvider {
         const runDir = _input.runDir
         const nodes = await researchTreeQuery.execute({ runDir }, toolExec) as Array<{ id: string; kind: string }>
         const hypothesis = nodes.find((node) => node.kind === 'hypothesis')
+        const artifact = 'work/cycle-1/out.txt'
+        await mkdir(join(runDir, 'work', 'cycle-1'), { recursive: true })
+        await writeFile(join(runDir, artifact), 'fake worker artifact\n', 'utf8')
+        await mkdir(join(runDir, 'work', 'cycle-01'), { recursive: true })
+        await writeFile(join(runDir, 'work', 'cycle-01', 'out.txt'), 'fake worker artifact\n', 'utf8')
         if (hypothesis) {
           const action = await researchActionStart.execute({ runDir, hypothesisId: hypothesis.id, content: 'fake action' }, toolExec) as { id: string }
           this.lastActionId = action.id
-          await researchActionFinish.execute({ runDir, actionId: action.id, status: this.script.workerStatus ?? 'completed', summary: 'worker summary', artifacts: [] }, toolExec)
+          await researchActionFinish.execute({ runDir, actionId: action.id, status: this.script.workerStatus ?? 'completed', summary: 'worker summary', artifacts: [artifact] }, toolExec)
         }
         return {
           text: 'worker done',
           structured: {
             status: this.script.workerStatus ?? 'completed',
             summary: 'worker summary',
-            artifacts: ['work/cycle-1/out.txt'],
+            artifacts: this.script.workerArtifacts ?? ['work/cycle-1/out.txt'],
           },
           stopReason: 'completed',
         }
       }
       case 'evidence-agent': {
         if (this.lastActionId) {
-          await researchEvidenceAdd.execute({ runDir: _input.runDir, actionId: this.lastActionId, content: 'fake evidence', verdict: 'supports' }, toolExec)
+          await researchEvidenceAdd.execute({ runDir: _input.runDir, actionId: this.lastActionId, content: 'fake evidence', verdict: 'supports', artifacts: ['work/cycle-1/out.txt'] }, toolExec)
         }
         return { text: 'evidence checked', structured: { summary: 'evidence checked' }, stopReason: 'completed' }
       }

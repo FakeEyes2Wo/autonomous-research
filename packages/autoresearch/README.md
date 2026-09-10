@@ -21,6 +21,10 @@ npm test
   agent.cordis.yml
 ```
 
+DSH Agent 调用 AutoResearch 工具时，相对 `runDir` 和 `projectDir` 会以该调用
+会话的工作区目录为基准解析；显式绝对路径语义不变。没有 Agent 上下文的直接
+service 或 headless CLI 调用继续保持原有的进程相对路径语义。
+
 在 DSH 模式选择器中选择 **AutoResearch**，而不是直接输入 `/auto_research`：
 
 - 会先探索当前目录

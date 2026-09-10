@@ -1,0 +1,110 @@
+/* Compact paper surface shared by the standalone page and the native shell. */
+body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { height: 58px; min-height: 58px; padding: 0 24px; }
+.brand { font-size: 14px; gap: 10px; }
+.brand-mark { width: 32px; height: 32px; font-size: 23px; border-radius: 9px; }
+.brand small { font-size: 7px; letter-spacing: 1.7px; margin-top: 3px; }
+main { width: 100%; flex: 1; min-height: 0; padding: 18px 24px 0; display: flex; flex-direction: column; }
+.workspace-heading { margin-bottom: 8px; gap: 14px; }
+.eyebrow { font-size: 8px; margin-bottom: 5px; letter-spacing: 1.7px; }
+h1 { font-size: 23px; letter-spacing: -.6px; }
+.subtitle { display: inline-block; font-size: 11px; margin: 5px 0 0; }
+.project-control { min-width: 170px; gap: 5px; }
+.workspace-toolbar { min-height: 44px; margin-bottom: 10px; flex-shrink: 0; }
+.button { padding: 7px 12px; }
+.workspace { height: auto; flex: 1; min-height: 160px; max-height: none; border-radius: 9px; }
+.panel-heading { height: 39px; padding: 0 14px; }
+.editor-footer, .preview-footer { height: 32px; }
+.editor-wrap { padding-top: 13px; }
+#editor, #line-numbers { font-size: 12px; line-height: 1.85; }
+.pdf-viewport { padding: 20px; }
+.preview-empty { min-height: 0; }
+.preview-empty h2 { margin-top: 17px; font-size: 14px; }
+.paper-symbol { width: 58px; height: 75px; padding: 17px 10px; }
+.paper-symbol span { margin-bottom: 7px; }
+.workspace-footer { min-height: 30px; flex-shrink: 0; }
+.build-log { flex-shrink: 0; max-height: 130px; }
+.sync-notice { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-shrink: 0; margin: 0 0 8px; padding: 7px 11px; font-size: 11px; color: #39705a; background: #eaf3ed; border: 1px solid #d5e6dc; border-radius: 6px; }
+.sync-notice button { white-space: nowrap; font-size: 11px; color: #226c56; }
+.notice { flex-shrink: 0; margin-bottom: 8px; max-height: 90px; overflow: auto; }
+.research-chat { --chat-height: 320px; height: var(--chat-height); min-height: 180px; flex-shrink: 0; margin: 7px 0 16px; border: 1px solid #d9e1d9; border-radius: 12px; background: #fff; box-shadow: 0 4px 20px #244b3610; position: relative; display: flex; flex-direction: column; }
+.chat-resize { position: absolute; height: 11px; top: -10px; left: 0; right: 0; cursor: ns-resize; display: flex; justify-content: center; align-items: center; touch-action: none; }
+.chat-resize span { height: 3px; width: 34px; border-radius: 3px; background: #b9c8bd; }
+.chat-resize:hover span, .chat-resize:focus-visible span { background: var(--accent); }
+.chat-heading { height: 39px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; border-bottom: 1px solid #edf0eb; }
+.chat-title, .chat-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.chat-title .connection-dot { margin: 0; }
+.chat-title strong { font-size: 12px; font-weight: 600; white-space: nowrap; }
+#chat-state { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-actions .text-button { font-size: 10px; }
+.chat-actions { flex-shrink: 0; }
+.chat-content { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; border-radius: 0 0 12px 12px; }
+.chat-prompts { display: flex; align-items: center; gap: 7px; padding: 7px 14px 2px; flex-shrink: 0; }
+.chat-prompts button { border: 1px solid #dde8df; color: #426a56; background: #f6faf5; border-radius: 6px; padding: 4px 9px; font-size: 10px; white-space: nowrap; }
+.chat-prompts button:hover:enabled { background: #e8f1e6; }
+#chat-hint { margin-left: auto; color: var(--muted); font-size: 9px; }
+.chat-frame-wrap { position: relative; flex: 1; min-height: 0; }
+#native-chat { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+.chat-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; background: #fff; color: var(--muted); padding: 16px; font-size: 11px; text-align: center; }
+.research-chat.collapsed { height: 40px; min-height: 40px; }
+.research-chat.collapsed .chat-heading { border: 0; }
+.resizing-chat { cursor: ns-resize; user-select: none; }
+.resizing-chat iframe { pointer-events: none; }
+.embedded { background: transparent; }
+.embedded .research-chat { display: none; }
+.embedded .topbar { display: none; }
+.embedded main { padding: 10px 16px 0; }
+.embedded .eyebrow, .embedded .subtitle, .embedded .project-control label { display: none; }
+.embedded .workspace-heading { margin-bottom: 2px; }
+.embedded h1 { font-size: 15px; letter-spacing: 0; font-weight: 600; }
+.embedded .heading-dot { display: none; }
+.embedded .project-control { min-width: 150px; max-width: 230px; }
+.embedded .project-control select { padding-top: 5px; padding-bottom: 5px; background: transparent; }
+.embedded .workspace-toolbar { margin-bottom: 7px; min-height: 39px; }
+@media (max-width: 1050px) {
+  main { padding: 14px 16px 0; }
+  .topbar { padding: 0 16px; }
+  .workspace-toolbar { gap: 6px; }
+  .document-controls select { max-width: 220px; }
+  .save-controls { gap: 6px; }
+}
+@media (max-width: 720px) {
+  .topbar { height: 52px; min-height: 52px; padding: 0 12px; }
+  .brand { font-size: 12px; }
+  .brand small { display: none; }
+  main, .embedded main { padding: 10px 10px 0; }
+  h1 { font-size: 20px; }
+  .workspace-heading { align-items: center; margin-bottom: 6px; }
+  .eyebrow, .subtitle { display: none; }
+  .project-control, .embedded .project-control { min-width: 105px; max-width: 160px; }
+  .project-control label { display: none; }
+  .workspace-toolbar { gap: 2px; margin-bottom: 2px; }
+  .document-controls { gap: 7px; }
+  .document-controls select { max-width: none; font-size: 11px; }
+  .save-controls .button { padding: 6px 9px; font-size: 10px; }
+  .save-controls .status { font-size: 9px; }
+  .mobile-tabs { flex-shrink: 0; margin: 5px 0 7px; }
+  .mobile-tabs button { padding: 6px; }
+  .workspace { min-height: 130px; height: auto; }
+  .panel-heading { height: 33px; }
+  .panel-caption { font-size: 8px; }
+  .workspace-footer { min-height: 27px; gap: 5px; }
+  .workspace-footer > span:last-child { display: none; }
+  .sync-notice { font-size: 10px; padding: 6px 8px; gap: 5px; }
+  .sync-notice button { font-size: 10px; }
+  .pdf-viewport { padding: 14px; }
+  .research-chat { margin-bottom: 12px; border-radius: 9px; }
+  .chat-heading { padding: 0 10px; height: 35px; }
+  .chat-title { gap: 6px; }
+  .chat-title strong { font-size: 11px; }
+  #chat-state { font-size: 9px; max-width: 115px; }
+  .chat-actions { gap: 6px; }
+  .chat-actions a { display: none; }
+  .chat-prompts { padding: 6px 8px 2px; gap: 5px; }
+  .chat-prompts button { padding: 4px 7px; font-size: 9px; }
+  #chat-hint { display: none; }
+}
+@media (max-height: 520px) {
+  .embedded .preview-empty .paper-symbol, .embedded .preview-empty h2 { display: none; }
+  .embedded .preview-empty p { margin: 4px 0; }
+}

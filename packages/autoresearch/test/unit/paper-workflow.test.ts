@@ -49,3 +49,30 @@ test('auditPaper accepts numbers with known evidence tags', async () => {
     await rm(dir, { recursive: true, force: true })
   }
 })
+
+test('auditPaper ignores LaTeX macro arity syntax but still audits正文 numeric claims', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-audit-macros-'))
+  try {
+    await mkdir(join(dir, 'paper'), { recursive: true })
+    await writeFile(join(dir, 'paper', 'math_commands.tex'), '\\newcommand{\\norm}[1]{\\left\\|#1\\right\\|}\n\\newcommand{\\inner}[2]{\\langle #1,#2\\rangle}\n')
+    await writeFile(join(dir, 'paper', 'main.tex'), '\\documentclass{article}\n\\begin{document}\nAccuracy is 0.95.\n\\end{document}\n')
+    const result = await auditPaper(dir, ['E1'])
+    assert.equal(result.numeric.ok, false)
+    assert.equal(result.numeric.errors.length, 1)
+    assert.match(result.numeric.errors[0] ?? '', /Accuracy is 0\.95/)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('auditPaper accepts a macro-definition file without treating arity as a claim', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-audit-macro-only-'))
+  try {
+    await mkdir(join(dir, 'paper'), { recursive: true })
+    await writeFile(join(dir, 'paper', 'math_commands.tex'), '\\newcommand{\\norm}[1]{\\left\\|#1\\right\\|}\n\\newcommand{\\inner}[2]{\\langle #1,#2\\rangle}\n')
+    const result = await auditPaper(dir, ['E1'])
+    assert.equal(result.numeric.ok, true)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

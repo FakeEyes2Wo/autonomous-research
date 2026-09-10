@@ -1,0 +1,75 @@
+{
+  "name": "@athena/autoresearch-web",
+  "version": "0.1.0",
+  "description": "Portable AutoResearch settings and LaTeX/PDF research workbench for DSH",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./contract": {
+      "types": "./dist/contract.d.ts",
+      "default": "./dist/contract.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "external": [
+        "react"
+      ],
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "scripts",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/api.test.mjs test/core-integration.test.mjs test/factory.test.mjs test/native-host.test.mjs test/workbench.test.mjs test/assets.test.mjs test/workbench-sync.test.mjs",
+    "test:native-host": "node --test test/native-host.test.mjs",
+    "test:browser": "node test/browser-render.test.mjs",
+    "test:workbench:browser": "node test/workbench-browser.mjs"
+  },
+  "engines": {
+    "node": ">=22.19.0",
+    "dsh": ">=0.1.5-alpha.1"
+  },
+  "peerDependencies": {
+    "@athena/autoresearch": "*",
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-client-locale": "^0.1.5-alpha.1",
+    "@deepseek-ai/dsh-client-ui-session": "^0.1.5-alpha.1",
+    "@deepseek-ai/dsh-client-ui-conversation": "^0.1.5-alpha.1",
+    "@deepseek-ai/dsh-client-ui-settings": "^0.1.5-alpha.1",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.1.5-alpha.1",
+    "@deepseek-ai/dsh-host-webserver": "^0.1.5-alpha.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@athena/autoresearch": "file:../autoresearch",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.5-alpha.1",
+    "pdfjs-dist": "6.3.289",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "license": "MIT"
+}

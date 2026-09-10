@@ -1,0 +1,64 @@
+/* Native DSH tokens are provided by the owning shell; fallbacks also make the
+   standalone portable page usable when it has no parent. */
+:root {
+  --ink: var(--dsw-alias-label-primary, #16181c);
+  --muted: var(--dsw-alias-label-tertiary, #81858c);
+  --accent: var(--dsw-alias-button-info-fill, #4d6bfe);
+  --line: var(--dsw-alias-border-l1, #e5e5e5);
+  --paper: var(--dsw-alias-bg-base, #fff);
+  --surface: var(--dsw-alias-interactive-bg-hover, #f7f8fa);
+  font-family: var(--dsw-font-family, Inter, "Segoe UI", "Microsoft YaHei", sans-serif);
+}
+body, .topbar, .workspace, .panel-heading, .editor-wrap, #line-numbers,
+.editor-footer, .preview-footer, .research-chat, .chat-loading, #native-chat {
+  background: var(--paper);
+}
+.topbar, .workspace, .panel-heading, .editor-footer, .preview-footer,
+.research-chat, .chat-heading { border-color: var(--line); }
+.brand-mark { background: var(--accent); font-style: normal; }
+.brand-mark span { color: white; }
+.eyebrow, .filename, .panel-caption, .status, .subtitle, .workspace-footer,
+.editor-footer, .preview-footer, .project-control label, #line-numbers,
+.file-icon, .button.quiet, .preview-empty, .preview-empty h2 { color: var(--muted); }
+.button, select { background: var(--paper); color: var(--ink); border-color: var(--line); border-radius: 8px; }
+.button:hover:enabled, .back-link:hover { background: var(--surface); }
+.button.primary, .button.primary:hover:enabled { background: var(--accent); color: #fff; border-color: var(--accent); }
+.button.primary:hover:enabled { filter: brightness(.96); }
+.button.quiet { background: transparent; border-color: transparent; }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible,
+textarea:focus-visible { outline-color: var(--accent); }
+.heading-dot, .text-link, .sync-notice button { color: var(--accent); }
+.panel-dot, .connection-dot, .preview-dot { background: var(--accent); }
+.workspace { box-shadow: none; border-radius: 10px; }
+#editor { color: var(--ink); font-size: 13px; line-height: 1.8; }
+#line-numbers { font-size: 13px; line-height: 1.8; opacity: .65; }
+#editor::placeholder { color: var(--muted); }
+.pdf-viewport { background: var(--surface); }
+.engine-status, .build-log, .sync-notice { background: var(--surface); border-color: var(--line); color: var(--muted); }
+.paper-symbol { background: var(--paper); border-color: var(--line); box-shadow: 6px 6px 0 var(--line); }
+.paper-symbol span, .paper-symbol span:first-child { background: var(--line); }
+.mobile-tabs button { background: var(--surface); color: var(--muted); border-radius: 7px; }
+.mobile-tabs button[aria-selected=true] { background: color-mix(in srgb, var(--accent) 9%, var(--paper)); color: var(--accent); }
+.page-controls button, .page-controls input, .preview-footer select { color: var(--muted); }
+.page-controls input { background: var(--paper); border-color: var(--line); }
+.chat-prompts button { background: var(--paper); border-color: var(--line); color: var(--ink); border-radius: 8px; }
+.chat-prompts button:hover:enabled { background: var(--surface); }
+.research-chat { box-shadow: 0 2px 12px #00000006; }
+.chat-resize span { background: var(--line); }
+.chat-resize:hover span { background: var(--muted); }
+.embedded { background: var(--paper); }
+.embedded main { padding: 8px 0 0; }
+.embedded .workspace-heading h1 { display: none; }
+.embedded .workspace-toolbar { margin-bottom: 7px; }
+.embedded .workspace-footer { min-height: 27px; }
+@media (max-width: 720px) {
+  .embedded main { padding: 6px 0 0; }
+}
+
+.project-name {
+  display: none;
+  color: var(--ink);
+  font-weight: 600;
+}
+.workspace-managed .project-control select { display: none; }
+.workspace-managed .project-control .project-name { display: inline-block; }

@@ -24,8 +24,8 @@
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: >-
-      You are AutoResearch mode powered by the {{model}} model. Your working directory is {{cwd}}.
+    prefix: >-
+      You are AutoResearch mode powered by the {{model}} model.
 
       Before running any research task, explore the current directory:
       read README, package files, source layout, and any existing .autoresearch settings.
@@ -33,6 +33,7 @@
       Then use the AutoResearch tools (research_run, experiment_run, project_settings_*,
       paper_pipeline_*) to execute the task. Keep the user informed and interact when a
       human decision is needed.
+    suffix: Your working directory is {{cwd}}.
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
@@ -195,6 +196,7 @@
       config:
         provider: spawn
         toolName: subagent
+        modelSelectionSettings: true
         backgroundMode: continuable
 
     - id: tool-subagent-fork
@@ -213,7 +215,7 @@
       config:
         provider: codex
         toolName: subagent_codex
-        enableRunInBackground: false
+        backgroundMode: one-shot
         maxDepth: provider-managed
 
     - id: tool-subagent-claude-code
@@ -222,7 +224,7 @@
       config:
         provider: claude-code
         toolName: subagent_claude_code
-        enableRunInBackground: false
+        backgroundMode: one-shot
         maxDepth: provider-managed
 
     - id: workflow-worker-thread
@@ -256,4 +258,3 @@
   config:
     fetch: false
     searchTimeoutMs: 60000
-

@@ -26,21 +26,19 @@ async function makeContext(run: RoleAgentProvider['run']): Promise<RunContext> {
   )
 }
 
-test('runAgent retries once and returns the provider result', async (t) => {
+test('runAgent does not retry the whole role and propagates failure', async (t) => {
   let calls = 0
   const ctx = await makeContext(async () => {
     calls += 1
-    if (calls === 1) throw new Error('transient')
-    return { text: 'ok', structured: { plan: 'P' }, stopReason: 'completed' }
+    throw new Error('transient')
   })
   t.after(() => rm(ctx.runDir, { recursive: true, force: true }))
-  const result = await runAgent(ctx, {
+  await assert.rejects(() => runAgent(ctx, {
     role: 'planner',
     label: 'plan',
     input: { runDir: ctx.runDir },
-  })
-  assert.equal(calls, 2)
-  assert.equal(structuredText(result.structured, 'plan'), 'P')
+  }), /transient/)
+  assert.equal(calls, 1)
 })
 
 test('runStage transitions and writes structured output', async (t) => {
