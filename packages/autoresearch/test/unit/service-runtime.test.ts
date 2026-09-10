@@ -8,6 +8,7 @@ import { ResearchTree } from '../../dist/core/research-tree.js'
 import { createInitialState } from '../../dist/core/state.js'
 import { createRunContext, type RunContext } from '../../dist/service/context.js'
 import { runAgent, runStage, structuredText } from '../../dist/service/agent.js'
+import { runExperimentReflexion } from '../../dist/experiment/steps.js'
 import { readOptionalText } from '../../dist/core/utils.js'
 
 async function makeContext(run: RoleAgentProvider['run']): Promise<RunContext> {
@@ -64,4 +65,49 @@ test('readOptionalText ignores only missing files', async (t) => {
   t.after(() => rm(dir, { recursive: true, force: true }))
   assert.equal(await readOptionalText(join(dir, 'missing.md')), undefined)
   await assert.rejects(() => readOptionalText(dir))
+})
+
+test('experiment reflexion reviews the second redesign before returning it', async (t) => {
+  let reviewCalls = 0
+  let designCalls = 0
+  const ctx = await makeContext(async (role) => {
+    if (role === 'experiment-reflexion') {
+      reviewCalls += 1
+      return {
+        text: '',
+        structured: { feasibility: 'high', generalizability: 'high', risks: [], failureDirections: [], verdict: reviewCalls < 3 ? 'revise' : 'proceed' },
+        stopReason: 'completed',
+      }
+    }
+    if (role === 'experiment-designer') {
+      designCalls += 1
+      return { text: '', structured: { design: `revision-${designCalls}` }, stopReason: 'completed' }
+    }
+    throw new Error(`unexpected role ${role}`)
+  })
+  t.after(() => rm(ctx.runDir, { recursive: true, force: true }))
+
+  const design = await runExperimentReflexion(ctx, {
+    planText: 'plan', minimalVerification: 'probe', modelScout: 'models', initialDesign: 'initial',
+  })
+
+  assert.equal(reviewCalls, 3)
+  assert.equal(designCalls, 2)
+  assert.match(design, /revision-2/)
+})
+
+test('experiment reflexion fails closed on an invalid verdict', async (t) => {
+  const ctx = await makeContext(async () => ({
+    text: '',
+    structured: { feasibility: 'high', generalizability: 'high', risks: [], failureDirections: [], verdict: 'maybe' },
+    stopReason: 'completed',
+  }))
+  t.after(() => rm(ctx.runDir, { recursive: true, force: true }))
+
+  await assert.rejects(
+    () => runExperimentReflexion(ctx, {
+      planText: 'plan', minimalVerification: 'probe', modelScout: 'models', initialDesign: 'initial',
+    }),
+    /invalid.*verdict|review.*accepted/i,
+  )
 })

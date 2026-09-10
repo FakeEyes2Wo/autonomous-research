@@ -1,11 +1,36 @@
 import { join } from 'node:path'
-import { AutoResearchError, readOptionalText, writeText } from '../core/utils.js'
+import { AutoResearchError, DEFAULT_MAX_CYCLES, readOptionalText, writeText } from '../core/utils.js'
 import { recordResult } from '../core/state.js'
 import type { ActionResult, ResearchDecision } from '../core/types.js'
 import { parseDecision } from '../core/types.js'
 import { readRubric } from '../domain/files.js'
 import { runAgent, runStage, structuredText, treeSummary } from '../service/agent.js'
 import type { RunContext } from '../service/context.js'
+import { ExperimentPauseError } from './errors.js'
+import { validateWorkerResult } from './validation.js'
+import { resolveModelRoute } from '../policy/model-routing.js'
+import type { ProjectSettings } from '../settings/schema.js'
+
+function plannerRuntimeConstraints(ctx: RunContext): string {
+  const policy = ctx.policySnapshot
+  const maxCycles = ctx.deps.maxCycles ?? DEFAULT_MAX_CYCLES
+  const routing = policy.modelRouting
+  const resolved = resolveModelRoute(policy as ProjectSettings, { role: 'planner', task: 'planning' })
+  const route = resolved.source === 'inherit'
+    ? 'inherited; provider and model are unknown to AutoResearch'
+    : `${resolved.source} route; tier=${resolved.tier}; provider=${resolved.provider || 'unknown'}; model=${resolved.model || 'unknown'}`
+  const review = policy.workflow.mode === 'legacy'
+    ? `legacy pre-work design reflexion is required; configured minimal experiment-review policy=${policy.workflow.experimentReview}`
+    : `configured minimal experiment-review policy=${policy.workflow.experimentReview}; standalone minimal does not add optional review roles`
+  return [
+    `- effective outer workflow mode: ${policy.workflow.mode}`,
+    `- maximum outer cycles/rounds: ${maxCycles}`,
+    `- outer role model routing: ${routing.enabled ? 'enabled' : 'disabled'}; planner route=${route}`,
+    `- outer review behavior: ${review}`,
+    `- outer LLM budget: maxRunTokens=${policy.budget.maxRunTokens}; maxRoleCalls=${policy.budget.maxRoleCalls}; global maxInputTokens/call=${policy.budget.maxInputTokens}; global maxOutputTokens/call=${policy.budget.maxOutputTokens}; role/tier caps may be lower`,
+    '- These outer limits do not limit experiment-internal seeds, episodes, retries, or models. Plan those separately from PROFILE and the frozen experiment protocol; disabled outer model routing does not ban multi-model experiments.',
+  ].join('\n')
+}
 
 export async function runPlanner(
   ctx: RunContext,
@@ -22,6 +47,7 @@ export async function runPlanner(
       idea,
       profile,
       rubric,
+      runtimeConstraints: plannerRuntimeConstraints(ctx),
       treeSummary: treeSummary(ctx.tree),
       ...(feedback ? { plan: `Human review feedback on the previous plan/evidence:\n${feedback}` } : {}),
     },
@@ -51,6 +77,7 @@ export async function runMinimalPlan(
       cycle: ctx.state.cycle,
       idea,
       profile,
+      runtimeConstraints: plannerRuntimeConstraints(ctx),
       treeSummary: treeSummary(ctx.tree),
     },
     label: `minimal plan cycle ${ctx.state.cycle}`,
@@ -108,6 +135,7 @@ export async function runExperimentDesign(
     feedback?: string
   },
 ): Promise<string> {
+  const previousDesign = feedback ? await readOptionalText(join(ctx.runDir, 'EXPERIMENT_DESIGN.md')) : undefined
   return runStage(ctx, {
     phase: 'experiment_design',
     stepId: `experiment-design-${ctx.state.cycle}`,
@@ -120,6 +148,7 @@ export async function runExperimentDesign(
       minimalVerification,
       modelScout,
       treeSummary: treeSummary(ctx.tree),
+      ...(previousDesign ? { experimentDesign: previousDesign } : {}),
       ...(feedback ? { reflexion: `Human review feedback on the previous experiment design:\n${feedback}` } : {}),
     },
     outputFile: 'EXPERIMENT_DESIGN.md',
@@ -128,20 +157,22 @@ export async function runExperimentDesign(
 
 export async function runExperimentReflexion(
   ctx: RunContext,
-  { planText, minimalVerification, modelScout, initialDesign }: {
+  { planText, minimalVerification, modelScout, initialDesign, maxRedesigns = 2 }: {
     planText: string
     minimalVerification: string
     modelScout: string
     initialDesign: string
+    maxRedesigns?: number
   },
 ): Promise<string> {
   let design = initialDesign
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  const redesignCap = Math.max(0, Math.min(2, maxRedesigns))
+  for (let review = 1; review <= redesignCap + 1; review += 1) {
     const reflexText = await runStage(ctx, {
       phase: 'experiment_reflexion',
       stepId: `experiment-reflexion-${ctx.state.cycle}`,
       role: 'experiment-reflexion',
-      label: `experiment reflexion cycle ${ctx.state.cycle} attempt ${attempt}`,
+      label: `experiment reflexion cycle ${ctx.state.cycle} review ${review}`,
       input: {
         runDir: ctx.runDir,
         cycle: ctx.state.cycle,
@@ -153,13 +184,18 @@ export async function runExperimentReflexion(
       },
       outputFile: 'EXPERIMENT_REFLEXION.md',
     })
-    const r = JSON.parse(reflexText) as { verdict?: string }
-    if (r?.verdict !== 'revise') break
+    let verdict: unknown
+    try { verdict = (JSON.parse(reflexText) as { verdict?: unknown }).verdict } catch { verdict = undefined }
+    if (verdict === 'proceed') return design
+    if (verdict !== 'revise') throw new ExperimentPauseError(`experiment review returned invalid verdict for design review ${review}`)
+    if (review > redesignCap) {
+      throw new ExperimentPauseError(`experiment design was not accepted after ${review} review${review === 1 ? '' : 's'}; latest verdict requires revision`)
+    }
     design = await runStage(ctx, {
       phase: 'experiment_design',
       stepId: `experiment-redesign-${ctx.state.cycle}`,
       role: 'experiment-designer',
-      label: `experiment redesign cycle ${ctx.state.cycle} attempt ${attempt}`,
+      label: `experiment redesign cycle ${ctx.state.cycle} revision ${review}`,
       input: {
         runDir: ctx.runDir,
         cycle: ctx.state.cycle,
@@ -173,7 +209,7 @@ export async function runExperimentReflexion(
       outputFile: 'EXPERIMENT_DESIGN.md',
     })
   }
-  return design
+  throw new ExperimentPauseError('experiment design review ended without explicit acceptance')
 }
 
 export async function runResultReflexion(
@@ -223,7 +259,7 @@ export async function runInsightAbstractor(
 
 export async function runWorker(
   ctx: RunContext,
-  { workDir: _workDir, planText, experimentDesign, minimalVerification }: {
+  { workDir, planText, experimentDesign, minimalVerification }: {
     workDir: string
     planText: string
     experimentDesign: string
@@ -234,6 +270,7 @@ export async function runWorker(
     role: 'research-worker',
     input: {
       runDir: ctx.runDir,
+      workDir,
       cycle: ctx.state.cycle,
       plan: planText,
       experimentDesign,
@@ -242,15 +279,7 @@ export async function runWorker(
     },
     label: `work cycle ${ctx.state.cycle}`,
   })
-  const structured = result.structured as Partial<ActionResult> | undefined
-  if (structured && (structured.status === 'completed' || structured.status === 'failed')) {
-    return {
-      status: structured.status,
-      summary: structured.summary ?? result.text,
-      artifacts: structured.artifacts ?? [],
-    }
-  }
-  return { status: 'completed', summary: result.text, artifacts: [] }
+  return validateWorkerResult(ctx.runDir, result.structured)
 }
 
 export async function runEvidenceAgent(

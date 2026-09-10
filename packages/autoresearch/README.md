@@ -11,6 +11,35 @@ npm run build
 npm test
 ```
 
+## 轻量实验工程约定
+
+需要生成可执行代码时，planner、worker、实验设计/反思、证据和 supervisor 角色共享一份插件内置的工程提示。新实验默认采用以下小型结构；实际任务按需缩减，不创建空目录或复杂框架：
+
+```text
+<runDir>/
+  experiment/
+    README.md                 # 环境、smoke、完整运行、评估命令与预期输出
+    pyproject.toml            # 或 requirements 文件；其他语言使用项目原有 manifest
+    configs/
+    src/<package>/            # 数据准备、方法/基线、评估、命令编排按职责拆分
+    tests/
+    scripts/                  # 可选的薄入口
+    notebooks/                # 可选，不能是唯一执行入口
+  data/                       # raw（只读）和 prepared 数据
+  work/cycle-XX/              # research_run 的无代码输出与不可覆盖的 attempt 子目录
+  work/experiment-cycle-XX/   # experiment_run 对应输出
+```
+
+Python 项目优先沿用仓库已经选择的工具；manifest 还需配合可复现的解析版本记录。pilot/smoke 只证明可运行性或用于校准，不等于正式验证。正式比较前应冻结带 revision/hash 的设计、主指标、seed/split、有效基线、任务特定的预算单位/容差、停止规则和失败/截尾处理；pilot 改动后新建版本，exploratory/formal 结果不能静默混合。成本敏感比较记录完整 run/episode 的 input/cache/output token、步骤、重试、时间及可得的价格依据。
+
+`workflow.mode=minimal` 保持 planner → worker → 本地 evidence → supervisor 的低调用流程，worker 自行承担重要逻辑测试和 smoke check；research minimal 仅在既有策略要求时进行可选的 post-work review，且该审查只能接受已执行协议或暂停，不能为旧结果追溯改写设计。完整流程会额外使用 minimal verifier、model scout、experiment designer/reflexion 和 evidence agent。两种模式使用同一工程约定，不增加强制角色或新 checkpoint。
+
+planner 会收到一个受限、无敏感信息的 **outer AutoResearch runtime constraints** 区块：有效 workflow mode、outer cycle/round 上限、外层角色模型路由的已知/继承状态、相关 review 策略和全局 LLM 上限。它不代表实验内部的 seed、episode、重试、被研究模型或科学预算；外层路由关闭也不禁止多模型实验。
+
+运行时现在强制两项基本门槛：完整模式最多允许两次自动 redesign，但返回给 worker 的精确版本必须再获得 `proceed`；worker 的结构化结果必须为 completed、摘要非空，并至少列出一个真实、普通、解析后仍位于 real run root 内的文件。缺失文件、目录、glob、遍历、逃逸 symlink、失败或 malformed 输出会在 evidence/supervisor 前进入 `PAUSED` 并保留报告/checkpoint；恢复时缓存 work 也会重新做同样校验，不重跑已完成 worker。旧的 terminal completed run 不追溯修改。
+
+这些运行时门槛只验证 review acceptance 与本地 artifact 的基本形状/路径安全，不证明指标真实。正式协议版本、完整可复现记录、预算匹配、统计充分性和 failure-derived lesson 的事实/解释及 split provenance 边界，仍由 planning、worker、evidence 与 review 明确承担。
+
 ## AutoResearch 模式（DSH Preset）
 
 安装时会自动安装：

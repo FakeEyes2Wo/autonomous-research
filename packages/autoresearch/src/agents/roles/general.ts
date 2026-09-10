@@ -8,7 +8,7 @@ import { objectSchema } from '../schema.js'
  */
 export const generalRoleSpecs = {
   planner: {
-    sections: ['idea', 'profile', 'rubric', 'plan', 'treeSummary'],
+    sections: ['idea', 'profile', 'rubric', 'plan', 'runtimeConstraints', 'treeSummary'],
     outputSchema: objectSchema({
       plan: { type: 'string', required: true },
       riskLevel: { type: 'string', enum: ['low', 'medium', 'high'] },
@@ -36,7 +36,7 @@ export const generalRoleSpecs = {
     outputSchema: objectSchema({ summary: { type: 'string', required: true } }),
   },
   supervisor: {
-    sections: ['rubric', 'plan', 'treeSummary'],
+    sections: ['rubric', 'plan', 'treeSummary', 'reflexion'],
     outputSchema: objectSchema({
       action: { type: 'string', enum: ['continue', 'revise', 'finish', 'fail'], required: true },
       reason: { type: 'string', required: true },

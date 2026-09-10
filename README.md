@@ -1,328 +1,242 @@
-# Autonomous Research System
+# AutoResearch：面向 DSH 的可恢复自动研究闭环
 
-Current implementation status: [status record](docs/drafts/current-status.md). Optional Web installation and explicit host `apply` steps: [Web package README](packages/autoresearch-web/README.md).
+AutoResearch 是一个以 DSH Agent/Subagent 为执行底座的源码仓库项目。核心包把研究任务组织为可恢复的闭环：
 
-The repository's Web package is a private source package: use local links and an explicit native Cordis `cordis.patch.yml` row; the HTML prototype remains an offline design reference.
+```text
+idea → plan → work → evidence → decide → paper | failure report
+```
 
-当前 DSH 适配锚点为 `0.1.5-alpha.1`；升级与临时环境验证记录见 [DSH upgrade record](docs/drafts/dsh-upgrade-record.md)。Web 配置插件、核心 settings bridge 与 minimal workflow 的实际状态以 [implementation plan](docs/drafts/implementation-plan.md) 和 [TODO](docs/drafts/TODO.md) 为准。
+它既可以完成文献探索、独立实验和论文流水线，也可以通过可选 Web 包提供项目设置与对话式 LaTeX/PDF 工作台。当前部署方式是从本仓库源码构建并链接到 DSH profile；这里不承诺 npm registry 发布状态，也不宣称兼容任意最新 DSH。当前依赖锚点见各包 `package.json`，升级宿主后应重新验收。
 
-DSH 插件 `@athena/autoresearch`：自动研究闭环。
+快速导航：[安装核心包](#安装核心包) · [可选 Web 工作台](#可选-web-工作台) · [使用方式](#两种使用方式) · [workflow](#minimal-与-legacy完整workflow) · [实验协议](#实验工程与科学协议) · [恢复](#产物与断点恢复) · [排错](#常见问题)
 
-2026-09-09 [项目设计草稿](docs/drafts/README.md)（核心与可选包已通过本地测试；Web 已完成 Cordis/SlotCore、浏览器与真实 DSH profile 联调，CPA 真实端点仍待用户登录后验收）：
+## 能力与边界
 
-- [CPA 接入与模块边界](docs/drafts/cpa-integration.md)：可选接入包、GPT 路由、Claude 扩展和接入验收。
-- [研究流程与模型策略](docs/drafts/research-runtime.md)：最小研究流程、模型分档表、上下文预算与重试收敛。
-- [详细实现计划](docs/drafts/implementation-plan.md)：文件级改造任务、阶段依赖与验收条件。
-- [科研工作台与迁移指南](docs/drafts/2026-09-09-workbench-guide.md)：精简配置页、左侧 LaTeX 编辑、右侧 PDF 预览与返回原生 DSH；[旧交互原型](docs/drafts/ui/dsh-settings-prototype.html)仅为历史设计参考。
-- [CLIProxyAPI / GPT Pro 自用接入](docs/drafts/2026-09-09-cliproxy-pro-guide.md)：订阅登录、代理本地 key 与 DSH 原生 Models 配置。
-- [额外功能 TODO](docs/drafts/TODO.md)：文献搜索阅读、全文检索等扩展；本次实现其中的论文编辑与 PDF 预览工作台。
+| 组件 | 是否必需 | 职责 |
+|---|---:|---|
+| `packages/autoresearch` | 是 | 研究树、实验编排、证据、论文生成、项目设置、checkpoint 与恢复 |
+| `packages/autoresearch-web` | 否 | DSH 设置页、原生会话中的 LaTeX/PDF 科研工作台 |
+| `packages/dsh-cpa` | 否 | 将用户已有的 CLIProxyAPI/CPA 路由编译到 DSH 原生模型配置；不安装代理、不管理上游账号、不属于研究运行时 |
 
-可选 Web 包：`packages/autoresearch-web` 提供精简的 DSH `settings.section`、项目设置 API 和科研工作台。设置通过核心 `@athena/autoresearch/settings` bridge 保存，桥接不可用时返回 503；工作台文件与编译接口独立运行，共用 loopback、同源与项目 allowlist。已按用户要求接入本机 DSH profile。
+核心包不依赖 Web 或 CPA。Web 也不复制 DSH 的 Models/credentials 页面；provider、CPA 地址和凭据仍由 DSH 管理。CPA 的示例模型名不是官方或已验证模型，真实端点、协议能力、工具调用与计费必须由用户在自己的环境中单独验收。
 
-核心能力：
+当前本地验证覆盖核心 `155/155`、核心 typecheck，以及 Web `60/60`。这些结果证明的是仓库代码和本地 mock/fixture 契约，不代表真实 provider、真实模型请求或真实科研结论已经通过验证。
 
-- **Paper 调研**
-  - 两阶段：先广泛领域调研并找相关综述，再选择 direction 查询最新前沿。
-  - 生成统一 `paper_wiki/` 和领域知识图谱 `paper_wiki/kg/`。
-- **自动实验**
-  - `experiment_run`：输入任务要求后自动执行实验。
-- **论文生成**
-  - `idea → plan → work → evidence → decide → paper | failure report`。
-- **项目设置**
-  - 项目级 Paper 探索参数、外部生图 API、模型复用与实验参数。
-  - 通过 DSH 工具 `project_settings_get` / `project_settings_save` / `figure_api_test` 管理。
+## 界面预览
 
----
+下面三张图由仓库自带浏览器测试在临时项目和 mock host 中实际渲染，不是设计稿，也不包含真实模型运行或真实研究结果。复现命令、截图边界和验证记录见[截图说明](docs/assets/autoresearch/README.md)与[本次验证记录](docs/drafts/2026-09-10-readme-screenshots-verification.md)。
+
+![AutoResearch 项目设置页：模型来源、研究强度与论文输出](docs/assets/autoresearch/settings.png)
+
+_项目设置页（本地临时 settings fixture）。_
+
+![AutoResearch 桌面科研工作台：原生会话、LaTeX 编辑与 PDF 预览](docs/assets/autoresearch/workbench-desktop.png)
+
+_桌面工作台（本地临时 mock host，示例论文与聊天内容）。_
+
+<p align="center">
+  <img src="docs/assets/autoresearch/workbench-mobile.png" alt="AutoResearch 窄屏科研工作台：移动视口下的论文区与原生导航" width="390">
+</p>
+
+_390×844 窄屏工作台（本地临时 mock host，示例论文与聊天内容）。_
+
+完整交互说明见[对话式科研工作台指南](docs/drafts/2026-09-10-conversational-workbench-guide.md)。
 
 ## 环境要求
 
-- Node.js ≥ 22.19.0
-- pnpm
-- DSH ≥ 0.1.5-alpha.1（`dsh` CLI 可用；当前适配锚点为 `0.1.5-alpha.1`）
-- 可选：pandoc、LaTeX（`latexmk` / `pdflatex` / `xelatex` / `tectonic`）或 Chrome/Edge，用于论文 PDF 生成
+- Node.js `>=22.19.0`；
+- npm（仓库各包分别维护 `package.json`，根目录没有 npm scripts）；
+- 已创建的 DSH profile，当前适配锚点为 `0.1.5-alpha.1`；
+- 使用安装脚本时，目标 profile 还需要 pnpm；
+- 可选：`tectonic`、`latexmk`、`pdflatex` 或 `xelatex` 用于 PDF；缺少编译器时，部分无头产出可使用本机 Chrome/Edge 兜底。
 
----
+## 安装核心包
 
-## 一、DSH 插件安装
-
-1. 构建插件：
-
-   ```powershell
-   cd packages/autoresearch
-   npm run build
-   ```
-
-2. 安装到已有 DSH profile（默认 `web`）：
-
-   ```powershell
-   npm run install:dsh -- web
-   ```
-
-   或：
-
-   ```powershell
-   node scripts/install-dsh-plugin.mjs web
-   ```
-
-   脚本会修改 `<DSH_HOME>\profiles\web\package.json`（添加 `"@athena/autoresearch": "link:<repo>\packages\autoresearch"`），并向 `cordis.patch.yml` 注入插件加载行。默认 `<DSH_HOME>` 为 `%USERPROFILE%\.dsh`，可通过环境变量 `DSH_HOME` 覆盖。
-
-3. 安装 profile 依赖并启动 DSH：
-
-   ```powershell
-   cd $env:USERPROFILE\.dsh\profiles\web
-   pnpm install
-   dsh --profile web
-   ```
-
-> 说明：profile 必须已经存在（需先由 DSH 创建）。如果只跑无头模式，`run:headless` 会自动创建 `headless` profile，无需手动执行本节。
-
-安装脚本还会安装 **AutoResearch DSH Agent Preset**：
-
-```text
-~/.dsh/.agent-presets/auto_research/
-  preset.yml
-  agent.cordis.yml
-```
-
-### 使用 AutoResearch 模式
-
-在 DSH 模式选择器中选择 **AutoResearch**（不是输入 `/auto_research`），该模式会：
-
-1. 先探索当前工作目录，读取 `README`、源码布局、包文件以及已有 `.autoresearch/` 配置；
-2. 如果任务意图不明确，通过 `ask_user_question` 与你交互确认；
-3. 然后自动调用 `research_run` / `experiment_run` / `project_settings_*` / `paper_pipeline_*` 等工具执行论文调研、自动实验或论文生成；
-4. 遇到需要人工决策时会暂停询问。
-
-典型触发方式：
-
-```text
-请先看看当前目录，然后继续我们之前的研究。
-帮我调研这个领域的综述和最新前沿，并写入 paper_wiki。
-围绕当前项目做一组对比实验，输出 EXPERIMENT_REPORT.md。
-```
-
-如果 DSH 模式选择器中没有出现 **AutoResearch**，重新运行安装脚本：
+从仓库根目录执行：
 
 ```powershell
-cd packages/autoresearch
-npm run install:dsh -- web
+npm --prefix packages/autoresearch ci
+npm --prefix packages/autoresearch run build
+npm --prefix packages/autoresearch run install:dsh -- web
 ```
 
-> `/auto_research` 是插件注册的轻量 Slash 命令，只用于查看帮助 / 配置 / run 状态；实际“探索目录 + 自动执行”请选择 **AutoResearch** Agent Preset。
-
----
-
-## 二、无头模式运行脚本
-
-### 目录说明
-
-| 目录 | 是否能运行 npm 脚本 |
-|---|---|
-| `C:\...\autonomous-research`（仓库根目录） | ❌ 没有 `package.json`，直接 `npm run` 会报 `ENOENT` |
-| `C:\...\autonomous-research\packages\autoresearch`（插件运行目录） | ✅ 有 `package.json`，可以运行 `npm run run:headless` |
-
-> **重要：`npm run run:headless` 必须在 `packages/autoresearch` 目录下运行。**
+最后一条命令会把核心包以本地 `link:` 形式加入已经存在的 `web` profile，并安装 AutoResearch Agent Preset。它会修改目标 profile 的 `package.json` 和 `cordis.patch.yml`；先备份 profile，并确认 profile 名称正确。然后在该 profile 中安装依赖并启动 DSH：
 
 ```powershell
-# 方式 1：进入插件目录（推荐）
-cd packages/autoresearch
-npm run run:headless
+cd $env:USERPROFILE\.dsh\profiles\web
+pnpm install
+dsh --profile web
+```
 
-# 方式 2：在仓库根目录使用 npm --prefix
+安装后，在 DSH 模式选择器中选择 **AutoResearch**。`/auto_research` 只是帮助、配置与状态命令，不是自动研究模式的入口。
+
+> `npm run run:headless` 只能在 `packages/autoresearch` 包目录中运行。它会创建/修改 `headless` profile，并为自动执行禁用该 profile 的 sandbox/permission 预设；只应在你信任的代码、数据和机器上使用。
+
+核心包的构建、API 与更完整参数说明见[核心包 README](packages/autoresearch/README.md)。
+
+## 可选 Web 工作台
+
+Web 包提供精简设置页，以及保留 DSH 原生工作区、会话与对话的 LaTeX/PDF 工作台。它不是独立研究引擎；核心包必须先可用。
+
+```powershell
+npm --prefix packages/autoresearch run build
+npm --prefix packages/autoresearch-web install --ignore-scripts --legacy-peer-deps
+npm --prefix packages/autoresearch-web run build
+```
+
+随后按[Web 包 README](packages/autoresearch-web/README.md)把两个本地源码包显式链接到目标 DSH profile，并把 `autoresearch`、`autoresearch-web` 两行加入该 profile 的 `cordis.patch.yml`。生产环境项目目录来自 DSH 原生 workspace registry；`standaloneProjects` 只用于明确的独立测试 host。
+
+工作台中，左栏一个 DSH workspace 就是一个研究项目。快捷按钮只把指令填入原生草稿，不会自动发送模型请求；保存与编译也是显式操作。Tectonic 不可用时仍可编辑和保存，但 PDF 编译会给出明确状态。
+
+## 两种使用方式
+
+### 1. DSH 对话模式
+
+选择 **AutoResearch** 后，可直接描述目标：
+
+```text
+请先检查当前项目与已有 .autoresearch 配置，再继续上次研究。
+围绕当前项目设计一组可复现的对比实验；先给我精确实验设计，等我确认后再执行。
+调研该领域的综述和最新前沿，并整理 paper_wiki 与知识图谱。
+```
+
+Agent 会先探索当前工作区；意图、成本或实验设计不清楚时应询问，随后调用 `research_run`、`experiment_run`、`project_settings_*` 或 `paper_pipeline_*`。
+
+### 2. 无头模式
+
+```powershell
+# 无主题探索：先 brainstorm，再进入研究闭环
 npm --prefix packages/autoresearch run run:headless
+
+# 已有明确 idea：跳过 brainstorm
+npm --prefix packages/autoresearch run run:headless -- `
+  --candidate C:/path/to/idea.md `
+  --profile-file C:/path/to/PROFILE.md `
+  --max-cycles 3 `
+  --venue ICLR `
+  --effort balanced
 ```
 
-脚本会：
+常用参数包括 `--run-dir`、`--candidate`、`--profile-file`、`--max-cycles`、`--venue`、`--assurance`、`--effort`、`--illustration`、`--auto-proceed`、`--human-checkpoint` 和 `--max-improvement-rounds`。论文改进轮数按项目策略决定，未配置时为 `0`，不是旧文档中的 `2`。
 
-1. 构建插件（`npm run build`）；
-2. 创建运行目录 `.runs/run-<timestamp>`（可用 `--run-dir` 指定）；
-3. 如果没有传 `--candidate`，自动先生成 brainstorm 前置流程：
-   - 广泛领域调研（先找相关综述）
-   - survey paper wiki + 知识图谱
-   - 选 direction
-   - 查最新前沿
-   - 统一 paper wiki
-   - 多视角 debate → vote
-   - 生成 `input/idea.md`
-4. Brainstorm 为**无主题探索**：不接收种子课题/方向，完全从广泛文献调研开始；
-5. 如果已有确定课题，请使用 `--candidate` 跳过 brainstorm；
-6. 确保 DSH `headless` profile 存在并完成 `pnpm install`；
-7. 启动 `dsh --profile headless`，由 Agent 调用 `research_run` 完成研究闭环；
-8. 生成论文产物：优先 LaTeX 编译，缺失时用 pandoc + Chrome/Edge 以 HTML→PDF 兜底；
-9. 打印最终产物路径。
+## minimal 与 legacy（完整）workflow
 
-> 注意：`run:headless` 自动创建的 `headless` profile 会禁用 sandbox / permission 预设并改用本地 shell / fs provider，请在可信环境中运行。
+两种模式共享同一工程与证据约定，但角色数量不同：
 
-### 常用参数
-
-| 参数 | 默认值 | 说明 |
+| 模式 | 流程 | 适用场景 |
 |---|---|---|
-| `--profile` | `headless` | DSH profile 名 |
-| `--run-dir` | `.runs/run-<timestamp>` | 运行输出目录 |
-| `--candidate` | 无 | 手动指定 `idea.md` 文件路径；传了会跳过 brainstorm |
-| `--profile-file` | 无 | 手动指定 `PROFILE.md` 文件路径 |
-| `--max-cycles` | `5` | 研究循环最大轮数 |
-| `--venue` | 无 | 目标会议，如 `ICLR` / `NeurIPS` / `ICML` |
-| `--assurance` | 无 | `draft` 或 `submission` |
-| `--effort` | 无 | `lite` / `balanced` / `max` / `beast` |
-| `--illustration` | 无 | `figurespec` / `gemini` / `codex-image2` / `mermaid` / `false` |
-| `--style-ref` | 无 | 论文风格参考文件路径 |
-| `--auto-proceed` | `true` | 论文流水线自动继续（`true` / `false`） |
-| `--human-checkpoint` | `true` | 论文流水线人工检查点（`true` / `false`） |
-| `--max-improvement-rounds` | 无（内部默认 `2`） | 论文改进轮数上限 |
+| `minimal` | planner → worker → 本地 evidence → supervisor | 低调用开销；worker 自行完成关键逻辑测试和 smoke check |
+| `legacy`（完整模式） | 在核心流程上增加 verifier、model scout、experiment designer/reflexion、evidence agent | 需要更强设计审查、模型选择与证据复核的正式实验 |
 
-### 示例
+配置值为 `workflow.mode=minimal|legacy`。minimal 不是“降低科学标准”：它直接按 planner 给出的计划进入 worker，不会为了补流程而增加额外强制 Agent；research minimal 的可选 post-work review 只能接受已经执行的协议，或要求暂停，不能对旧结果追溯改写实验设计。legacy 完整模式包含自动 experiment-reflexion 设计审查，最多允许两次自动 redesign；每次返回给 worker 的精确设计都必须再次得到 `proceed`。
 
-```powershell
-# 全自动：先 brainstorm，再研究闭环
-cd packages/autoresearch
-npm run run:headless
+planner 收到的 outer runtime constraints 只描述外层 workflow mode、cycle/round 上限、角色模型路由和全局 LLM 限额；它们不等于实验内部的 seed、episode、重试、被研究模型或科学预算。关闭外层多模型路由，也不意味着禁止多模型科学实验。
 
-# 手动指定已有 idea（跳过 brainstorm）和 profile
-npm run run:headless -- --candidate C:/path/idea.md --profile-file C:/path/PROFILE.md --max-cycles 3 --venue ICLR --effort balanced
-```
-
-### 断点续跑
-
-如果某个 run 中途停止，`AutoResearchService` 会自动读取已有 `state.json` 并恢复：
-
-```powershell
-cd packages/autoresearch
-npm run run:headless -- --run-dir .runs/run-1787742452500
-```
-
-或使用绝对路径：
-
-```powershell
-npm --prefix packages/autoresearch run run:headless -- --run-dir "C:\path\to\.runs\run-1787742452500"
-```
-
-如果 `state.json` 已经是 `COMPLETED` / `FAILED`，系统会直接返回终态，不会重跑。
-
----
-
-## 三、项目设置
-
-项目级设置保存在：
+## 一次研究如何推进
 
 ```text
-<project>/
-  .autoresearch/
-    project-settings.yaml
-    project-secrets.yaml
+minimal: 输入 → planner → worker → 本地 evidence → supervisor → 报告
+
+legacy:
+输入 / idea → planner 冻结精确设计 → review/redesign → proceed
+            → worker → artifact 校验 → evidence → supervisor → 报告
 ```
 
-示例：
+无论采用哪种模式，正式实验设计都应在工作开始前确定，并包含可执行步骤、主指标、数据与 split、seed、有效基线、任务特定预算单位/容差、停止规则，以及失败和截尾处理。legacy 的 pre-work 设计审查中，精确设计没有得到 `proceed` 就不会交给 worker；系统进入 `PAUSED` 并保留 checkpoint。minimal 不设置这一强制 pre-work 审查关口，而是从计划直接执行；其可选 post-work review 仍只能接受已执行协议或暂停。任何模式都不能在运行后把结果导向的改动伪装成预注册设计。
 
-```yaml
-version: 1
+worker 返回后，运行时要求状态为 completed、摘要非空，并至少列出一个真实普通文件；该文件必须解析后仍位于真实 run root 内。目录、glob、遍历路径、逃逸 symlink、缺失文件、失败或 malformed 输出会在 evidence/supervisor 之前进入 `PAUSED`。恢复时也会重新校验缓存产物，但不会重跑已完成 worker。
 
-paperExploration:
-  maxPapers: 80
-  minSurveys: 3
-  minClusters: 5
-  latestWindowYears: 1
-  latestPerDirection: 5
-  maxSelectedDirections: 3
+这些门槛只验证 review acceptance 与本地产物的基本形状和路径安全，不证明实验指标真实，也不替代统计充分性、可复现性或科学审查。
 
-figureApi:
-  enabled: true
-  apiUrl: https://example.com/api/generate
-  model: ""
-  timeoutMs: 60000
+## 实验工程与科学协议
 
-model:
-  useGlobal: true
-  overrides:
-    provider: deepseek-official
-    model: deepseek-v4-pro
-
-experiment:
-  maxRounds: 3
-  profile: "允许本地实验和公开数据"
-```
-
-> `project-secrets.yaml` 保存 API Key 等敏感信息，应加入 `.gitignore`。
-
-DSH 会话内可用：
+需要生成代码的实验默认采用小型、可删减的结构：
 
 ```text
-project_settings_get
-project_settings_save
-figure_api_test
+<runDir>/
+  experiment/
+    README.md              # 环境、smoke、正式运行、评估命令、预期输出
+    pyproject.toml         # 或项目原有 manifest/lock 体系
+    configs/
+    src/<package>/
+    tests/
+    scripts/               # 可选薄入口
+    notebooks/             # 可选，但不能是唯一执行入口
+  data/                    # 与代码分离；raw 只读，prepared 可重建
+  work/cycle-XX/           # research_run 输出及不可覆盖 attempt 子目录
+  work/experiment-cycle-XX/ # experiment_run 输出及不可覆盖 attempt 子目录
 ```
 
----
+按需缩减，不为“看起来完整”创建空目录或复杂框架。代码、配置、数据、日志和结果必须能相互追溯：记录源码 revision/hash、环境与解析后的依赖版本、实际命令、配置版本、输入/输出路径、随机种子、数据与 split provenance、时间和失败原因；attempt 不覆盖，以便比较和审计。
 
-## 四、DSH 工具
+- pilot/smoke 只证明可运行或用于校准，不等于正式验证；
+- formal 运行前冻结带版本的协议；pilot 修改后创建新版本，exploratory 与 formal 结果不可静默混合；
+- 成本敏感比较记录完整 run/episode 的 input/cache/output token、步骤、重试、时间，以及可获得的价格依据；
+- 失败和阴性结果进入证据与报告，不因结论不理想而删除；
+- evidence 必须区分观察事实、推断和限制，文件存在不等于结论正确。
 
-插件安装后自动注册：
+## 产物与断点恢复
 
-| 工具 | 作用 |
+典型 run 目录可能包含：
+
+| 产物 | 含义 |
 |---|---|
-| `research_hypothesis_add` | 添加/修订假设 |
-| `research_action_start` | 开始研究动作 |
-| `research_action_finish` | 结束研究动作 |
-| `research_evidence_add` | 添加证据 |
-| `research_tree_query` | 查询研究树 |
-| `experiment_run` | 输入任务要求自动执行实验 |
-| `project_settings_get` | 读取项目设置 |
-| `project_settings_save` | 保存项目设置 |
-| `figure_api_test` | 测试外部生图 API |
-| `research_run` | 启动/恢复整个研究闭环 |
-| `paper_pipeline_status` | 查看论文流水线状态 |
-| `paper_pipeline_last_run` | 查看最近 run |
-| `paper_pipeline_resume` | 恢复论文流水线 |
+| `state.json` | 闭环状态与恢复入口 |
+| `research_tree.json`、`evidence_chain.json` | 研究树与证据链 |
+| `paper_wiki/`、`paper_wiki/kg/` | 文献 wiki 与知识图谱 |
+| `experiment/`、`work/*/attempt-*` | 可执行工程、配置、日志与不可覆盖尝试 |
+| `EXPERIMENT_REPORT.md` | 独立实验报告 |
+| `paper/main.tex`、`paper/main.pdf` | 论文源文件与 PDF |
+| `FINAL_REPORT.md` 或 `FAILURE_REPORT.md` | 最终或失败报告 |
 
-DSH 还注册了 Slash 命令：
+用同一个 `--run-dir` 恢复：
 
-```text
-/auto_research
-/auto_research config <projectDir>
-/auto_research status <runDir>
-/auto
+```powershell
+npm --prefix packages/autoresearch run run:headless -- `
+  --run-dir "C:\path\to\.runs\run-1787742452500"
 ```
 
-- `/auto_research`：显示 AutoResearch 模式帮助（实际自动探索请使用 **AutoResearch** Agent Preset）
-- `/auto_research config <projectDir>`：查看项目设置
-- `/auto_research status <runDir>`：查看 run 状态
-- `/auto`：切换自动模式
+服务会读取已有 `state.json` 与 checkpoint。已完成的 worker 产物先重新做路径/文件校验，再从后续阶段继续；终态 `COMPLETED`/`FAILED` 不会自动重跑。DSH 会话中也可用 `paper_pipeline_last_run`、`paper_pipeline_status`、`paper_pipeline_resume`。
 
----
+## 项目设置与秘密
 
-## 五、目录与产物
-
-### 运行产物
-
-在 `--run-dir` 下可能生成：
-
-- `state.json`：运行状态
-- `research_tree.json`：研究树
-- `evidence_chain.json`：证据链
-- `paper_wiki/_index.md`：统一论文 wiki 索引
-- `paper_wiki/kg/kg.json`：领域知识图谱
-- `paper_wiki/kg/kg.html`：知识图谱可视化
-- `paper_draft.md`：论文草稿
-- `paper/main.tex`、`paper/main.pdf`：论文 LaTeX / PDF
-- `evidence/citations.json`：引用证据
-- `FINAL_REPORT.md` 或 `FAILURE_REPORT.md`：最终 / 失败报告
-- `EXPERIMENT_REPORT.md`：独立实验报告
-
-### 插件目录
+项目设置位于：
 
 ```text
-packages/autoresearch/
-  src/
-    experiment/      独立实验编排
-    settings/        项目设置读写
-    figure/          外部生图 API Client
-    brainstorm/      Paper 调研/知识图谱
-    paper/           论文生成
-    service/         研究闭环编排
-    tools/           DSH 工具注册
-  prompts/
-    system/          角色 System Prompt
-  test/
-    unit/            单元测试
-    integration/     集成测试
+<project>/.autoresearch/project-settings.yaml
+<project>/.autoresearch/project-secrets.yaml
 ```
+
+设置页主要管理模型来源、研究强度与论文输出；高级区管理角色路由、workflow 和预算声明。`project-secrets.yaml`、DSH credentials、CPA OAuth/token 与客户端 key 均不得进入 Git、URL、日志、导出或截图。预算声明只有在相应 runtime hook 已验证时才能称为硬限制；缺少 usage 时应标为 estimated/unknown，不能记为零。
+
+## 常见问题
+
+**在仓库根目录执行 `npm run ...` 报 `ENOENT`**
+
+根目录没有 `package.json`。进入对应包目录，或使用 `npm --prefix packages/autoresearch ...` / `npm --prefix packages/autoresearch-web ...`。
+
+**DSH 里没有 AutoResearch 模式**
+
+确认目标 profile 已存在，再执行 `npm --prefix packages/autoresearch run install:dsh -- web`，然后在 profile 目录运行 `pnpm install` 并重启 DSH。检查的是模式选择器，不是 Slash 命令列表。
+
+**Web 设置保存返回 `503 core_settings_service_unavailable`**
+
+Web 的核心 settings bridge 没有加载。确认核心与 Web 两个本地包都已链接，并检查 `cordis.patch.yml` 中核心行位于 Web 行之前。
+
+**PDF 无法编译**
+
+配置 `workbench.compiler`、`TECTONIC_PATH` 或把受支持编译器加入 PATH。编辑与保存仍应可用；首次使用 Tectonic 时若本地没有 bundle，离线环境可能无法下载编译资源。
+
+**运行停在 `PAUSED`**
+
+先看 `state.json`、当前 cycle/attempt 日志和报告。常见原因是精确设计尚未获 `proceed`、worker 结果不完整，或声明产物缺失/越界。修正原因后使用同一 runDir 恢复，不要删除 checkpoint 或伪造产物路径。
+
+**配置保存冲突或工作台提示磁盘版本变化**
+
+重新读取最新配置/源码再合并。工作台不会用外部更新静默覆盖未保存草稿；确认内容后再保存和编译。
+
+## 进一步阅读
+
+- [核心包：运行、工具与工程约定](packages/autoresearch/README.md)
+- [Web 包：安装、host contract 与安全边界](packages/autoresearch-web/README.md)
+- [对话式科研工作台：目录、会话、编辑与迁移](docs/drafts/2026-09-10-conversational-workbench-guide.md)

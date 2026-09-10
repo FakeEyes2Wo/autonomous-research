@@ -14,6 +14,8 @@ import { loadProjectSettings } from '../settings/project-settings.js'
 import { createPolicySnapshot } from '../policy/model-routing.js'
 import { openRequestLedger } from '../policy/request-ledger.js'
 import type { ProjectSettings } from '../settings/schema.js'
+import { isExperimentPauseError } from './errors.js'
+import { validateWorkerResult } from './validation.js'
 import {
   runEvidenceAgent,
   runExperimentDesign,
@@ -100,6 +102,11 @@ async function readStage<T>(file: string): Promise<T | undefined> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT' || (error instanceof Error && /cannot read .*ENOENT/i.test(error.message))) return undefined
     throw error
   }
+}
+
+function cachedActionResult(stageData: unknown): unknown {
+  if (!stageData || typeof stageData !== 'object' || Array.isArray(stageData)) return stageData
+  return (stageData as { actionResult?: unknown }).actionResult
 }
 
 function identityHash(value: string): string { return createHash('sha256').update(value, 'utf8').digest('hex') }
@@ -248,16 +255,19 @@ export async function runExperimentTask(
         runModelScout(ctx, { planText }),
       ])
       experimentDesign = await runExperimentDesign(ctx, { planText, minimalVerification, modelScout })
-      await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
+      experimentDesign = await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
       await writeStage(runDir, cycle, 'design', { minimalVerification, modelScout, experimentDesign })
     }
 
     await transition(state, 'work', `experiment-work-${cycle}`)
     const workDir = safeResolve(runDir, 'work', `experiment-cycle-${String(cycle).padStart(2, '0')}`)
     await ensureDir(workDir)
-    const cachedWork = await readStage<{ actionResult: Awaited<ReturnType<typeof runWorker>> }>(stageFile(runDir, cycle, 'work'))
-    const actionResult = cachedWork?.actionResult ?? await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification })
-    if (!cachedWork) {
+    const cachedWork = await readStage<unknown>(stageFile(runDir, cycle, 'work'))
+    const rawActionResult = cachedWork === undefined
+      ? await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification })
+      : cachedActionResult(cachedWork)
+    const actionResult = await validateWorkerResult(runDir, rawActionResult)
+    if (cachedWork === undefined) {
       await recordResult(state, `experiment-work-${cycle}`, actionResult as unknown as Record<string, unknown>)
       await writeStage(runDir, cycle, 'work', { actionResult })
     }
@@ -295,11 +305,12 @@ export async function runExperimentTask(
     }
   }
   } catch (error) {
-    if (!isBudgetPause(error)) throw error
+    if (!isBudgetPause(error) && !isExperimentPauseError(error)) throw error
     const reason = error instanceof Error ? error.message : String(error)
     state.status = 'PAUSED'
     state.lastError = reason
     await saveState(runDir, state)
+    await writeFailureReport(runDir, `# PAUSED\n\n${reason}\n`)
     await writeText(reportPath, buildExperimentReport(task, profile, cycles, reason, state.evidencePath, 'paused', false))
     return { runDir, status: 'paused', reportPath, evidencePath: state.evidencePath, cycles, reason }
   }
@@ -368,23 +379,15 @@ async function runMinimalExperiment(
 
       const workDir = safeResolve(ctx.runDir, 'work', `experiment-cycle-${String(cycle).padStart(2, '0')}`)
       await ensureDir(workDir)
-      const cachedWork = await readStage<{ actionResult: Awaited<ReturnType<typeof runWorker>> }>(stageFile(ctx.runDir, cycle, 'work'))
-      const actionResult = cachedWork?.actionResult ?? await (async () => {
+      const cachedWork = await readStage<unknown>(stageFile(ctx.runDir, cycle, 'work'))
+      const rawActionResult = cachedWork === undefined ? await (async () => {
         await transition(ctx.state, 'work', `experiment-minimal-work-${cycle}`)
         const result = await runWorker(ctx, { workDir, planText, experimentDesign: planText, minimalVerification: 'minimal plan is the verification basis' })
         await writeStage(ctx.runDir, cycle, 'work', { actionResult: result })
         await recordResult(ctx.state, `experiment-minimal-work-${cycle}`, result as unknown as Record<string, unknown>)
         return result
-      })()
-      if (actionResult.status !== 'completed') {
-        const reason = `minimal worker did not complete: ${actionResult.summary}`
-        ctx.state.status = 'PAUSED'
-        ctx.state.lastError = reason
-        await saveState(ctx.runDir, ctx.state)
-        await writeFailureReport(ctx.runDir, `# PAUSED\n\n${reason}\n`)
-        await writeText(reportPath, buildExperimentReport(task, profile, cycles, reason, undefined, 'paused', false))
-        return { runDir: ctx.runDir, status: 'paused', reportPath, cycles, reason }
-      }
+      })() : cachedActionResult(cachedWork)
+      const actionResult = await validateWorkerResult(ctx.runDir, rawActionResult)
 
       if (!(await readStage(stageFile(ctx.runDir, cycle, 'evidence')))) {
         await transition(ctx.state, 'evidence', `experiment-minimal-evidence-${cycle}`)
@@ -420,11 +423,12 @@ async function runMinimalExperiment(
       if (decision.action === 'revise') ctx.state.planVersion += 1
     }
   } catch (error) {
-    if (!isBudgetPause(error)) throw error
+    if (!isBudgetPause(error) && !isExperimentPauseError(error)) throw error
     const reason = error instanceof Error ? error.message : String(error)
     ctx.state.status = 'PAUSED'
     ctx.state.lastError = reason
     await saveState(ctx.runDir, ctx.state)
+    await writeFailureReport(ctx.runDir, `# PAUSED\n\n${reason}\n`)
     await writeText(reportPath, buildExperimentReport(task, profile, cycles, reason, ctx.state.evidencePath, 'paused', false))
     return { runDir: ctx.runDir, status: 'paused', reportPath, evidencePath: ctx.state.evidencePath, cycles, reason }
   }

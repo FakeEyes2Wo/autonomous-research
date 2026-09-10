@@ -26,7 +26,7 @@ function policy(overrides: Record<string, unknown> = {}) {
     },
     workflow: { mode: 'minimal' },
     budget: {
-      maxInputTokens: 1000,
+      maxInputTokens: 2000,
       maxOutputTokens: 321,
       maxRunTokens: 10000,
       maxRoleCalls: 20,
@@ -153,6 +153,32 @@ test('continuable listener is installed before start and completed child is not 
   assert.match(first.childId ?? '', /^ar-/)
   assert.deepEqual(second.structured, { summary: 'done' })
   assert.match(await readFile(join(runDir, '.autoresearch', 'subagent-tasks.json'), 'utf8'), /completed/)
+})
+
+test('adding contextual workDir reuses a completed worker without changing its fingerprint', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-workdir-resume-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  const bus = eventBus()
+  let starts = 0
+  const runtime = {
+    async startContinuable(spec: { childId?: string }) {
+      starts += 1
+      bus.emit({ id: spec.childId!, stopReason: 'completed', lastAssistantMessage: [{ type: 'text', text: '{"summary":"preserved"}' }] })
+      return { childId: spec.childId!, messageId: 'message-1' }
+    },
+  }
+  const provider = new SubagentRoleAgentProvider(runtime as never, { context: bus as never })
+  const first = await provider.run('research-worker', { runDir, taskId: 'worker-resume', plan: 'same-plan' }, context(runDir))
+  const second = await provider.run('research-worker', {
+    runDir,
+    taskId: 'worker-resume',
+    plan: 'same-plan',
+    workDir: join(runDir, 'work', 'cycle-01'),
+  }, context(runDir))
+
+  assert.equal(starts, 1)
+  assert.equal(second.childId, first.childId)
+  assert.deepEqual(second.structured, { summary: 'preserved' })
 })
 
 test('continuable start preserves the native runtime receiver', async (t) => {

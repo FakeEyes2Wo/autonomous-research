@@ -1,0 +1,21 @@
+# Lightweight experiment engineering
+
+Apply this policy only when the task calls for executable experiment code. Preserve PROFILE limits and existing repository conventions.
+
+- Default new code to `<runDir>/experiment/`: `README.md`, a language-appropriate dependency manifest with reproducible versions, `configs/`, responsibility-based modules under `src/<package>/`, and focused `tests/`. For Python, use `pyproject.toml` or a requirements file plus a resolved version record. Add thin `scripts/` or `notebooks/` only when useful; notebooks must not be the only pipeline. Keep raw/prepared data in `<runDir>/data/` and code-free results in the supplied cycle work directory. If no work directory is supplied for a cheap probe, use a clearly named subdirectory under `<runDir>/work/`.
+- Scale the layout to the task. Tiny experiments may use only a few modules. Do not create empty scaffolding or complex frameworks. For theoretical or no-code work, state that engineering is not applicable and why.
+- Preserve a useful existing layout. Map its responsibilities and reproduction commands in `experiment/README.md`; do not mass-move user files or break prior evidence links.
+- Plans must include a concrete **Code organization and reproducibility** section naming code/output roots, small module responsibilities, configuration and entrypoint, tests, reproduction commands, and expected artifacts. Experiment designs must align scientific methods with that plan and may return an `engineeringPlan` string.
+- Separate data preparation, method/baseline, evaluation, and command orchestration when needed. Put seeds, datasets, splits, and hyperparameters in config. Reuse preprocessing and metrics across alternatives. Avoid machine-specific paths, duplicated monolithic scripts, fake fallbacks, and hidden import-time training or downloads.
+- The experiment README must give exact environment/setup, smoke, full-run, and evaluation commands plus expected outputs. Use portable paths, validate inputs, log useful progress, and exit clearly on failure.
+- Treat raw data as immutable and preserve negative results. For every attempt, create a unique subdirectory below the current cycle work directory; never overwrite an earlier attempt. Record resolved config, seeds, dependency/tool versions, source and dataset-split identity, command, working directory, exit code, logs, and metrics.
+- Test important scientific logic and run a cheap smoke check before expensive work. Record failures honestly; never fabricate a passing check or result.
+- Review actual files and executed checks, not promises. Artifact paths must name real files relative to `runDir`, including README, entrypoint, config, and current-cycle verification/metrics/logs; a directory, glob, or nonexistent path is not evidence.
+
+## Scientific protocol and evidence identity
+
+- Distinguish **pilot calibration** from **formal validation**. A smoke test or single cheap pilot establishes operability or informs design; it does not validate the scientific hypothesis.
+- Before formal comparisons, freeze a versioned design with a revision ID or content hash, primary metrics, data splits, seeds, valid baselines, budget unit and matching tolerances, stopping rules, and treatment of failed or censored outcomes. If a pilot changes any of these, create a new design version. Label exploratory and formal result sets and never silently pool results across versions.
+- Make matching task-specific. For cost-sensitive comparisons, account for the whole run or episode: input, cached-input, and output tokens; steps; retries; elapsed time; and price/cost basis when available. Do not invent a universal token cap or assume an outer AutoResearch call budget is the experiment's internal budget.
+- Each attempt must link code/source identity, frozen design version, resolved config, data/split/seed/model identifiers, exact commands and working directory, exit codes, logs, and metrics. Keep failure-derived lessons: preserve observed facts separately from unverified explanations, with provenance and evaluation-split boundaries.
+- For theory, no-code, or genuinely small tasks, use only the applicable records and explain omissions. Do not create empty framework scaffolding.

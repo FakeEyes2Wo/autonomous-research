@@ -66,7 +66,7 @@ export const researchRoleSpecs = {
     }),
   },
   'experiment-designer': {
-    sections: ['plan', 'treeSummary', 'minimalVerification', 'modelScout', 'reflexion'],
+    sections: ['plan', 'treeSummary', 'minimalVerification', 'modelScout', 'experimentDesign', 'reflexion'],
     outputSchema: objectSchema({
       datasets: { type: 'array', items: { type: 'string' }, required: true },
       conflictConstruction: { type: 'string', required: true },
@@ -75,6 +75,7 @@ export const researchRoleSpecs = {
       metrics: { type: 'array', items: { type: 'string' }, required: true },
       rootCauseValidation: { type: 'string', required: true },
       limitations: { type: 'array', items: { type: 'string' }, required: true },
+      engineeringPlan: { type: 'string' },
     }),
   },
   'experiment-reflexion': {

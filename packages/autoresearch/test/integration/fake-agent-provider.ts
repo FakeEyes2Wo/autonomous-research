@@ -15,6 +15,8 @@ export interface FakeAgentScript {
   writerText?: string
   minimalRisk?: 'low' | 'medium' | 'high'
   throwOnRole?: RoleName
+  experimentVerdicts?: string[]
+  unstructuredWorker?: boolean
 }
 
 export class FakeAgentProvider implements RoleAgentProvider {
@@ -80,7 +82,7 @@ export class FakeAgentProvider implements RoleAgentProvider {
           stopReason: 'completed',
         }
       case 'experiment-reflexion':
-        return { text: '', structured: { feasibility: 'high', generalizability: 'high', risks: [], failureDirections: [], verdict: 'proceed' }, stopReason: 'completed' }
+        return { text: '', structured: { feasibility: 'high', generalizability: 'high', risks: [], failureDirections: [], verdict: this.script.experimentVerdicts?.shift() ?? 'proceed' }, stopReason: 'completed' }
       case 'result-reflexion':
         return { text: '', structured: { summary: 'ok', failureAnalysis: 'none', explorationDirections: ['try more backbones'] }, stopReason: 'completed' }
       case 'insight-abstractor':
@@ -99,6 +101,7 @@ export class FakeAgentProvider implements RoleAgentProvider {
           this.lastActionId = action.id
           await researchActionFinish.execute({ runDir, actionId: action.id, status: this.script.workerStatus ?? 'completed', summary: 'worker summary', artifacts: [artifact] }, toolExec)
         }
+        if (this.script.unstructuredWorker) return { text: 'worker returned no structured result', stopReason: 'completed' }
         return {
           text: 'worker done',
           structured: {

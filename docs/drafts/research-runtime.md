@@ -2,6 +2,16 @@
 
 更新日期：2026-09-09。状态：minimal 流程、配置 schema 与请求账本基础已实施；运行时硬预算和真实模型联调仍有限。连接和模块边界见[CPA 接入草稿](cpa-integration.md)，总体验收见[当前状态](current-status.md)。
 
+## Upstream experiment validation addendum (2026-09-10)
+
+Each planner call now receives a bounded, non-secret summary of the effective **outer AutoResearch** workflow mode, maximum cycle/round count, model-routing state and known resolved/inherited planner route, applicable review behavior, and global LLM ceilings. These values do not define experiment-internal seeds, episodes, retries, models under study, or budget matching. Disabled outer model routing does not prohibit a multi-model experiment.
+
+Full/legacy design reflexion permits at most two redesigns. The exact design returned to a worker must receive an explicit `proceed`; a missing/invalid verdict or unresolved `revise` enters `PAUSED` while preserving design/review files. A second human `revise` also pauses. Research minimal's optional post-work review is review-only: it may accept the executed protocol or pause, but cannot revise a protocol and attach that new design to old results. Auto-mode human-review skipping is unchanged.
+
+All fresh and cached worker results pass the same basic local validation before evidence or supervisor decisions. A successful result needs a non-empty summary and at least one existing regular file whose real path stays within the real run root. Missing files, directories/globs, lexical traversal, outside absolute paths, escaping symlinks, failed status, and malformed output produce a normal `PAUSED` result with an actionable report. Resume revalidates cached work without rerunning a completed worker. Existing terminal completed runs are not changed retroactively.
+
+This deterministic gate establishes only result shape, local file existence, and path containment. It does not prove metrics true. Scientific protocol versioning, pilot/formal separation, whole-run or whole-episode budget matching, statistical adequacy, and complete per-attempt reproducibility remain explicit planning, execution, evidence, and review responsibilities.
+
 ## 目标与当前依据
 
 优先减少无条件步骤、重复上下文和失败重跑，再按任务选择模型。保留原始证据和可恢复状态；没有实测前不承诺节省百分比。
@@ -43,6 +53,16 @@
 | improvement / polish | 默认不循环 | 未通过审计或用户要求修改 |
 
 必须保留的是检查职责，而不是固定次数的模型调用。原始 artifacts、证据 ID、数值和不确定性、数据泄漏检查、科研结论与停止理由都不能省略。预算暂停不能被描述成研究失败或成功。语言模型的 proof 审阅不能被描述成机器验证的形式化证明。
+
+### 实验代码与产物组织
+
+当前实现由 `src/agents/factory.ts` 从插件自身目录内联共享实验工程提示，因此从任意 `runDir` 启动都不要求工作区内存在 `prompts/`。提示只发给 planner、research-worker、experiment designer/reflexion、minimal verifier、evidence agent 和 supervisor；论文写作、brainstorm 等无关角色不接收。
+
+可执行的新任务默认把代码放在 `<runDir>/experiment/`：README、语言对应的依赖 manifest/版本记录、`configs/`、`src/<package>/` 和重要逻辑的 `tests/`，仅按需加入薄 `scripts/` 或非唯一入口的 `notebooks/`。`<runDir>/data/` 保存 raw/prepared 数据；无代码实验输出进入当前 `work/cycle-XX` 或 `work/experiment-cycle-XX`，每次尝试使用唯一子目录并记录配置、seed、版本/来源、split、命令/cwd/退出码、日志和指标。理论或无需代码任务明确说明 N/A。
+
+minimal 模式仍只有 planner、worker、本地 evidence、supervisor 的职责链；完整模式由独立设计/反思和 evidence 角色复核。`workDir` 作为 worker 的上下文标题传入，但不加入 role sections/fingerprint，所以为旧 pending/completed worker 补充该上下文不会制造 task revision 冲突。supervisor 的 evidence 通过 Reflexion 输入实际渲染。反思返回的修订设计会继续传到 worker，并写入 standalone stage marker。
+
+这是面向角色的指导和审查职责，不是新增的确定性代码质量 gate：运行时没有新增角色、状态迁移或必填输出字段。新 run 从约定布局开始；恢复旧 run 时不迁移已完成 stage、不批量移动现有文件，也不破坏旧 evidence 路径，只在后续角色调用中沿用或在 README 映射现有布局。短输入预算仍可能因内联提示而拒绝调用，需通过正常的 `maxInputTokens` 配置给实验角色预留上下文。
 
 ## 模型分档表
 

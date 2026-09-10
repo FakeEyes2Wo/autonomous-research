@@ -230,3 +230,103 @@ test('minimal resume repairs missing checkpoint result events without rerunning 
     await rm(dir, { recursive: true, force: true })
   }
 })
+
+test('minimal post-work review pauses on revise and resume reuses the worker checkpoint', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-minimal-post-work-review-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  await mkdir(join(dir, 'input'), { recursive: true })
+  await mkdir(join(dir, '.autoresearch'), { recursive: true })
+  await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nReview the executed protocol.\n', 'utf8')
+  await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: enabled\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n', 'utf8')
+
+  const first = new FakeAgentProvider({ decisions: ['finish'], experimentVerdicts: ['revise'] })
+  const paused = await new AutoResearchService(first).run({ runDir: dir }, {
+    parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal,
+  })
+  assert.equal(paused.status, 'PAUSED')
+  assert.equal(first.calls.filter((role) => role === 'research-worker').length, 1)
+  assert.equal(first.calls.includes('experiment-designer'), false)
+  assert.equal(first.calls.includes('supervisor'), false)
+
+  const second = new FakeAgentProvider({ decisions: ['finish'], experimentVerdicts: ['proceed'] })
+  const completed = await new AutoResearchService(second).resume({ runDir: dir }, {
+    parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal,
+  })
+  assert.equal(completed.status, 'COMPLETED')
+  assert.equal(second.calls.includes('research-worker'), false)
+  assert.deepEqual(second.calls, ['experiment-reflexion', 'supervisor'])
+})
+
+test('legacy research pauses before work when automatic design review is unresolved', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-legacy-review-pause-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  await mkdir(join(dir, 'input'), { recursive: true })
+  await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nFreeze a reviewed protocol.\n', 'utf8')
+  await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  const provider = new FakeAgentProvider({ decisions: ['finish'], experimentVerdicts: ['revise', 'revise', 'revise'] })
+
+  const state = await new AutoResearchService(provider).run({ runDir: dir, humanReview: 'off' }, {
+    parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal,
+  })
+
+  assert.equal(state.status, 'PAUSED')
+  assert.equal(provider.calls.includes('research-worker'), false)
+  assert.equal(provider.calls.includes('supervisor'), false)
+  assert.match(await readFile(join(dir, 'FAILURE_REPORT.md'), 'utf8'), /not accepted|requires revision/i)
+})
+
+test('legacy research pauses before evidence when worker artifact is missing', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-legacy-artifact-pause-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  await mkdir(join(dir, 'input'), { recursive: true })
+  await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nValidate worker evidence.\n', 'utf8')
+  await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  const provider = new FakeAgentProvider({ decisions: ['finish'], workerArtifacts: ['work/cycle-1/missing.txt'] })
+
+  const state = await new AutoResearchService(provider).run({ runDir: dir, humanReview: 'off' }, {
+    parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal,
+  })
+
+  assert.equal(state.status, 'PAUSED')
+  assert.equal(provider.calls.includes('evidence-agent'), false)
+  assert.equal(provider.calls.includes('supervisor'), false)
+  assert.match(state.lastError ?? '', /artifact/i)
+})
+
+test('legacy research pauses when a second human experiment review still requests revision', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-human-review-pause-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  await mkdir(join(dir, 'input'), { recursive: true })
+  await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nRequire explicit human acceptance.\n', 'utf8')
+  await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  const provider = new FakeAgentProvider({ decisions: ['finish'] })
+  const reviewer = { ask: async () => ({ verdict: 'revise' as const, feedback: 'still incomplete' }) }
+
+  const state = await new AutoResearchService(provider, { reviewer, reviewGates: ['experiment'] }).run({ runDir: dir, humanReview: 'on' }, {
+    parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal,
+  })
+
+  assert.equal(state.status, 'PAUSED')
+  assert.equal(provider.calls.includes('research-worker'), false)
+  assert.match(state.lastError ?? '', /still needs human revision/i)
+})
+
+test('legacy research returns paused when automatic review rejects a human-requested redesign', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-human-redesign-auto-pause-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  await mkdir(join(dir, 'input'), { recursive: true })
+  await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nReview the human redesign.\n', 'utf8')
+  await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  const provider = new FakeAgentProvider({ decisions: ['finish'], experimentVerdicts: ['proceed', 'revise', 'revise', 'revise'] })
+  let humanCalls = 0
+  const reviewer = { ask: async () => ({ verdict: ++humanCalls === 1 ? 'revise' as const : 'approve' as const, feedback: 'redesign this' }) }
+
+  const state = await new AutoResearchService(provider, { reviewer, reviewGates: ['experiment'] }).run({ runDir: dir, humanReview: 'on' }, {
+    parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal,
+  })
+
+  assert.equal(state.status, 'PAUSED')
+  assert.equal(provider.calls.includes('research-worker'), false)
+  assert.match(state.lastError ?? '', /not accepted|requires revision/i)
+})

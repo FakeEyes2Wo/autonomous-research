@@ -1,5 +1,5 @@
-import { existsSync, realpathSync, statSync } from 'node:fs'
-import { isAbsolute, join, relative, sep } from 'node:path'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import type { RoleExecutionContext } from '../agents/types.js'
 import { DEFAULT_MAX_CYCLES, EVENTS_FILE, IDEA_FILE, INPUT_DIR, WORK_DIR, ensureDir, readOptionalText, safeResolve, writeText } from '../core/utils.js'
 import { HypothesisPool } from '../core/hypothesis-pool.js'
@@ -28,6 +28,8 @@ import {
 } from '../experiment/steps.js'
 import { runPaper } from './steps/paper.js'
 import type { ResearchRunnerOptions } from './types.js'
+import { isExperimentPauseError } from '../experiment/errors.js'
+import { validateWorkerResult } from '../experiment/validation.js'
 
 export type { ResearchRunnerOptions } from './types.js'
 
@@ -187,7 +189,12 @@ export class ResearchRunner {
         runModelScout(ctx, { planText }),
       ])
       let experimentDesign = await runExperimentDesign(ctx, { planText, minimalVerification, modelScout })
-      await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
+      try {
+        experimentDesign = await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
+      } catch (error) {
+        if (isExperimentPauseError(error)) return this.pauseRun(ctx, error.message)
+        throw error
+      }
 
       let experimentVerdict = await reviewGate(ctx, {
         gate: 'experiment',
@@ -200,7 +207,12 @@ export class ResearchRunner {
       if (experimentVerdict.verdict === 'revise') {
         ctx.logger.info('human requested experiment design revision; re-running design')
         experimentDesign = await runExperimentDesign(ctx, { planText, minimalVerification, modelScout, feedback: experimentVerdict.feedback })
-        await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
+        try {
+          experimentDesign = await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
+        } catch (error) {
+          if (isExperimentPauseError(error)) return this.pauseRun(ctx, error.message)
+          throw error
+        }
         experimentVerdict = await reviewGate(ctx, {
           gate: 'experiment',
           title: 'Revised experiment design is ready?',
@@ -209,12 +221,21 @@ export class ResearchRunner {
         if (experimentVerdict.verdict === 'reject') {
           return this.failRun(ctx, `human rejected revised experiment design: ${experimentVerdict.feedback ?? 'no feedback'}`)
         }
+        if (experimentVerdict.verdict === 'revise') {
+          return this.pauseRun(ctx, `revised experiment design still needs human revision: ${experimentVerdict.feedback ?? 'no feedback'}`)
+        }
       }
 
       await transition(state, 'work', `work-${cycle}`)
       const workDir = safeResolve(runDir, WORK_DIR, `cycle-${String(cycle).padStart(2, '0')}`)
       await ensureDir(workDir)
-      const actionResult = await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification })
+      let actionResult
+      try {
+        actionResult = await validateWorkerResult(runDir, await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification }))
+      } catch (error) {
+        if (isExperimentPauseError(error)) return this.pauseRun(ctx, error.message)
+        throw error
+      }
       await recordResult(state, `work-${cycle}`, actionResult as unknown as Record<string, unknown>)
       ctx.logger.info(`work done status=${actionResult.status} artifacts=${actionResult.artifacts.length}`)
 
@@ -319,6 +340,15 @@ export class ResearchRunner {
     return ctx.state
   }
 
+  private async pauseRun(ctx: RunContext, reason: string): Promise<RunState> {
+    ctx.logger.warn(`run paused: ${reason}`)
+    ctx.state.status = 'PAUSED'
+    ctx.state.lastError = reason
+    await saveState(ctx.runDir, ctx.state)
+    await writeFailureReport(ctx.runDir, `# PAUSED\n\n${reason}\n`)
+    return ctx.state
+  }
+
   private shouldRunPaper(ctx: RunContext, idea: string): boolean {
     const toggle = ctx.policySnapshot.workflow.paper
     if (toggle === 'enabled') return true
@@ -376,24 +406,28 @@ export class ResearchRunner {
 
     let actionResult: { status: 'completed' | 'failed'; summary: string; artifacts: string[] }
     const savedWork = await readOptionalText(workMarker)
-    if (savedWork) {
-      const value = JSON.parse(savedWork) as Partial<typeof actionResult>
-      if ((value.status !== 'completed' && value.status !== 'failed') || typeof value.summary !== 'string' || value.summary.trim().length === 0 || !Array.isArray(value.artifacts) || value.artifacts.length === 0 || !value.artifacts.every((item) => typeof item === 'string' && item.trim().length > 0)) {
-        throw new Error(`invalid minimal work checkpoint: ${workMarker}`)
+    try {
+      if (savedWork) {
+        let value: unknown
+        try { value = JSON.parse(savedWork) } catch { throw new Error(`invalid JSON in cached work result: ${workMarker}`) }
+        actionResult = await validateWorkerResult(ctx.runDir, value)
+      } else {
+        await transition(ctx.state, 'work', `minimal-work-${cycle}`)
+        const workDir = safeResolve(ctx.runDir, WORK_DIR, `cycle-${String(cycle).padStart(2, '0')}`)
+        await ensureDir(workDir)
+        actionResult = await validateWorkerResult(ctx.runDir, await runWorker(ctx, {
+          workDir,
+          planText: plan.plan,
+          experimentDesign: plan.plan,
+          minimalVerification: '',
+        }))
+        await writeText(workMarker, JSON.stringify(actionResult, null, 2))
+        await recordResult(ctx.state, `minimal-work-${cycle}`, actionResult)
       }
-      actionResult = { status: value.status, summary: value.summary, artifacts: value.artifacts }
-    } else {
-      await transition(ctx.state, 'work', `minimal-work-${cycle}`)
-      const workDir = safeResolve(ctx.runDir, WORK_DIR, `cycle-${String(cycle).padStart(2, '0')}`)
-      await ensureDir(workDir)
-      actionResult = await runWorker(ctx, {
-        workDir,
-        planText: plan.plan,
-        experimentDesign: plan.plan,
-        minimalVerification: '',
-      })
-      await writeText(workMarker, JSON.stringify(actionResult, null, 2))
-      await recordResult(ctx.state, `minimal-work-${cycle}`, actionResult)
+    } catch (error) {
+      if (isExperimentPauseError(error)) return pauseForEvidence(error.message)
+      if (savedWork) return pauseForEvidence(error instanceof Error ? error.message : String(error))
+      throw error
     }
     if (!(await resultRecorded(ctx.runDir, `minimal-work-${cycle}`))) {
       await recordResult(ctx.state, `minimal-work-${cycle}`, actionResult)
@@ -402,21 +436,10 @@ export class ResearchRunner {
     await reloadTree(ctx)
     const actions = ctx.tree.query({ kind: 'action' })
     const evidenceNodes = ctx.tree.query({ kind: 'evidence' })
-    const runRoot = realpathSync(ctx.runDir)
-    const artifactsSafe = actionResult.artifacts.length > 0 && actionResult.artifacts.every((artifact) => {
-      try {
-        const artifactPath = safeResolve(ctx.runDir, artifact)
-        if (!existsSync(artifactPath) || !statSync(artifactPath).isFile()) return false
-        const artifactRootRelative = relative(runRoot, realpathSync(artifactPath))
-        return artifactRootRelative !== '..' && !artifactRootRelative.startsWith(`..${sep}`) && !isAbsolute(artifactRootRelative)
-      } catch {
-        return false
-      }
-    })
     const validActions = actions.length > 0 && actions.every((action) => action.status === 'completed' && action.content.trim().length > 0)
-    const localRisk = actionResult.status === 'failed' || !validActions || !artifactsSafe ? 'high' : 'low'
+    const localRisk = !validActions ? 'high' : 'low'
     const risk = plan.riskLevel === 'high' || localRisk === 'high' ? 'high' : plan.riskLevel === 'medium' ? 'medium' : 'low'
-    const evidence = `local evidence: ${actions.length} action node(s), ${evidenceNodes.length} recorded evidence node(s); worker status=${actionResult.status}; artifacts=${artifactsSafe ? 'valid' : 'invalid'}; risk=${risk}`
+    const evidence = `local evidence: ${actions.length} action node(s), ${evidenceNodes.length} recorded evidence node(s); worker status=${actionResult.status}; artifacts=valid; risk=${risk}`
     await transition(ctx.state, 'evidence', `minimal-evidence-${cycle}`)
     await writeText(safeResolve(ctx.runDir, `MINIMAL_EVIDENCE-${cycle}.md`), `# Minimal evidence\n\n${evidence}\n`)
     ctx.state.evidencePath = safeResolve(ctx.runDir, `MINIMAL_EVIDENCE-${cycle}.md`)
@@ -425,12 +448,18 @@ export class ResearchRunner {
     }
 
     if (review === 'enabled' || (review === 'auto' && risk !== 'low')) {
-      await runExperimentReflexion(ctx, {
-        planText: plan.plan,
-        minimalVerification: evidence,
-        modelScout: '',
-        initialDesign: plan.plan,
-      })
+      try {
+        await runExperimentReflexion(ctx, {
+          planText: plan.plan,
+          minimalVerification: evidence,
+          modelScout: '',
+          initialDesign: plan.plan,
+          maxRedesigns: 0,
+        })
+      } catch (error) {
+        if (isExperimentPauseError(error)) return pauseForEvidence(`post-work review did not accept the executed protocol: ${error.message}`)
+        throw error
+      }
     } else if (review === 'never' && risk !== 'low') {
       return pauseForEvidence('independent review disabled while critical risk remains')
     }

@@ -27,6 +27,10 @@ export interface CommonRoleInput {
   readonly taskId?: string
   readonly cycle?: number
   readonly plan?: string
+  /** Contextual output root; intentionally excluded from role fingerprints. */
+  readonly workDir?: string
+  /** Bounded, non-secret summary of outer AutoResearch orchestration limits. */
+  readonly runtimeConstraints?: string
 }
 
 /**
