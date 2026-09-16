@@ -1,0 +1,5 @@
+# Historical source fixtures are byte-exact; preserve their hashes on every platform.
+* -text
+# Metadata follows normal repository text handling.
+fixture-manifest.json text
+.gitattributes text
