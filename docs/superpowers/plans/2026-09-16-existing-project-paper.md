@@ -1,5 +1,7 @@
 # Existing-project paper workflow implementation plan
 
+**Delivery status (2026-09-16):** E1 implemented and independently reviewed; E2 verified through the normal paper-planner handoff. E3 verified paid discovery, main-agent routing, budget pause and runDir-only resume; it did not complete a real-model manuscript. See the [verification record](../../verification/2026-09-16-research-rag-runtime.md). Project inventory provenance and external literature retrieval retain distinct source namespaces; inventory is not automatically indexed as literature.
+
 > Use subagent-driven-development with scoped ownership and task reviews. Implementation explicitly authorized by user; this is an addition to the active RAG/runtime plan.
 
 **Goal:** main agent dispatches existing-project discovery and paper generation from its initial task handling.
@@ -10,15 +12,15 @@
 
 Read `.superpowers/sdd/2026-09-16-rag-research-roadmap/existing-project-discovery.md` for exact entrypoint analysis. Create `src/project/{inventory,discovery,contracts}.ts`, `src/service/project-paper.ts` as needed; add project-explorer role and prompt; modify `src/service/autoresearch-service.ts`, `src/tools/index.ts`, `src/index.ts`, path binding and `presets/auto_research/agent.cordis.yml`. Provider change narrowly enforces tool-free project-explorer; coordinate that file before editing. Avoid edits to service/research-cycle.ts and service/steps/idea.ts (B2) and literature modules (A5/B1).
 
-- [ ] Write failing bounded inventory/path/secret exclusion tests using real temporary files.
-- [ ] Implement bounded sorted inventory with byte/hash SourceRefs, coverage omissions, no source writes/no execution.
-- [ ] Write fake-provider discovery tests rejecting invented source IDs and preserving historical-unverified labels.
-- [ ] Run synthesis through normal provider/ledger after run bootstrap; persist discovery/candidate source manifest and checkpoint; no raw host subagent calls.
-- [ ] Add project_paper_run tool with projectDir/runDir/maxCycles/paper options consistent with existing contracts; relative paths bind to main-agent workspace.
-- [ ] Reuse normal ResearchRunner with brainstorm off for the selected candidate, explicitly honor user request to enter paper after evidence gate. No bypass of evidence/compile/audit requirements.
-- [ ] Persist canonical project identity and workflow origin; resume validates and reuses it even when only runDir is supplied. Old runs remain compatible.
-- [ ] Update init persona to distinguish existing-project paper, new research, standalone experiment and resume on first task turn. No side effects on plugin registration or GET.
-- [ ] Build/typecheck and focused service/provider/tool/path/paper compatibility tests. Record exact outputs and report; parent commits/reviews.
+- [x] Write failing bounded inventory/path/secret exclusion tests using real temporary files.
+- [x] Implement bounded sorted inventory with byte/hash SourceRefs, coverage omissions, no source writes/no execution.
+- [x] Write fake-provider discovery tests rejecting invented source IDs and preserving historical-unverified labels.
+- [x] Run synthesis through normal provider/ledger after run bootstrap; persist discovery/candidate source manifest and checkpoint; no raw host subagent calls.
+- [x] Add project_paper_run tool with projectDir/runDir/maxCycles/paper options consistent with existing contracts; relative paths bind to main-agent workspace.
+- [x] Reuse normal ResearchRunner with brainstorm off for the selected candidate, explicitly honor user request to enter paper after evidence gate. No bypass of evidence/compile/audit requirements.
+- [x] Persist canonical project identity and workflow origin; resume validates and reuses it even when only runDir is supplied. Old runs remain compatible.
+- [x] Update init persona to distinguish existing-project paper, new research, standalone experiment and resume on first task turn. No side effects on plugin registration or GET.
+- [x] Build/typecheck and focused service/provider/tool/path/paper compatibility tests. Record exact outputs and report; parent commits/reviews.
 
 ## E2: RAG and runtime integration
 

@@ -1,0 +1,213 @@
+{
+  "schema": "autoresearch/runtime-soak-evidence/v1",
+  "scope": "Local controlled Windows jobs; no paid provider or benchmark; not a security sandbox",
+  "runId": "658176e3-5be2-4eae-b5aa-14b3eb272675",
+  "startedAt": "2026-09-16T11:53:31.104Z",
+  "endedAt": "2026-09-16T13:53:31.218Z",
+  "requestedDurationMs": 7200000,
+  "elapsedMs": 7200114,
+  "passed": true,
+  "processExitCode": 0,
+  "environment": {
+    "node": "v24.4.1",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "controllerRestarts": 7,
+  "controllerStarts": 8,
+  "controllerStops": 8,
+  "persistedJobs": 81,
+  "statusCounts": {
+    "cancelled": 2,
+    "succeeded": 79
+  },
+  "completedControlledExecutions": 79,
+  "actualWorkloadDurationMs": {
+    "min": 60004,
+    "max": 124494
+  },
+  "duplicateSubmissions": 0,
+  "lostResults": 0,
+  "unresolvedJobs": 0,
+  "settlementMismatches": 0,
+  "budget": {
+    "limits": {
+      "maxReservedWallMs": 90000000,
+      "maxConcurrentJobs": 1
+    },
+    "initial": {
+      "reservedWallMs": 0,
+      "activeJobs": 0,
+      "settledWallMs": 0,
+      "cpuSeconds": null,
+      "gpuSeconds": null,
+      "costMicros": null
+    },
+    "spentAfterLastRestartMs": 60860,
+    "monotonicAcrossRestarts": true,
+    "cancellationUnconfirmedReservationBeforeRestartMs": 90000,
+    "cancellationUnconfirmedReservationAfterRestartMs": 90000,
+    "final": {
+      "settledWallMs": 7132552,
+      "reservedWallMs": 0,
+      "activeJobs": 0
+    }
+  },
+  "resources": {
+    "peakRssBytes": 136511488,
+    "rssScope": "sampled controller plus harness; workload/supervisor excluded",
+    "retainedLogBytes": 599174,
+    "diskBytesBeforeReportSerialization": 6345230,
+    "peakSampledDiskBytes": 6344832,
+    "directoryBytesAfterRawAndIndependentReports": 6632330,
+    "maxDiskBytes": 67108864,
+    "maxHarnessLogBytes": 8388608
+  },
+  "probes": {
+    "unknownPaused": true,
+    "cancellationUnconfirmedPaused": true,
+    "diskWriteRejected": true
+  },
+  "recoveryBoundaries": [
+    "cancel-unconfirmed",
+    "before-submit",
+    "after-spawn",
+    "scheduled",
+    "before-collect"
+  ],
+  "verification": {
+    "sqliteIntegrity": "ok",
+    "verifiedArtifactManifests": 79,
+    "verifiedStartupFingerprints": 17,
+    "verifiedAt": "2026-09-16T13:54:01.888Z"
+  },
+  "versionBoundary": {
+    "testedLaunchHarnessSha256": "86fe76acb7c7638332a8c15da87d00c0086adc71d5c5b7d76b15027945f5de9b",
+    "launchHarnessSnapshot": "c4-soak-2h-final/source-at-launch/runtime-soak.mjs",
+    "currentHarnessSha256": "f1b829be9b5247b83ae3f6ed601b37665bdea3ce6364fd931c29fa7f5ce6ccb5",
+    "currentHarnessHasFullTwoHourEvidence": false,
+    "explanation": "The two-hour process retained its launch code. A later unexpected-controller-exit correction was verified separately by focused fault tests. All 14 runtime JS files and both controller/workload helpers match their startup hashes.",
+    "separateFaultCorrectionEvidence": [
+      {
+        "node": "v24.4.1",
+        "expectedFailureReported": true,
+        "unresolvedJobs": 0,
+        "finalBudget": {
+          "settledWallMs": 15315,
+          "reservedWallMs": 0,
+          "activeJobs": 0
+        },
+        "rawDirectory": "c4-controller-exit-node24"
+      },
+      {
+        "node": "v22.19.0",
+        "expectedFailureReported": true,
+        "unresolvedJobs": 0,
+        "finalBudget": {
+          "settledWallMs": 15359,
+          "reservedWallMs": 0,
+          "activeJobs": 0
+        },
+        "rawDirectory": "c4-controller-exit-node22"
+      }
+    ]
+  },
+  "startupFingerprints": [
+    {
+      "path": "scripts/runtime-soak.mjs",
+      "sha256": "86fe76acb7c7638332a8c15da87d00c0086adc71d5c5b7d76b15027945f5de9b"
+    },
+    {
+      "path": "test/fixtures/jobs/soak-controller.mjs",
+      "sha256": "bca21aab398ff403a032a5dc11d025a288d96a3db3a7ad5c165a87e5f57189d0"
+    },
+    {
+      "path": "test/fixtures/jobs/soak-workload.mjs",
+      "sha256": "a9337e1dd6935803d5f6c7c5238c3a9259222a7b62d427491ebeaca5970f603a"
+    },
+    {
+      "path": "dist/runtime/artifacts.js",
+      "sha256": "7360d7d0ec37da68ef1365b5084c9439a5cb1d642b47f2b97fd183527924c8a4"
+    },
+    {
+      "path": "dist/runtime/budget.js",
+      "sha256": "b431f5a7befd0d5929a464acd32823fb66f8c3c739557576633babab4a31b0ae"
+    },
+    {
+      "path": "dist/runtime/checkpoint.js",
+      "sha256": "00bad5efed14799556a146425d8cd2935cf515f27ae47e336e4c2b7a0556b4fc"
+    },
+    {
+      "path": "dist/runtime/contracts.js",
+      "sha256": "a17effb166611b0b01bf95e0329cfac8f40e429d6e3248bef258db85e25c6626"
+    },
+    {
+      "path": "dist/runtime/executors/local.js",
+      "sha256": "c56b966fcc8adde54c636553462146957e891547b41a2b1e1ec632c0788d4dc8"
+    },
+    {
+      "path": "dist/runtime/index.js",
+      "sha256": "f79f208e8880026e5b55e5e5aa0eff48c4faa06b08ed02926443ee2582724730"
+    },
+    {
+      "path": "dist/runtime/job-controller.js",
+      "sha256": "4fe47d4d40219644a0d0155ce92f7175d35dafb85dc6f9900cfe694608c9abcd"
+    },
+    {
+      "path": "dist/runtime/job-logs.js",
+      "sha256": "972870c43ca1d1275a6821a4980912c9f0155a95c88b5da268eccb0dd4c9c14c"
+    },
+    {
+      "path": "dist/runtime/job-store-worker.js",
+      "sha256": "97986edc1f12c6f0d805d1b2aa1dfc59267584e4b3746ed7ea28d5de33d85c75"
+    },
+    {
+      "path": "dist/runtime/job-store.js",
+      "sha256": "d461a00dccd72275a87dc1f9c43737594190842cf214a08c42454ce527b91405"
+    },
+    {
+      "path": "dist/runtime/local-authority.js",
+      "sha256": "068b33a7252256ec5a844093864b357cb78b10aac2d4dbdadd245fdc290052f4"
+    },
+    {
+      "path": "dist/runtime/local-control.js",
+      "sha256": "f9cae314a5ef239b969ff1fe580c385bfa6b4a12caab2f9a3b0391e975ad1405"
+    },
+    {
+      "path": "dist/runtime/local-supervisor.js",
+      "sha256": "b9a1e38ef3e91e77aba48376aca1eb57c1e59507c6f88b4949a288ea4f16b097"
+    },
+    {
+      "path": "dist/runtime/windows-job.js",
+      "sha256": "d00781cfff542374795e88fbe9cd793ce5d1c5327c4cabc9a9c841536e37444e"
+    }
+  ],
+  "evidenceFiles": [
+    {
+      "path": "c4-soak-2h-final/run.json",
+      "sha256": "7e6f4018c772bb18696d6f3c20bcdf2121f1d61bf10bcae53c1dd462ee76b090"
+    },
+    {
+      "path": "c4-soak-2h-final/report.json",
+      "sha256": "890f7677c0162a55f01669c9af39aad183621ddf42362cce4138ebfa27f40883"
+    },
+    {
+      "path": "c4-soak-2h-final/database-evidence.json",
+      "sha256": "7c0f162f43aac62887e41a871fbd1ff1379e321acbf8e1058369800d929616fc"
+    },
+    {
+      "path": "c4-soak-2h-final/events.jsonl",
+      "sha256": "131b8fb2e52b47e74b823e2c93b7bd764eeda445d11c6686029580fe8eba528c"
+    },
+    {
+      "path": "c4-soak-2h-final/executions.jsonl",
+      "sha256": "c228f02f5125ea150b839a30a2a08d01e6d89c61ed15a061fe9a042a716fc9f2"
+    },
+    {
+      "path": "c4-soak-2h-final/independent-verification.json",
+      "sha256": "7f39c76e8d3bd970df2de49d8ae1567f26bac40d3e71b3880938e40f9d333cc8"
+    }
+  ],
+  "evidenceBaseDirectory": ".superpowers/sdd/2026-09-16-rag-research-roadmap",
+  "twentyFourHourRunPerformed": false
+}

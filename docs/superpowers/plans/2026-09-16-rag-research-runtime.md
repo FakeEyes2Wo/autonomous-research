@@ -1,5 +1,7 @@
 # B：研究循环接入与持久实验 Implementation Plan
 
+**交付状态（2026-09-16）：B0–B4 已实现并通过独立复审。** 以下保留实施时的任务步骤；最终文献白名单、claim 判断绑定和恢复语义见[验收记录](../../verification/2026-09-16-research-rag-runtime.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 将文献与合法实验反馈送入下一轮假设生成，保存多个候选，并让实验在控制器重启后可核对和继续。

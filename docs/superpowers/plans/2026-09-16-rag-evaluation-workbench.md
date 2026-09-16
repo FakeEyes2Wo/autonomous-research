@@ -1,5 +1,7 @@
 # C：评测、文献阅读界面与检索增强 Implementation Plan
 
+**交付状态（2026-09-16）：C2 与 C4 功能测试及实际两小时运行已通过；C1/C3 暂缓。** 以下保留实施时的任务步骤，实际结果及启动版本边界见[验收记录](../../verification/2026-09-16-research-rag-runtime.md)。24 小时运行未执行。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 提供从论文目录跳转到原文证据的阅读入口，并验证研究闭环与作业恢复的正确性。

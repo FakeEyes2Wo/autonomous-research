@@ -1,5 +1,7 @@
 # A：文献目录、入库与关键词检索 Implementation Plan
 
+**交付状态（2026-09-16）：A1–A5 已实现并通过独立复审。** 以下保留实施时的任务步骤；当前入口、实际测试和边界见[验收记录](../../verification/2026-09-16-research-rag-runtime.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 交付能导入论文、返回有原文出处的检索结果、保存可重放记录的本地文献库。
