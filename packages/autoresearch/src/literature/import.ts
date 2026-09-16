@@ -16,6 +16,24 @@ function sameAuthors(left: string[], right: string[]): boolean {
   return a.length === b.length && a.every((author, index) => author === b[index])
 }
 
+interface AuthorConflictObservation {
+  authors: string[]
+  metadataSources: string[]
+}
+
+interface StoredWork extends Work {
+  unresolvedConflicts?: { kind: 'authors'; observations: AuthorConflictObservation[] }[]
+}
+
+function addAuthorObservation(observations: AuthorConflictObservation[], authors: string[], metadataSources: string[]): void {
+  const existing = observations.find(observation => sameAuthors(observation.authors, authors))
+  if (existing === undefined) {
+    observations.push({ authors: [...authors], metadataSources: [...new Set(metadataSources)] })
+  } else {
+    existing.metadataSources = [...new Set([...existing.metadataSources, ...metadataSources])]
+  }
+}
+
 /** Only verified metadata participates in cross-record alias resolution. */
 export async function registerWork(catalog: Catalog, value: Work): Promise<Work> {
   const work = assertWork(value)
@@ -26,27 +44,47 @@ export async function registerWork(catalog: Catalog, value: Work): Promise<Work>
       sql: 'SELECT works.body FROM aliases JOIN works ON works.id = aliases.work_id WHERE aliases.kind = ? AND aliases.value = ?',
       params: [alias.kind, alias.value],
     })
-    const found = (await catalog.transact(lookups)).flat().map(row => assertWork(JSON.parse(String(row.body))))
+    const found = (await catalog.transact(lookups)).flat().map(row => assertWork(JSON.parse(String(row.body))) as StoredWork)
     const ids = [...new Set(found.map(item => item.id))]
     if (ids.length > 1) throw new Error('IDENTITY_CONFLICT: aliases refer to multiple works')
     const previous = found[0]
     if (previous && normalizeIdentity({ title: previous.title }).titleKey !== normalizeIdentity({ title: work.title }).titleKey) {
       throw new Error('IDENTITY_CONFLICT: matching identifier has different title; review version relationship')
     }
-    const authorConflict = previous?.status === 'verified_metadata' && work.status === 'verified_metadata' &&
+    const priorAuthorConflict = previous?.unresolvedConflicts?.find(conflict => conflict.kind === 'authors')
+    const newAuthorConflict = previous?.status === 'verified_metadata' && work.status === 'verified_metadata' &&
       previous.authors !== null && work.authors !== null &&
       !sameAuthors(previous.authors, work.authors)
-    const merged: Work = previous ? {
+    const authorConflict = priorAuthorConflict !== undefined || newAuthorConflict
+    const unresolvedConflicts = previous?.unresolvedConflicts?.map(conflict => ({
+      kind: conflict.kind,
+      observations: conflict.observations.map(observation => ({
+        authors: [...observation.authors], metadataSources: [...observation.metadataSources],
+      })),
+    })) ?? []
+    if (newAuthorConflict) {
+      const observations: AuthorConflictObservation[] = []
+      addAuthorObservation(observations, previous!.authors!, previous!.metadataSources)
+      addAuthorObservation(observations, work.authors!, work.metadataSources)
+      unresolvedConflicts.push({ kind: 'authors', observations })
+    } else if (priorAuthorConflict !== undefined && work.status === 'verified_metadata' && work.authors !== null) {
+      const conflict = unresolvedConflicts.find(item => item.kind === 'authors')!
+      addAuthorObservation(conflict.observations, work.authors, work.metadataSources)
+    }
+    const merged: StoredWork = previous ? {
       ...previous,
-      authors: work.status === 'verified_metadata' && previous.status === 'candidate'
+      authors: authorConflict ? previous.authors
+        : work.status === 'verified_metadata' && previous.status === 'candidate'
         ? work.authors
         : previous.authors ?? work.authors,
       status: authorConflict ? 'candidate' : previous.status === 'verified_metadata' ? previous.status : work.status,
       // Candidate aliases have no cross-record trust and must not be promoted with later verified metadata.
-      aliases: previous.status === 'verified_metadata' && work.status === 'verified_metadata'
+      aliases: authorConflict ? previous.aliases
+        : previous.status === 'verified_metadata' && work.status === 'verified_metadata'
         ? [...new Map([...previous.aliases, ...work.aliases].map(a => [a.kind + ':' + a.value, a])).values()]
         : work.status === 'verified_metadata' ? work.aliases : previous.aliases,
       metadataSources: [...new Set([...previous.metadataSources, ...work.metadataSources])],
+      ...(authorConflict ? { unresolvedConflicts } : {}),
     } : work
     const statements: SqlStatement[] = [{
       sql: 'INSERT INTO works(id, body) VALUES(?, ?) ON CONFLICT(id) DO UPDATE SET body = CASE WHEN works.body = ? THEN excluded.body ELSE NULL END',
@@ -58,7 +96,9 @@ export async function registerWork(catalog: Catalog, value: Work): Promise<Work>
     })
     try {
       await catalog.transact(statements)
-      if (authorConflict) throw new Error('METADATA_CONFLICT: authors disagree after NFKC, whitespace, and case normalization')
+      if (authorConflict && work.status === 'verified_metadata') {
+        throw new Error('METADATA_CONFLICT: authors remain unresolved after NFKC, whitespace, and case normalization')
+      }
       return merged
     } catch (error) {
       if (attempt === 2 || !/constraint|unique/i.test(String(error))) throw error

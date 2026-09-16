@@ -51,20 +51,35 @@ test('verified aliases merge only one work and conflicting work aliases roll bac
   } finally { await catalog.close(); await rm(root, { recursive: true, force: true }) }
 })
 
-test('contradictory verified authors make the work unresolved while preserving both sources', async () => {
+test('contradictory verified authors remain unresolved across reopen and either response replay', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ar-lit-authors-'))
-  const catalog = await openCatalog(root)
+  let catalog = await openCatalog(root)
   try {
     const base = { id: 'w-a', title: 'A', aliases: [{ kind: 'doi' as const, value: '10.1234/a' }],
       metadataSources: ['a'.repeat(64)], status: 'verified_metadata' as const }
     await registerWork(catalog, { ...base, authors: ['Ada Lovelace'] })
-    await registerWork(catalog, { ...base, id: 'w-equivalent', authors: ['  ada   lovelace  '], metadataSources: ['b'.repeat(64)] })
     await assert.rejects(registerWork(catalog, { ...base, id: 'w-conflict', authors: ['Grace Hopper'],
+      metadataSources: ['b'.repeat(64)] }), /METADATA_CONFLICT: authors/)
+    await catalog.close()
+    catalog = await openCatalog(root)
+    await assert.rejects(registerWork(catalog, { ...base, id: 'w-replay-a', authors: ['  ada   lovelace  '],
       metadataSources: ['c'.repeat(64)] }), /METADATA_CONFLICT: authors/)
+    await assert.rejects(registerWork(catalog, { ...base, id: 'w-replay-b', authors: ['Grace Hopper'], aliases: [
+      { kind: 'doi', value: '10.1234/a' }, { kind: 'arxiv', value: '2401.01234' },
+    ], metadataSources: ['d'.repeat(64)] }), /METADATA_CONFLICT: authors/)
     const row = (await listPapers(catalog, { limit: 20 })).rows[0]!
     assert.equal(row.work.status, 'candidate')
     assert.deepEqual(row.work.authors, ['Ada Lovelace'])
-    assert.deepEqual(row.work.metadataSources, ['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)])
+    assert.deepEqual(row.work.metadataSources, ['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64), 'd'.repeat(64)])
+    const [storedRows] = await catalog.transact([{ sql: 'SELECT body FROM works WHERE id = ?', params: ['w-a'] }])
+    const stored = JSON.parse(String(storedRows[0]!.body))
+    assert.deepEqual(stored.unresolvedConflicts, [{ kind: 'authors', observations: [
+      { authors: ['Ada Lovelace'], metadataSources: ['a'.repeat(64), 'c'.repeat(64)] },
+      { authors: ['Grace Hopper'], metadataSources: ['b'.repeat(64), 'd'.repeat(64)] },
+    ] }])
+    const independent = await registerWork(catalog, { ...base, id: 'w-independent', title: 'Independent',
+      authors: ['Other Author'], aliases: [{ kind: 'arxiv', value: '2401.01234' }], metadataSources: ['e'.repeat(64)] })
+    assert.equal(independent.id, 'w-independent')
   } finally { await catalog.close(); await rm(root, { recursive: true, force: true }) }
 })
 
