@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 遵循[总计划](2026-09-16-rag-research-roadmap.md)，本轮只编写计划。
+- 遵循[总计划](2026-09-16-rag-research-roadmap.md)，用户已授权实施，按任务范围执行。
 - 完整 `packages/...` 路径相对仓库根；省略前缀的 `src/`、`test/`、`scripts/`、`prompts/` 统一相对 `packages/autoresearch/`。B0 后的模块指整合后核心包，不从 `.worktrees` 做运行时 import。
 - 实验并发默认 1；隐藏测试结果不参与 successor 选择。
 - 支持/反对、unknown、invalid 分开；没有新增领域 validator 的任务维持 exploratory/unknown。

@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 本文件状态：**待审阅实施计划**。本轮只编写计划，不实施、不合并、不运行付费研究。
+- 本文件状态：**实施中**。用户已授权多 agent 实现；在隔离分支执行，不自动合并。用户后续已允许付费模型调用，沿用项目配置与预算；benchmark 仍暂缓。
 - 最新范围调整：用户要求 benchmark 暂时不管。C1、C3 及研究性能对照暂缓，不准备试点数据集或运行 benchmark；保留必要的软件正确性、隔离和恢复测试。
 - 保持当前包约束 `node >=22.19.0`、`dsh >=0.1.5-alpha.1`；最低版本和实际运行版本分别验证。
 - 当前源码和未提交工作都属于基线；实施前建立隔离工作区，不覆盖用户改动。
@@ -44,7 +44,7 @@
 
 选 SQLite 是为了在身份映射、索引发布、领取和预算更新中使用事务；不引入独立数据库服务。检索采用 FTS5/BM25。中文先使用固定版本的字符 unigram/bigram 预切分作为可重现基线，同时保留英文词和数字；这不是宣称已解决中文语义检索。
 
-当前机器实际为 Node `v24.4.1`，内存探针确认 SQLite `3.50.2` 和 FTS5 可用。**尚未验证 Node 22.19.0、Windows 多进程锁及项目 TypeScript 类型兼容。** A1 必须补齐；`node:sqlite` 在最低版本仍处 active development，避免使用该版本文档之外的新 API。[Node 22.19.0 文档](https://nodejs.org/download/release/v22.19.0/docs/api/sqlite.html)
+当前机器实际为 Node `v24.4.1`，内存探针确认 SQLite `3.50.2` 和 FTS5 可用。**已验证 Node 22.19.0 构建、FTS5、文献模块及 Windows 作业恢复测试。** 最终集成仍须重新验证；`node:sqlite` 在最低版本仍处 active development，避免使用该版本文档之外的新 API。[Node 22.19.0 文档](https://nodejs.org/download/release/v22.19.0/docs/api/sqlite.html)
 
 数据库连接留在独立 worker 内，外部异步访问；事务内不等待网络或模型。WAL 数据库只放本机磁盘，首版不支持网络共享盘上的多机写入。备份使用 SQLite 一致性机制或关闭连接后备份，不能只复制正在写入的主数据库文件。[SQLite WAL](https://www.sqlite.org/wal.html)
 
