@@ -1,12 +1,13 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
+import { backup, DatabaseSync } from 'node:sqlite'
 import { parentPort, workerData } from 'node:worker_threads'
 
 import type { SqlStatement } from './contracts.js'
 
-const CURRENT_SCHEMA_VERSION = 1
+const CURRENT_SCHEMA_VERSION = 2
 
 interface WorkerInput {
   root: string
@@ -45,16 +46,39 @@ function sourceObjectIsValid(root: string, value: unknown): number {
   }
 }
 
-function migrate(database: DatabaseSync): void {
+function createGenerationSchema(database: DatabaseSync): void {
+  database.exec(`
+    CREATE TABLE index_generations (
+      id TEXT PRIMARY KEY,
+      manifest_hash TEXT NOT NULL CHECK (length(manifest_hash) = 64 AND manifest_hash = lower(manifest_hash)),
+      corpus_hash TEXT NOT NULL CHECK (length(corpus_hash) = 64 AND corpus_hash = lower(corpus_hash)),
+      config_hash TEXT NOT NULL CHECK (length(config_hash) = 64 AND config_hash = lower(config_hash)),
+      status TEXT NOT NULL CHECK (status IN ('building','validated','active','retired','failed')),
+      body TEXT NOT NULL CHECK (json_valid(body))
+    ) STRICT;
+    CREATE TABLE index_state (
+      singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+      active_generation_id TEXT REFERENCES index_generations(id)
+    ) STRICT;
+    INSERT INTO index_state(singleton,active_generation_id) VALUES(1,NULL);
+    CREATE TABLE generation_pins (
+      run_id TEXT NOT NULL,
+      generation_id TEXT NOT NULL REFERENCES index_generations(id),
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (run_id,generation_id)
+    ) STRICT;
+  `)
+}
+
+async function migrate(database: DatabaseSync, input: WorkerInput): Promise<void> {
   database.exec('BEGIN IMMEDIATE')
   try {
     const version = Number(database.prepare('PRAGMA user_version').get()?.user_version ?? 0)
-    if (version > CURRENT_SCHEMA_VERSION) {
-      throw codedError(
-        `catalog schema ${version} is newer than supported schema ${CURRENT_SCHEMA_VERSION}`,
-        'SCHEMA_TOO_NEW',
-      )
+    if (![0, 1, CURRENT_SCHEMA_VERSION].includes(version)) {
+      const code = version > CURRENT_SCHEMA_VERSION ? 'SCHEMA_TOO_NEW' : 'SCHEMA_UNSUPPORTED'
+      throw codedError(`catalog schema ${version} is not supported by schema ${CURRENT_SCHEMA_VERSION}`, code)
     }
+    if (version === 1) await writeConsistentV1Backup(input.databasePath)
     if (version === 0) {
       database.exec(`
         CREATE TABLE works (
@@ -110,8 +134,12 @@ function migrate(database: DatabaseSync): void {
         BEGIN
           SELECT RAISE(ABORT, 'SOURCE_OBJECT_MISSING_OR_CORRUPT');
         END;
-        PRAGMA user_version = 1;
       `)
+      createGenerationSchema(database)
+      database.exec('PRAGMA user_version = 2')
+    } else if (version === 1) {
+      createGenerationSchema(database)
+      database.exec('PRAGMA user_version = 2')
     }
     database.exec('CREATE VIRTUAL TABLE temp.catalog_fts5_probe USING fts5(body); DROP TABLE temp.catalog_fts5_probe;')
     database.exec('COMMIT')
@@ -125,13 +153,39 @@ function migrate(database: DatabaseSync): void {
   }
 }
 
-function openDatabase(input: WorkerInput): DatabaseSync {
+async function writeConsistentV1Backup(databasePath: string): Promise<void> {
+  const backupPath = `${databasePath}.v1.backup`
+  const temporary = `${backupPath}.${process.pid}.${randomUUID()}.tmp`
+  const source = new DatabaseSync(databasePath, { readOnly: true })
+  try {
+    await backup(source, temporary)
+  } finally {
+    source.close()
+  }
+  try {
+    const candidate = new DatabaseSync(temporary, { readOnly: true })
+    try {
+      const version = Number(candidate.prepare('PRAGMA user_version').get()?.user_version ?? -1)
+      const check = candidate.prepare('PRAGMA integrity_check').get() as { integrity_check?: unknown } | undefined
+      if (version !== 1 || check?.integrity_check !== 'ok') {
+        throw codedError('v1 catalog backup failed validation', 'CATALOG_BACKUP_INVALID')
+      }
+    } finally {
+      candidate.close()
+    }
+    await rename(temporary, backupPath)
+  } finally {
+    await rm(temporary, { force: true }).catch(() => undefined)
+  }
+}
+
+async function openDatabase(input: WorkerInput): Promise<DatabaseSync> {
   let database: DatabaseSync | undefined
   try {
     database = new DatabaseSync(input.databasePath, { timeout: 1000 })
     database.function('source_object_valid', value => sourceObjectIsValid(input.root, value))
     database.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 1000;')
-    migrate(database)
+    await migrate(database, input)
     return database
   } catch (error) {
     database?.close()
@@ -214,7 +268,7 @@ if (port === null) throw new Error('catalog worker requires a parent port')
 
 let database: DatabaseSync
 try {
-  database = openDatabase(workerData as WorkerInput)
+  database = await openDatabase(workerData as WorkerInput)
   port.postMessage({ type: 'ready' })
 } catch (error) {
   port.postMessage({ type: 'ready', error: errorPayload(error) })
