@@ -12,11 +12,19 @@ export interface ParseIssue {
   message: string
 }
 
+export interface SpanRelation {
+  spanId: string
+  previousId: string | null
+  nextId: string | null
+  parentLocator: Locator | null
+}
+
 export interface ParseResult {
   spans: SourceSpan[]
   parserFingerprint: Hash
   status: 'complete' | 'partial' | 'failed'
   issues: ParseIssue[]
+  spanRelations?: SpanRelation[]
 }
 
 export interface Parser {

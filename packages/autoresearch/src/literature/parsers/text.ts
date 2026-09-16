@@ -1,8 +1,8 @@
 import type { Locator, SourceSpan } from '../contracts.js'
 import type { ParseInput, ParseResult } from '../parsing.js'
-import { makeParserFingerprint, makeSpan, sourceMatches } from '../spans.js'
+import { makeParserFingerprint, makeSpan, makeSpanRelations, sourceMatches, splitTextByCodePoints } from '../spans.js'
 
-const FINGERPRINT = makeParserFingerprint('text-parser', 1)
+const FINGERPRINT = makeParserFingerprint('text-parser', 2)
 const MAX_CODE_POINTS = 2000
 
 export async function parseText(input: ParseInput): Promise<ParseResult> {
@@ -13,11 +13,13 @@ export async function parseText(input: ParseInput): Promise<ParseResult> {
       parserFingerprint: FINGERPRINT,
       status: 'failed',
       issues: [{ code: 'SOURCE_HASH_MISMATCH', locator: null, message: 'source bytes do not match document.rawHash' }],
+      spanRelations: [],
     }
   }
 
   const text = new TextDecoder('utf-8', { fatal: false }).decode(input.bytes)
   const spans: SourceSpan[] = []
+  const parentLocators = new Map<string, Locator>()
   const sections: string[] = []
   const paragraphPattern = /(?:^|(?:\r?\n){2,})([\s\S]*?)(?=(?:\r?\n){2,}|$)/gu
   let match: RegExpExecArray | null
@@ -34,22 +36,31 @@ export async function parseText(input: ParseInput): Promise<ParseResult> {
       sections.splice(level - 1)
       sections[level - 1] = heading[2]?.trim() ?? ''
     }
-    for (const chunk of splitAtCodePointBudget(paragraph, range.start, MAX_CODE_POINTS)) {
+    const parentLocator: Locator = {
+      kind: 'text',
+      start: range.start,
+      end: range.end,
+      unit: 'utf16',
+      sourceHash: input.document.rawHash,
+    }
+    for (const chunk of splitTextByCodePoints(paragraph, MAX_CODE_POINTS)) {
       const locator: Locator = {
         kind: 'text',
-        start: chunk.start,
-        end: chunk.end,
+        start: range.start + chunk.start,
+        end: range.start + chunk.end,
         unit: 'utf16',
         sourceHash: input.document.rawHash,
       }
-      spans.push(makeSpan({
+      const span = makeSpan({
         document: input.document,
         parserFingerprint: FINGERPRINT,
         kind: 'paragraph',
         sectionPath: sections.filter(Boolean),
-        evidenceText: text.slice(chunk.start, chunk.end),
+        evidenceText: chunk.text,
         locator,
-      }))
+      })
+      spans.push(span)
+      parentLocators.set(span.id, parentLocator)
     }
   }
 
@@ -61,6 +72,7 @@ export async function parseText(input: ParseInput): Promise<ParseResult> {
     issues: hasReplacement
       ? [{ code: 'TEXT_DECODE_REPLACEMENT', locator: null, message: 'invalid UTF-8 bytes were replaced during decoding' }]
       : [],
+    spanRelations: makeSpanRelations(spans, parentLocators),
   }
 }
 
@@ -71,40 +83,6 @@ function trimRange(value: string, sourceStart: number): { start: number; end: nu
     start: sourceStart + leading,
     end: sourceStart + value.length - trailing,
   }
-}
-
-function splitAtCodePointBudget(
-  paragraph: string,
-  sourceStart: number,
-  maxCodePoints: number,
-): { start: number; end: number }[] {
-  const result: { start: number; end: number }[] = []
-  let remaining = paragraph
-  let offset = sourceStart
-  while ([...remaining].length > maxCodePoints) {
-    const prefix = [...remaining].slice(0, maxCodePoints).join('')
-    const preferred = findPreferredBoundary(prefix)
-    const split = preferred > 0 ? preferred : prefix.length
-    const chunkText = remaining.slice(0, split).trimEnd()
-    if (chunkText.length > 0) result.push({ start: offset, end: offset + chunkText.length })
-    let consumed = split
-    while (/\s/u.test(remaining[consumed] ?? '')) consumed += 1
-    offset += consumed
-    remaining = remaining.slice(consumed)
-  }
-  if (remaining.length > 0) result.push({ start: offset, end: offset + remaining.length })
-  return result
-}
-
-function findPreferredBoundary(prefix: string): number {
-  const minimum = Math.floor(prefix.length * 0.6)
-  for (let index = prefix.length; index > minimum; index -= 1) {
-    if (/[.!?。！？；;]\s/u.test(prefix.slice(index - 1, index + 1))) return index
-  }
-  for (let index = prefix.length; index > minimum; index -= 1) {
-    if (/\s/u.test(prefix[index - 1] ?? '')) return index
-  }
-  return prefix.length
 }
 
 function checkAbort(signal: AbortSignal | undefined): void {

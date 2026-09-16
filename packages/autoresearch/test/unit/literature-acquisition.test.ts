@@ -1,7 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { acquire } from '../../dist/literature/acquisition.js'
 import { readObject } from '../../dist/literature/objects.js'
+import { downloadReferencePdfs } from '../../dist/paper/references.js'
 import { withLibrary } from '../fixtures/literature.ts'
 import { sourceBytes, sourceHash } from '../fixtures/literature/sources.ts'
 
@@ -134,5 +137,99 @@ test('acquire cancels a stalled response stream when its deadline expires', asyn
 
     assert.equal(receipt.error, 'timeout')
     assert.equal(cancelled, true)
+  })
+})
+
+test('acquire cancels non-success response bodies', async () => {
+  await withLibrary(async (root) => {
+    let cancelled = false
+    const body = new ReadableStream<Uint8Array>({
+      pull() {},
+      cancel() {
+        cancelled = true
+      },
+    })
+
+    const receipt = await acquire(root, 'https://example.test/missing.pdf', {
+      fetch: async () => response(body, { status: 404, headers: { 'content-type': 'application/pdf' } }, 'https://example.test/missing.pdf'),
+      signal: new AbortController().signal,
+      maxBytes: 1024,
+    })
+
+    assert.equal(receipt.error, 'unavailable')
+    assert.equal(cancelled, true)
+  })
+})
+
+test('acquire cannot report success when caller cancellation happens during persistence', async () => {
+  await withLibrary(async (root) => {
+    const controller = new AbortController()
+    const bytes = sourceBytes('%PDF-1.7\npersist')
+
+    const pending = acquire(root, 'https://example.test/persist.pdf', {
+      fetch: async () => response(bytes, { status: 200, headers: { 'content-type': 'application/pdf' } }, 'https://example.test/persist.pdf'),
+      signal: controller.signal,
+      maxBytes: 1024,
+      storeObject: async () => {
+        controller.abort()
+        return sourceHash(bytes)
+      },
+    })
+
+    await assert.rejects(pending, { name: 'AbortError' })
+  })
+})
+
+test('acquire reports timeout when its deadline expires during persistence', async () => {
+  await withLibrary(async (root) => {
+    const bytes = sourceBytes('%PDF-1.7\npersist-timeout')
+    const receipt = await acquire(root, 'https://example.test/persist-timeout.pdf', {
+      fetch: async () => response(bytes, { status: 200, headers: { 'content-type': 'application/pdf' } }, 'https://example.test/persist-timeout.pdf'),
+      signal: new AbortController().signal,
+      maxBytes: 1024,
+      timeoutMs: 10,
+      storeObject: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        return sourceHash(bytes)
+      },
+    })
+
+    assert.equal(receipt.error, 'timeout')
+    assert.equal(receipt.rawHash, null)
+  })
+})
+
+test('reference downloads preserve the legacy PDF output and persist the same bytes immutably', async () => {
+  await withLibrary(async (root) => {
+    const bytes = sourceBytes('%PDF-1.7\nreference fixture')
+    const fetchImpl: typeof fetch = async () => response(bytes, {
+      status: 200,
+      headers: { 'content-type': 'application/pdf' },
+    }, 'https://cdn.example.test/reference.pdf')
+    const records = await downloadReferencePdfs(
+      root,
+      '@article{bounded, title={Bounded}, url={https://example.test/reference.pdf}}',
+      { strict: true, fetch: fetchImpl, maxBytes: 1024 },
+    )
+
+    assert.equal(records[0]?.status, 'downloaded')
+    assert.equal(records[0]?.sourceUrl, 'https://example.test/reference.pdf')
+    assert.deepEqual(new Uint8Array(await readFile(join(root, 'evidence', 'bounded.pdf'))), bytes)
+    assert.deepEqual(await readObject(root, records[0]!.sha256!), bytes)
+  })
+})
+
+test('reference downloads enforce the acquisition byte limit', async () => {
+  await withLibrary(async (root) => {
+    const bytes = sourceBytes(`%PDF-1.7\n${'x'.repeat(64)}`)
+    const fetchImpl: typeof fetch = async () => response(bytes, { status: 200, headers: { 'content-type': 'application/pdf' } }, 'https://example.test/large.pdf')
+    const records = await downloadReferencePdfs(
+      root,
+      '@article{large, url={https://example.test/large.pdf}}',
+      { strict: false, fetch: fetchImpl, maxBytes: 16 },
+    )
+
+    assert.equal(records[0]?.status, 'failed')
+    assert.match(records[0]?.error ?? '', /too_large/)
   })
 })

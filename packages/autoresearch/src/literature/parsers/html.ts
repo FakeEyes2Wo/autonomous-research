@@ -1,9 +1,9 @@
 import { parse } from 'parse5'
 import type { Locator, SourceSpan } from '../contracts.js'
 import type { ParseInput, ParseResult } from '../parsing.js'
-import { makeParserFingerprint, makeSpan, sourceMatches } from '../spans.js'
+import { makeParserFingerprint, makeSpan, makeSpanRelations, sourceMatches, splitTextByCodePoints } from '../spans.js'
 
-const FINGERPRINT = makeParserFingerprint('html-parser', 1)
+const FINGERPRINT = makeParserFingerprint('html-parser', 2)
 const IGNORED = new Set(['script', 'style', 'nav'])
 const PARAGRAPH_TAGS = new Set(['p', 'li', 'blockquote', 'pre'])
 const MAX_CODE_POINTS = 2000
@@ -37,12 +37,14 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
       parserFingerprint: FINGERPRINT,
       status: 'failed',
       issues: [{ code: 'SOURCE_HASH_MISMATCH', locator: null, message: 'source bytes do not match document.rawHash' }],
+      spanRelations: [],
     }
   }
 
   const html = new TextDecoder('utf-8', { fatal: false }).decode(input.bytes)
   const document = parse(html, { sourceCodeLocationInfo: true }) as unknown as HtmlNode
   const spans: SourceSpan[] = []
+  const parentLocators = new Map<string, Locator>()
   const sections: string[] = []
 
   walk(document, (node) => {
@@ -64,14 +66,18 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
           end: node.sourceCodeLocation.endOffset,
           sourceHash: input.document.rawHash,
         }
-        spans.push(makeSpan({
-          document: input.document,
-          parserFingerprint: FINGERPRINT,
-          kind: 'paragraph',
-          sectionPath: sections.filter(Boolean),
-          evidenceText,
-          locator,
-        }))
+        for (const chunk of splitTextByCodePoints(evidenceText, MAX_CODE_POINTS)) {
+          const span = makeSpan({
+            document: input.document,
+            parserFingerprint: FINGERPRINT,
+            kind: 'paragraph',
+            sectionPath: sections.filter(Boolean),
+            evidenceText: chunk.text,
+            locator,
+          })
+          spans.push(span)
+          parentLocators.set(span.id, locator)
+        }
       }
       return false
     }
@@ -87,7 +93,7 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
     for (const table of splitTable(extractTable(node), MAX_CODE_POINTS)) {
       const evidenceText = tableText(table)
       if (!evidenceText) continue
-      spans.push(makeSpan({
+      const span = makeSpan({
         document: input.document,
         parserFingerprint: FINGERPRINT,
         kind: 'table',
@@ -95,12 +101,20 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
         evidenceText,
         locator,
         table,
-      }))
+      })
+      spans.push(span)
+      parentLocators.set(span.id, locator)
     }
     return false
   })
 
-  return { spans, parserFingerprint: FINGERPRINT, status: 'complete', issues: [] }
+  return {
+    spans,
+    parserFingerprint: FINGERPRINT,
+    status: 'complete',
+    issues: [],
+    spanRelations: makeSpanRelations(spans, parentLocators),
+  }
 }
 
 function walk(node: HtmlNode, visit: (node: HtmlNode) => boolean): void {
@@ -111,9 +125,13 @@ function walk(node: HtmlNode, visit: (node: HtmlNode) => boolean): void {
 
 function extractTable(table: HtmlNode): NonNullable<SourceSpan['table']> {
   const caption = findDescendants(table, 'caption').map(normalizedTextContent).join(' ').trim()
-  const headerRows = findDescendants(table, 'tr').filter((row) => hasAncestorTag(row, 'thead') || directCells(row, 'th').length > 0)
-  const noteRows = findDescendants(table, 'tr').filter((row) => hasAncestorTag(row, 'tfoot'))
-  const dataRows = findDescendants(table, 'tr').filter((row) => {
+  const allRows = findDescendants(table, 'tr')
+  const noteRows = allRows.filter((row) => hasAncestorTag(row, 'tfoot'))
+  const headerRows = allRows.filter((row) => {
+    return !noteRows.includes(row)
+      && (hasAncestorTag(row, 'thead') || (directCells(row, 'th').length > 0 && directCells(row, 'td').length === 0))
+  })
+  const dataRows = allRows.filter((row) => {
     return !headerRows.includes(row) && !noteRows.includes(row) && directCells(row, 'td').length > 0
   })
   return {

@@ -4,9 +4,10 @@ import { createRequire } from 'node:module'
 import { dirname } from 'node:path'
 import type { Locator, SourceSpan } from '../contracts.js'
 import type { ParseInput, ParseIssue, ParseResult } from '../parsing.js'
-import { makeParserFingerprint, makeSpan, sourceMatches } from '../spans.js'
+import { makeParserFingerprint, makeSpan, makeSpanRelations, sourceMatches, splitTextByCodePoints } from '../spans.js'
 
-const FINGERPRINT = makeParserFingerprint('pdf-parser', 1)
+const FINGERPRINT = makeParserFingerprint('pdf-parser', 2)
+const MAX_CODE_POINTS = 2000
 const pdfJsEntry = createRequire(import.meta.url).resolve('pdfjs-dist/legacy/build/pdf.mjs')
 const pdfJsRoot = dirname(dirname(dirname(pdfJsEntry))).replaceAll('\\', '/')
 const standardFontDataUrl = `${pdfJsRoot}/standard_fonts/`
@@ -18,6 +19,11 @@ interface PositionedItem {
   y: number
 }
 
+interface PdfChunk {
+  text: string
+  items: PositionedItem[]
+}
+
 export async function parsePdf(input: ParseInput): Promise<ParseResult> {
   checkAbort(input.signal)
   if (!sourceMatches(input.document, input.bytes)) {
@@ -26,11 +32,15 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
       parserFingerprint: FINGERPRINT,
       status: 'failed',
       issues: [{ code: 'SOURCE_HASH_MISMATCH', locator: null, message: 'source bytes do not match document.rawHash' }],
+      spanRelations: [],
     }
   }
 
   let loadingTask: PDFDocumentLoadingTask | undefined
   let aborted = false
+  const spans: SourceSpan[] = []
+  const parentLocators = new Map<string, Locator>()
+  const issues: ParseIssue[] = []
   const onAbort = () => {
     aborted = true
     void loadingTask?.destroy()
@@ -43,8 +53,6 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
       verbosity: VerbosityLevel.ERRORS,
     })
     const pdf = await loadingTask.promise
-    const spans: SourceSpan[] = []
-    const issues: ParseIssue[] = []
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       checkAbort(input.signal)
       let page: PDFPageProxy | undefined
@@ -80,15 +88,26 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
         if (garbled) {
           issues.push({ code: 'PDF_TEXT_GARBLED', locator, message: `page ${pageNumber} contains unreliable decoded text` })
         }
-        spans.push(makeSpan({
-          document: input.document,
-          parserFingerprint: FINGERPRINT,
-          kind: 'paragraph',
-          sectionPath: [`Page ${pageNumber}`],
-          evidenceText: text,
-          locator,
-          quality,
-        }))
+        for (const chunk of chunkPdfItems(items, MAX_CODE_POINTS)) {
+          const span = makeSpan({
+            document: input.document,
+            parserFingerprint: FINGERPRINT,
+            kind: 'paragraph',
+            sectionPath: [`Page ${pageNumber}`],
+            evidenceText: chunk.text,
+            locator: pdfLocator(input, pageNumber, chunk.items),
+            quality,
+          })
+          spans.push(span)
+          parentLocators.set(span.id, locator)
+        }
+      } catch (error) {
+        if (aborted || input.signal?.aborted) throw abortError()
+        issues.push({
+          code: 'PDF_PAGE_FAILED',
+          locator: emptyPdfLocator(input, pageNumber),
+          message: `page ${pageNumber} could not be parsed: ${safeErrorMessage(error)}`,
+        })
       } finally {
         page?.cleanup()
       }
@@ -98,19 +117,62 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
       parserFingerprint: FINGERPRINT,
       status: issues.length > 0 ? 'partial' : 'complete',
       issues,
+      spanRelations: makeSpanRelations(spans, parentLocators),
     }
   } catch (error) {
     if (aborted || input.signal?.aborted) throw abortError()
+    if (spans.length > 0) {
+      issues.push({ code: 'PDF_PARTIAL_FAILURE', locator: null, message: safeErrorMessage(error) })
+      return {
+        spans,
+        parserFingerprint: FINGERPRINT,
+        status: 'partial',
+        issues,
+        spanRelations: makeSpanRelations(spans, parentLocators),
+      }
+    }
     return {
       spans: [],
       parserFingerprint: FINGERPRINT,
       status: 'failed',
       issues: [{ code: 'PDF_INVALID', locator: null, message: safeErrorMessage(error) }],
+      spanRelations: [],
     }
   } finally {
     input.signal?.removeEventListener('abort', onAbort)
     await loadingTask?.destroy().catch(() => undefined)
   }
+}
+
+function emptyPdfLocator(input: ParseInput, page: number): Locator {
+  return { kind: 'pdf', page, itemStart: 0, itemEnd: 0, sourceHash: input.document.rawHash }
+}
+
+function chunkPdfItems(items: PositionedItem[], maxCodePoints: number): PdfChunk[] {
+  const chunks: PdfChunk[] = []
+  let currentItems: PositionedItem[] = []
+  let currentText = ''
+  const flush = () => {
+    if (currentText) chunks.push({ text: currentText, items: currentItems })
+    currentItems = []
+    currentText = ''
+  }
+  for (const positioned of items) {
+    const itemText = positioned.item.str.trim()
+    if (!itemText) continue
+    const itemChunks = splitTextByCodePoints(itemText, maxCodePoints)
+    if (itemChunks.length > 1) {
+      flush()
+      for (const chunk of itemChunks) chunks.push({ text: chunk.text, items: [positioned] })
+      continue
+    }
+    const candidate = currentText ? `${currentText} ${itemText}` : itemText
+    if (currentText && [...candidate].length > maxCodePoints) flush()
+    currentItems.push(positioned)
+    currentText = currentText ? `${currentText} ${itemText}` : itemText
+  }
+  flush()
+  return chunks
 }
 
 function pdfLocator(input: ParseInput, page: number, items: PositionedItem[]): Locator {

@@ -1,7 +1,8 @@
-import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { AutoResearchError, atomicWriteJson, nowIso } from '../core/utils.js'
+import { acquire } from '../literature/acquisition.js'
+import { putObject, readObject } from '../literature/objects.js'
 
 export interface BibEntry {
   key: string
@@ -26,6 +27,9 @@ export interface DownloadReferencePdfsOptions {
   force?: boolean
   timeoutMs?: number
   strict?: boolean
+  maxBytes?: number
+  signal?: AbortSignal
+  fetch?: typeof fetch
 }
 
 export function parseBibEntries(bib: string): BibEntry[] {
@@ -84,7 +88,9 @@ export async function downloadReferencePdfs(
   bibText: string,
   options: DownloadReferencePdfsOptions = {},
 ): Promise<CitationPdfRecord[]> {
-  const { force = false, timeoutMs = 30000, strict = true } = options
+  const { force = false, timeoutMs = 30000, strict = true, maxBytes } = options
+  const signal = options.signal ?? new AbortController().signal
+  const fetchImpl = options.fetch ?? globalThis.fetch
   const entries = parseBibEntries(bibText)
   const evidenceDir = join(runDir, 'evidence')
   await mkdir(evidenceDir, { recursive: true })
@@ -99,6 +105,7 @@ export async function downloadReferencePdfs(
       existing = null
     }
     if (!force && existing && isPdfBuffer(existing)) {
+      const rawHash = await putObject(runDir, existing)
       records.push({
         key: entry.key,
         title: cleanField(entry.fields.title),
@@ -106,7 +113,7 @@ export async function downloadReferencePdfs(
         localFile,
         status: 'skipped',
         bytes: existing.length,
-        sha256: sha256Buffer(existing),
+        sha256: rawHash,
       })
       continue
     }
@@ -116,8 +123,18 @@ export async function downloadReferencePdfs(
     let lastError = ''
     for (const url of candidates) {
       try {
-        const buffer = await fetchPdf(url, timeoutMs)
-        await writeFile(localFile, buffer)
+        const receipt = await acquire(runDir, url, { fetch: fetchImpl, signal, maxBytes, timeoutMs })
+        if (receipt.error || !receipt.rawHash) {
+          throw new Error(`source acquisition failed: ${receipt.error ?? 'missing object hash'}`)
+        }
+        if (receipt.contentType !== 'application/pdf') {
+          throw new Error(`response is not a PDF (content-type: ${receipt.contentType || 'unknown'})`)
+        }
+        const bytes = await readObject(runDir, receipt.rawHash)
+        if (!isPdfBuffer(bytes)) {
+          throw new Error(`response is not a PDF (content-type: ${receipt.contentType}, bytes: ${bytes.byteLength})`)
+        }
+        await writeFile(localFile, bytes)
         records.push({
           key: entry.key,
           title: cleanField(entry.fields.title),
@@ -125,12 +142,13 @@ export async function downloadReferencePdfs(
           sourceUrl: url,
           localFile,
           status: 'downloaded',
-          bytes: buffer.length,
-          sha256: sha256Buffer(buffer),
+          bytes: bytes.byteLength,
+          sha256: receipt.rawHash,
         })
         downloaded = true
         break
       } catch (error) {
+        if (signal.aborted) throw error
         lastError = error instanceof Error ? error.message : String(error)
       }
     }
@@ -282,35 +300,7 @@ function cleanField(value: string | undefined): string | undefined {
   return value.replace(/[{}]/g, '').trim() || undefined
 }
 
-async function fetchPdf(url: string, timeoutMs: number): Promise<Buffer> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const response = await fetch(url, {
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: {
-        accept: 'application/pdf',
-        'user-agent': 'Mozilla/5.0 (compatible; autoresearch/1.0)',
-      },
-    })
-    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`)
-    const buffer = Buffer.from(await response.arrayBuffer())
-    if (!isPdfBuffer(buffer)) {
-      const contentType = response.headers.get('content-type') ?? 'unknown'
-      throw new Error(`response is not a PDF (content-type: ${contentType}, bytes: ${buffer.length})`)
-    }
-    return buffer
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
-function isPdfBuffer(buffer: Buffer): boolean {
-  const head = buffer.subarray(0, Math.min(buffer.length, 1024)).toString('latin1')
+function isPdfBuffer(buffer: Uint8Array): boolean {
+  const head = Buffer.from(buffer.subarray(0, Math.min(buffer.length, 1024))).toString('latin1')
   return head.includes('%PDF-')
-}
-
-function sha256Buffer(buffer: Buffer): string {
-  return createHash('sha256').update(buffer).digest('hex')
 }

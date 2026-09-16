@@ -10,6 +10,7 @@ import {
   TABLE_HTML,
   documentFixture,
   pdfFixture,
+  pdfWithBrokenSecondPageFixture,
   sourceBytes,
 } from '../fixtures/literature/sources.ts'
 
@@ -42,6 +43,18 @@ test('merged HTML headers are expanded while scripts and navigation are excluded
     ['Method', 'Mean', 'SD'],
   ])
   assert.doesNotMatch(parsed.spans.map((span) => span.evidenceText).join(' '), /Hidden/)
+})
+
+test('HTML row headers remain part of structured data rows', async () => {
+  const html = '<table><tr><th>Method</th><th>p95</th></tr><tr><th scope="row">A</th><td>12.5</td></tr></table>'
+  const bytes = sourceBytes(html)
+  const document = documentFixture('doc-row-header', 'text/html', bytes)
+
+  const parsed = await parseHtml({ document, bytes })
+  const table = parsed.spans.find((span) => span.kind === 'table')
+
+  assert.deepEqual(table?.table?.headers, [['Method', 'p95']])
+  assert.deepEqual(table?.table?.rows, [['A', '12.5']])
 })
 
 test('HTML paragraphs follow DOM sections while preserving raw UTF-16 element offsets', async () => {
@@ -78,6 +91,23 @@ test('large HTML tables split only between rows and repeat their headers', async
   assert.deepEqual(tables.flatMap((span) => span.table?.rows ?? []).map((row) => row[0]), Array.from({ length: 24 }, (_, index) => `row-${index}`))
 })
 
+test('long HTML paragraphs are bounded and report parent and adjacent spans', async () => {
+  const html = `<article><p id="long">${'甲'.repeat(1800)}。 ${'乙'.repeat(1800)}。</p></article>`
+  const bytes = sourceBytes(html)
+  const document = documentFixture('doc-long-html', 'text/html', bytes)
+
+  const parsed = await parseHtml({ document, bytes })
+  const paragraphs = parsed.spans.filter((span) => span.kind === 'paragraph')
+
+  assert.ok(paragraphs.length >= 2)
+  assert.ok(paragraphs.every((span) => [...span.evidenceText].length <= 2000))
+  assert.equal(parsed.spanRelations?.length, paragraphs.length)
+  assert.equal(parsed.spanRelations?.[0]?.previousId, null)
+  assert.equal(parsed.spanRelations?.[0]?.nextId, paragraphs[1]?.id)
+  assert.equal(parsed.spanRelations?.[1]?.previousId, paragraphs[0]?.id)
+  assert.equal(parsed.spanRelations?.[0]?.parentLocator?.kind, 'html')
+})
+
 test('plain text preserves CRLF UTF-16 offsets and marks an abstract as abstract', async () => {
   const bytes = sourceBytes(ABSTRACT_TEXT)
   const document = documentFixture('doc-abstract', 'text/plain', bytes, 'abstract')
@@ -107,6 +137,8 @@ test('plain text splits long paragraphs at Unicode code-point boundaries', async
     assert.ok([...span.evidenceText].length <= 2000)
     assert.doesNotMatch(span.evidenceText, /^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/u)
   }
+  assert.equal(parsed.spanRelations?.length, parsed.spans.length)
+  assert.equal(parsed.spanRelations?.[0]?.nextId, parsed.spans[1]?.id)
 })
 
 test('source hash mismatch fails without producing locatable text', async () => {
@@ -159,4 +191,36 @@ test('two-column PDF extraction remains locatable but is conservatively marked n
   assert.equal(parsed.spans[0]?.locator.kind, 'pdf')
   assert.equal(parsed.spans[0]?.locator.kind === 'pdf' ? parsed.spans[0].locator.page : null, 1)
   assert.equal(parsed.issues[0]?.code, 'PDF_READING_ORDER_UNCERTAIN')
+})
+
+test('dense PDF pages split into bounded locatable spans with adjacency', async () => {
+  const bytes = pdfFixture(Array.from({ length: 30 }, (_, index) => ({
+    x: 40,
+    y: 760 - index * 20,
+    text: `line-${index}-${'x'.repeat(92)}`,
+  })))
+  const document = documentFixture('doc-dense-pdf', 'application/pdf', bytes)
+
+  const parsed = await parsePdf({ document, bytes })
+
+  assert.equal(parsed.status, 'complete')
+  assert.ok(parsed.spans.length >= 2)
+  assert.ok(parsed.spans.every((span) => [...span.evidenceText].length <= 2000))
+  assert.ok(parsed.spans.every((span) => span.locator.kind === 'pdf' && span.locator.page === 1))
+  assert.equal(parsed.spanRelations?.length, parsed.spans.length)
+  assert.equal(parsed.spanRelations?.[0]?.nextId, parsed.spans[1]?.id)
+  assert.equal(parsed.spanRelations?.[0]?.parentLocator?.kind, 'pdf')
+})
+
+test('a malformed later PDF page preserves already located earlier pages', async () => {
+  const bytes = pdfWithBrokenSecondPageFixture()
+  const document = documentFixture('doc-partial-pages', 'application/pdf', bytes)
+
+  const parsed = await parsePdf({ document, bytes })
+
+  assert.equal(parsed.status, 'partial')
+  assert.match(parsed.spans[0]?.evidenceText ?? '', /Readable first page/)
+  assert.equal(parsed.spans[0]?.locator.kind === 'pdf' ? parsed.spans[0].locator.page : null, 1)
+  assert.equal(parsed.issues.at(-1)?.code, 'PDF_PAGE_FAILED')
+  assert.equal(parsed.issues.at(-1)?.locator?.kind === 'pdf' ? parsed.issues.at(-1)?.locator?.page : null, 2)
 })

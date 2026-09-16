@@ -20,6 +20,7 @@ export interface AcquireOptions {
   signal: AbortSignal
   maxBytes?: number
   timeoutMs?: number
+  storeObject?: (root: string, bytes: Uint8Array) => Promise<Hash>
 }
 
 export async function acquire(root: string, url: string, options: AcquireOptions): Promise<FetchReceipt> {
@@ -58,7 +59,10 @@ export async function acquire(root: string, url: string, options: AcquireOptions
     receipt.finalUrl = response.url || url
     receipt.status = response.status
     receipt.contentType = normalizeContentType(response.headers.get('content-type'))
-    if (!response.ok) return { ...receipt, error: 'unavailable' }
+    if (!response.ok) {
+      await response.body?.cancel()
+      return { ...receipt, error: 'unavailable' }
+    }
     if (!isHttpUrl(receipt.finalUrl) || !ACCEPTED_TYPES.has(receipt.contentType)) {
       await response.body?.cancel()
       return { ...receipt, error: 'invalid_type' }
@@ -73,7 +77,9 @@ export async function acquire(root: string, url: string, options: AcquireOptions
 
     const bytes = await readBounded(response.body, maxBytes, controller.signal)
     if (bytes === null) return { ...receipt, error: 'too_large' }
-    const rawHash = await putObject(root, bytes)
+    checkOperationSignal(options.signal, controller.signal)
+    const rawHash = await (options.storeObject ?? putObject)(root, bytes)
+    checkOperationSignal(options.signal, controller.signal)
     return { ...receipt, rawHash }
   } catch (error) {
     if (options.signal.aborted) throw abortError()
@@ -147,6 +153,11 @@ function isHttpUrl(value: string): boolean {
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')
+}
+
+function checkOperationSignal(callerSignal: AbortSignal, operationSignal: AbortSignal): void {
+  if (callerSignal.aborted) throw abortError()
+  if (operationSignal.aborted) throw operationSignal.reason ?? abortError()
 }
 
 function abortError(): DOMException {

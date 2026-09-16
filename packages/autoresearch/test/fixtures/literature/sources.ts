@@ -72,6 +72,21 @@ export function pdfFixture(lines: { x: number; y: number; text: string }[]): Uin
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
     `<< /Length ${Buffer.byteLength(operations, 'latin1')} >>\nstream\n${operations}\nendstream`,
   ]
+  return buildPdf(objects)
+}
+
+export function pdfWithBrokenSecondPageFixture(): Uint8Array {
+  const operations = 'BT /F1 12 Tf 40 740 Td (Readable first page) Tj ET'
+  return buildPdf([
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R 99 0 R] /Count 2 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${Buffer.byteLength(operations, 'latin1')} >>\nstream\n${operations}\nendstream`,
+  ])
+}
+
+function buildPdf(objects: string[]): Uint8Array {
   let pdf = '%PDF-1.4\n'
   const offsets = [0]
   objects.forEach((object, index) => {
