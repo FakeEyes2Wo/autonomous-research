@@ -304,6 +304,12 @@ test('v1 catalog migration creates a consistent backup before adding generation 
     const legacy = new DatabaseSync(databasePath)
     legacy.exec(`
       PRAGMA foreign_keys=OFF;
+      DROP TABLE exposures;
+      DROP TABLE retrieval_receipts;
+      DROP TABLE acquisition_receipts;
+      DROP TABLE metadata_receipts;
+      DROP TABLE search_receipts;
+      DROP TABLE ingestion_records;
       DROP TABLE generation_pins;
       DROP TABLE index_state;
       DROP TABLE index_generations;
@@ -321,7 +327,7 @@ test('v1 catalog migration creates a consistent backup before adding generation 
       ])
       assert.deepEqual(works, [{ id: 'legacy-work' }])
       assert.deepEqual(tables.map(row => row.name), ['generation_pins', 'index_generations', 'index_state'])
-      assert.equal(version[0]?.user_version, 2)
+      assert.equal(version[0]?.user_version, 3)
       await stat(`${databasePath}.v1.backup`)
 
       const backup = new DatabaseSync(`${databasePath}.v1.backup`, { readOnly: true })

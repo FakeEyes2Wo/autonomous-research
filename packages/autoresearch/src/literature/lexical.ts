@@ -19,6 +19,8 @@ export interface LexicalSearchRequest {
   query: string
   /** Partition IDs already authorized by the server-side policy layer. */
   authorizedPartitionIds: string[]
+  /** When supplied, excluded documents never contribute to visible FTS statistics. */
+  authorizedDocumentIds?: string[]
   maxResults: number
 }
 
@@ -46,8 +48,32 @@ export async function searchLexical(
     const database = new DatabaseSync(join(generationDirectory(root, request.generationId), partition.file), {
       readOnly: true,
     })
+    let visible: DatabaseSync | null = null
     try {
-      const rows = database.prepare(`SELECT span_id,document_id,work_id,
+      visible = request.authorizedDocumentIds === undefined ? null : new DatabaseSync(':memory:')
+      if (visible) {
+        visible.exec(`CREATE VIRTUAL TABLE spans_fts USING fts5(span_id UNINDEXED,document_id UNINDEXED,
+          work_id UNINDEXED,title,section,body,tokenize='unicode61')`)
+        const documents = new Set(request.authorizedDocumentIds)
+        const bindings = new Map(manifest.corpus.spans.map(span => [span.id, span]))
+        const seen = new Set<string>()
+        const insert = visible.prepare('INSERT INTO spans_fts(span_id,document_id,work_id,title,section,body) VALUES(?,?,?,?,?,?)')
+        for (const row of database.prepare('SELECT span_id,document_id,work_id,title,section,body FROM spans_fts ORDER BY rowid').all()) {
+          if (!documents.has(String(row.document_id))) continue
+          const binding = bindings.get(String(row.span_id))
+          // Canonical field order matches A4's lexical hash, independently of SQLite column order.
+          const lexical = { body: String(row.body), documentId: String(row.document_id), section: String(row.section),
+            spanId: String(row.span_id), title: String(row.title), workId: String(row.work_id) }
+          if (!binding || binding.partitionId !== partition.partitionId || seen.has(lexical.spanId) ||
+            sha256(JSON.stringify(lexical)) !== binding.lexicalHash) throw codedError('INDEX_LEXICAL_CORRUPT', 'INDEX_LEXICAL_CORRUPT')
+          seen.add(lexical.spanId)
+          insert.run(lexical.spanId, lexical.documentId, lexical.workId, lexical.title, lexical.section, lexical.body)
+        }
+        if (manifest.corpus.spans.some(span => span.partitionId === partition.partitionId && documents.has(span.documentId) && !seen.has(span.id))) {
+          throw codedError('INDEX_LEXICAL_CORRUPT', 'INDEX_LEXICAL_CORRUPT')
+        }
+      }
+      const rows = (visible ?? database).prepare(`SELECT span_id,document_id,work_id,
         bm25(spans_fts,0,0,0,3.0,2.0,1.0) AS score
         FROM spans_fts WHERE spans_fts MATCH ?
         ORDER BY score ASC,span_id ASC LIMIT ?`).all(query, request.maxResults) as {
@@ -61,6 +87,7 @@ export async function searchLexical(
         score: Number(row.score),
       })))
     } finally {
+      visible?.close()
       database.close()
     }
   }

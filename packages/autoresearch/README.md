@@ -330,7 +330,59 @@ import { name, inject, apply } from '@athena/autoresearch'
 
 ---
 
-## 目录
+## 本地文献库 CLI
+
+先运行 `npm run build`。所有命令输出 JSON，文献库存放在项目的
+`.autoresearch/literature` 下。`projectId` 默认使用项目目录的真实绝对路径；
+服务端通过注册项目找到目录后使用 `canonicalLiteratureProjectId(projectRoot)`，
+Web 的项目注册 ID 只用于查找目录。CLI、研究上下文和 Web 均使用
+`resolveLiteratureRoot(projectRoot)` 定位同一个库。
+
+```sh
+node scripts/literature.mjs import --project ./test-project --records ./papers.json
+node scripts/literature.mjs ingest --project ./test-project --manifest ./sources.json
+node scripts/literature.mjs index --project ./test-project
+node scripts/literature.mjs search --project ./test-project --query '反证' --generation <上一步返回的id>
+node scripts/literature.mjs replay --project ./test-project --receipt <search返回的receipt.id>
+```
+
+`papers.json` 为含 `title` 的论文数组。`sources.json` 格式如下；`workId` 使用
+import 返回的 `mappings[].workId`，`projectId` 使用实际项目绝对路径，
+`policyHash` 使用项目授权策略的 SHA-256，不能把示例标记当作真实 ID：
+
+```json
+{
+  "documents": [{
+    "workId": "<import返回的workId>",
+    "source": { "kind": "file", "path": "./paper.txt", "mediaType": "text/plain" },
+    "sourceKind": "full_text",
+    "visibility": {
+      "projectId": "<项目的真实绝对路径>",
+      "partitionId": "main",
+      "roles": ["researcher"],
+      "policyHash": "<项目策略的64位SHA-256>"
+    }
+  }]
+}
+```
+
+文件路径相对于 manifest。来源还支持 `{"kind":"text","text":"原文"}`、
+`{"kind":"url","url":"https://…"}` 和 `{"kind":"registered","documentId":"已入库ID"}`。
+只有显式 `ingest` URL 才下载原文；search、replay 和读取已注册文献不联网。
+未知 CLI 参数会报错。多策略项目需显式传入 `--policy-hash`；可用
+`--run`、`--role`、`--split`、`--partitions` 收窄读取范围。
+
+核心 API 通过 `@athena/autoresearch/literature` 导出。`ingestManifest` 默认拒绝本地路径，
+只有可信本地 CLI 传 `allowLocalFiles: true`。manifest 可附带 `works`（仅 candidate）
+及 `searchReceipts`（`provider/query/createdAt/rawResponse/resultWorkIds`），保存外部搜索原始响应，
+不自动搜索或提升元数据可信度；解析器返回的元数据须通过 `registerMetadata` 保存来源再注册。
+检索只打包完整 span；必需原文不可用或超预算时分别抛出
+`REQUIRED_SOURCE_UNAVAILABLE`、`LITERATURE_CONTEXT_INSUFFICIENT`。
+模型实际收到的片段由 `recordExposure` 的 prepared → sent/unknown 追加链记录。
+search 首次读取 active generation 时自动固定该 run 的版本，读取过程中发布新索引也不会中断；后续仍可 replay。
+直接读取历史 generation 则要求该 run 已通过 `pinGeneration` 固定该版本。
+
+## 源码目录
 
 ```text
 src/

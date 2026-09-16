@@ -7,7 +7,7 @@ import { parentPort, workerData } from 'node:worker_threads'
 
 import type { SqlStatement } from './contracts.js'
 
-const CURRENT_SCHEMA_VERSION = 2
+const CURRENT_SCHEMA_VERSION = 3
 
 interface WorkerInput {
   root: string
@@ -74,7 +74,7 @@ async function migrate(database: DatabaseSync, input: WorkerInput): Promise<void
   database.exec('BEGIN IMMEDIATE')
   try {
     const version = Number(database.prepare('PRAGMA user_version').get()?.user_version ?? 0)
-    if (![0, 1, CURRENT_SCHEMA_VERSION].includes(version)) {
+    if (![0, 1, 2, CURRENT_SCHEMA_VERSION].includes(version)) {
       const code = version > CURRENT_SCHEMA_VERSION ? 'SCHEMA_TOO_NEW' : 'SCHEMA_UNSUPPORTED'
       throw codedError(`catalog schema ${version} is not supported by schema ${CURRENT_SCHEMA_VERSION}`, code)
     }
@@ -140,6 +140,34 @@ async function migrate(database: DatabaseSync, input: WorkerInput): Promise<void
     } else if (version === 1) {
       createGenerationSchema(database)
       database.exec('PRAGMA user_version = 2')
+    }
+    if (version < 3) {
+      database.exec(`
+        CREATE TABLE retrieval_receipts (
+          id TEXT PRIMARY KEY, generation_id TEXT NOT NULL REFERENCES index_generations(id),
+          body TEXT NOT NULL CHECK(json_valid(body)), body_hash TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE exposures (
+          id TEXT PRIMARY KEY, previous_id TEXT UNIQUE REFERENCES exposures(id),
+          retrieval_receipt_id TEXT NOT NULL REFERENCES retrieval_receipts(id),
+          body TEXT NOT NULL CHECK(json_valid(body)), body_hash TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE acquisition_receipts (
+          id TEXT PRIMARY KEY, work_id TEXT NOT NULL REFERENCES works(id),
+          body TEXT NOT NULL CHECK(json_valid(body)), body_hash TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE metadata_receipts (
+          id TEXT PRIMARY KEY, body TEXT NOT NULL CHECK(json_valid(body)), body_hash TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE search_receipts (
+          id TEXT PRIMARY KEY, body TEXT NOT NULL CHECK(json_valid(body)), body_hash TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE ingestion_records (
+          document_id TEXT PRIMARY KEY REFERENCES documents(id),
+          document_hash TEXT NOT NULL, parse_report_hash TEXT NOT NULL
+        ) STRICT;
+        PRAGMA user_version = 3;
+      `)
     }
     database.exec('CREATE VIRTUAL TABLE temp.catalog_fts5_probe USING fts5(body); DROP TABLE temp.catalog_fts5_probe;')
     database.exec('COMMIT')

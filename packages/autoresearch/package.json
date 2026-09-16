@@ -10,7 +10,8 @@
     "./settings": "./dist/settings/index.js",
     "./settings-contract": "./dist/settings-contract.js",
     "./policy": "./dist/policy/index.js",
-    "./runtime": "./dist/runtime/index.js"
+    "./runtime": "./dist/runtime/index.js",
+    "./literature": "./dist/literature/index.js"
   },
   "files": [
     "dist",
@@ -27,7 +28,8 @@
     "check:dsh": "node scripts/check-dsh-runtime.mjs",
     "install:dsh": "node scripts/install-dsh-plugin.mjs",
     "run:headless": "npm run build && node scripts/run-headless.mjs",
-    "runtime:job": "node scripts/runtime-job.mjs"
+    "runtime:job": "node scripts/runtime-job.mjs",
+    "literature": "node scripts/literature.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.2",
