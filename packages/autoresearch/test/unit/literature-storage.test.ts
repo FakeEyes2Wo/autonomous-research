@@ -17,6 +17,18 @@ import { withCatalog, withLibrary } from '../fixtures/literature.ts'
 
 const hash = 'a'.repeat(64)
 
+async function settlesWithin<T>(promise: Promise<T>, milliseconds = 500): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined
+  const expired = new Promise<never>((_resolve, reject) => {
+    timeout = setTimeout(() => reject(new Error('promise did not settle')), milliseconds)
+  })
+  try {
+    return await Promise.race([promise, expired])
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout)
+  }
+}
+
 test('contract validators accept complete records and reject malformed hashes', () => {
   assert.equal(assertHash(hash), hash)
   assert.throws(() => assertHash('A'.repeat(64)), /hash/i)
@@ -143,6 +155,21 @@ test('catalog rolls back every statement when one statement fails', async () => 
   })
 })
 
+test('catalog rejects transaction-control SQL before any statement can escape rollback', async () => {
+  await withCatalog(async (_root, catalog) => {
+    await assert.rejects(
+      catalog.transact([
+        { sql: 'INSERT INTO works(id, body) VALUES (?, ?)', params: ['escaped', '{"id":"escaped"}'] },
+        { sql: '; -- caller must not own the transaction\nCOMMIT', params: [] },
+        { sql: 'INSERT INTO works(id, body) VALUES (?, ?)', params: ['escaped', '{"id":"duplicate"}'] },
+      ]),
+      /transaction.control/i,
+    )
+    const [rows] = await catalog.transact([{ sql: 'SELECT id FROM works', params: [] }])
+    assert.deepEqual(rows, [])
+  })
+})
+
 test('catalog enforces relations, JSON bodies, and immutable source existence', async () => {
   await withCatalog(async (root, catalog) => {
     await assert.rejects(
@@ -213,5 +240,17 @@ test('worker termination rejects pending transactions and future calls instead o
     await assert.rejects(pending, /worker|terminated|exit/i)
     await assert.rejects(catalog.transact([{ sql: 'SELECT 1', params: [] }]), /worker|closed|terminated|exit/i)
     await catalog.close()
+  })
+})
+
+test('concurrent close calls share completion and reject transactions once closing starts', async () => {
+  await withLibrary(async root => {
+    const catalog = await openCatalog(root)
+    const firstClose = catalog.close()
+    const secondClose = catalog.close()
+    const lateTransaction = catalog.transact([{ sql: 'SELECT 1 AS value', params: [] }])
+
+    await assert.rejects(settlesWithin(lateTransaction), /closing|closed/i)
+    await settlesWithin(Promise.all([firstClose, secondClose]))
   })
 })

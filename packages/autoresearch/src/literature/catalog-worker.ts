@@ -144,15 +144,57 @@ function openDatabase(input: WorkerInput): DatabaseSync {
   }
 }
 
-function transact(database: DatabaseSync, statements: SqlStatement[]): Record<string, unknown>[][] {
+const TRANSACTION_CONTROL_KEYWORDS = new Set([
+  'BEGIN',
+  'COMMIT',
+  'END',
+  'ROLLBACK',
+  'SAVEPOINT',
+  'RELEASE',
+])
+
+function leadingSqlKeyword(sql: string): string {
+  let remaining = sql
+  while (true) {
+    remaining = remaining.replace(/^[\s\uFEFF;]+/u, '')
+    if (remaining.startsWith('--')) {
+      const lineEnd = remaining.search(/[\r\n]/u)
+      if (lineEnd < 0) return ''
+      remaining = remaining.slice(lineEnd + 1)
+      continue
+    }
+    if (remaining.startsWith('/*')) {
+      const commentEnd = remaining.indexOf('*/', 2)
+      if (commentEnd < 0) return ''
+      remaining = remaining.slice(commentEnd + 2)
+      continue
+    }
+    return /^[A-Za-z]+/u.exec(remaining)?.[0]?.toUpperCase() ?? ''
+  }
+}
+
+function validateStatements(statements: SqlStatement[]): void {
   if (!Array.isArray(statements)) throw new TypeError('statements must be an array')
+  statements.forEach((statement, index) => {
+    if (typeof statement?.sql !== 'string' || statement.sql.trim() === '') {
+      throw new TypeError(`statements[${index}].sql must be a non-empty string`)
+    }
+    if (!Array.isArray(statement.params)) throw new TypeError(`statements[${index}].params must be an array`)
+    const keyword = leadingSqlKeyword(statement.sql)
+    if (TRANSACTION_CONTROL_KEYWORDS.has(keyword)) {
+      throw codedError(
+        `transaction-control SQL is not allowed in statements[${index}]: ${keyword}`,
+        'TRANSACTION_CONTROL_FORBIDDEN',
+      )
+    }
+  })
+}
+
+function transact(database: DatabaseSync, statements: SqlStatement[]): Record<string, unknown>[][] {
+  validateStatements(statements)
   database.exec('BEGIN IMMEDIATE')
   try {
-    const results = statements.map((statement, index) => {
-      if (typeof statement?.sql !== 'string' || statement.sql.trim() === '') {
-        throw new TypeError(`statements[${index}].sql must be a non-empty string`)
-      }
-      if (!Array.isArray(statement.params)) throw new TypeError(`statements[${index}].params must be an array`)
+    const results = statements.map(statement => {
       return database.prepare(statement.sql).all(...statement.params) as Record<string, unknown>[]
     })
     database.exec('COMMIT')

@@ -33,7 +33,8 @@ class WorkerCatalog implements Catalog {
   readonly worker: Worker
   readonly #pending = new Map<number, PendingRequest>()
   #nextRequestId = 1
-  #closed = false
+  #state: 'open' | 'closing' | 'closed' = 'open'
+  #closePromise: Promise<void> | undefined
   #failure: Error | undefined
   readonly #ready: Promise<void>
   readonly #exited: Promise<number>
@@ -49,7 +50,7 @@ class WorkerCatalog implements Catalog {
     this.#exited = new Promise(resolve => {
       this.worker.once('exit', code => {
         resolve(code)
-        if (!this.#closed) {
+        if (this.#state === 'open' || this.#pending.size > 0) {
           const error = new Error(`catalog worker exited with code ${code}`)
           settleReady?.(error)
           settleReady = undefined
@@ -81,31 +82,42 @@ class WorkerCatalog implements Catalog {
     return this.#ready
   }
 
-  async transact(statements: SqlStatement[]): Promise<Record<string, unknown>[][]> {
-    await this.#ready
-    return await this.#request('transact', statements) as Record<string, unknown>[][]
+  transact(statements: SqlStatement[]): Promise<Record<string, unknown>[][]> {
+    return this.#request('transact', statements) as Promise<Record<string, unknown>[][]>
   }
 
-  async close(): Promise<void> {
-    if (this.#closed) return
+  close(): Promise<void> {
+    if (this.#closePromise !== undefined) return this.#closePromise
+    if (this.#state === 'closed') return Promise.resolve()
+    this.#state = 'closing'
+    this.#closePromise = this.#finishClose()
+    return this.#closePromise
+  }
+
+  async #finishClose(): Promise<void> {
     if (this.#failure !== undefined) {
-      this.#closed = true
+      this.#state = 'closed'
       return
     }
     try {
       await this.#ready
-      await this.#request('close')
-      this.#closed = true
+      await this.#postRequest('close')
+      this.#state = 'closed'
       await this.#exited
     } catch (error) {
-      this.#closed = true
+      this.#state = 'closed'
       if (this.#failure === undefined) throw error
     }
   }
 
   #request(type: 'transact' | 'close', statements?: SqlStatement[]): Promise<Record<string, unknown>[][] | null> {
     if (this.#failure !== undefined) return Promise.reject(this.#failure)
-    if (this.#closed) return Promise.reject(new Error('catalog is closed'))
+    if (this.#state !== 'open') return Promise.reject(new Error(`catalog is ${this.#state}`))
+    return this.#postRequest(type, statements)
+  }
+
+  #postRequest(type: 'transact' | 'close', statements?: SqlStatement[]): Promise<Record<string, unknown>[][] | null> {
+    if (this.#failure !== undefined) return Promise.reject(this.#failure)
     const requestId = this.#nextRequestId++
     return new Promise((resolve, reject) => {
       this.#pending.set(requestId, { resolve, reject })
