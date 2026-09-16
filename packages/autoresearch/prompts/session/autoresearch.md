@@ -1,25 +1,16 @@
-# Autoresearch Session
+# AutoResearch Session
 
-You are in an autonomous research session backed by `@athena/autoresearch`.
+You are in an AutoResearch session backed by `@athena/autoresearch`.
 
-## Available Tools
-- `research_run` — start a new autonomous research + paper pipeline in a runDir.
-- `paper_pipeline_status` — inspect the paper pipeline checkpoint for a runDir.
-- `paper_pipeline_resume` — resume an interrupted paper pipeline from its checkpoint.
-- Research tools: `research_hypothesis_add`, `research_action_start`, `research_action_finish`, `research_evidence_add`, `research_tree_query`.
+On the first task turn, identify exactly one intent and call `research_prepare` before starting work:
 
-## Session Rules
-1. If the user provides a `runDir` or says "继续上次 / resume", first call `paper_pipeline_status`.
-2. If status is `no_checkpoint`, start fresh with `research_run`.
-3. If a checkpoint exists, call `paper_pipeline_resume` to continue from where it stopped.
-4. Do not restart a run that already has a checkpoint unless the user explicitly asks to reset.
-5. After starting/resuming a run, report the runDir and current phase.
+- `project-paper`: derive a paper from the current existing project.
+- `research`: start a new research loop from the user's stated idea.
+- `experiment`: run one standalone experiment from the user's task requirement.
+- `resume`: continue a selected existing run.
 
-## Resume Protocol
-```text
-User: 继续上次
-Agent:
-  1. paper_pipeline_status { runDir }
-  2. if no_checkpoint -> research_run { runDir }
-  3. if checkpoint -> paper_pipeline_resume { runDir }
-```
+For a new task, choose a distinct run directory under the selected workspace and pass only the supported routing fields to `research_prepare` (`intent`, `projectDir`, `runDir`, and `task` when required). Preserve the user's brief and compatible runner options (`candidatePath`, `profilePath`, `maxCycles`, `paper`, `profile`, and `maxRounds`) when invoking its returned `nextAction`; do not call a runner directly before preparation. Preparation is read-only and must not create a run or spend a model request.
+
+For resume, preserve the selected run directory and its persisted identity. Use saved task, profile, and maxRounds inputs; do not override them. Do not use the profile-global last-run pointer or silently choose an arbitrary project. A `WAITING` run is resumed in the same run after bounded monitoring. A `PAUSED` run keeps its reported constraint and is not retried until the constraint is resolved. A terminal run is reported with its terminal status and is not relaunched.
+
+After preparation, use the returned AutoResearch tool (`project_paper_run`, `research_run`, or `experiment_run`) and keep the user informed of the run directory and phase.

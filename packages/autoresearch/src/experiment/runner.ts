@@ -1,6 +1,6 @@
-import { access } from 'node:fs/promises'
-import { createHash } from 'node:crypto'
-import { join } from 'node:path'
+import { access, link, unlink, writeFile } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { dirname, join } from 'node:path'
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { createInitialState, loadState, recordResult, saveState, transition } from '../core/state.js'
@@ -18,6 +18,7 @@ import { isExperimentPauseError, DurableExperimentWaitingError } from './errors.
 import { validateWorkerResult } from './validation.js'
 import { assertFailureImportTarget, importResearchFailure, type FailureReportImport } from '../service/failure-import.js'
 import { bindResearchOutputs } from '../service/research-outputs.js'
+import { bindRunProject } from '../service/project-paper.js'
 import {
   runEvidenceAgent,
   runExperimentDesign,
@@ -40,7 +41,8 @@ export interface ExperimentRunRequest {
   failureReport?: FailureReportImport
   runDir: string
   projectDir?: string
-  task: string
+  /** Required for a new run; a verified request snapshot supplies it on resume. */
+  task?: string
   profile?: string
   maxRounds?: number
   agentContext: RoleExecutionContext
@@ -58,6 +60,14 @@ export interface ExperimentRunResult {
 type ExperimentStage = 'plan' | 'design' | 'work' | 'evidence' | 'decision'
 const SNAPSHOT_FILE = join('.autoresearch', 'policy-snapshot.json')
 const MANIFEST_FILE = join('.autoresearch', 'experiment-manifest.json')
+const REQUEST_FILE = join('.autoresearch', 'experiment-request.json')
+
+interface ExperimentRequestSnapshot {
+  version: 1
+  task: string
+  profile: string
+  maxRounds: number
+}
 
 function freezePolicy<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -115,6 +125,78 @@ function cachedActionResult(stageData: unknown): unknown {
 
 function identityHash(value: string): string { return createHash('sha256').update(value, 'utf8').digest('hex') }
 
+function isExperimentRequestSnapshot(value: unknown): value is ExperimentRequestSnapshot {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value) &&
+    (value as { version?: unknown }).version === 1 &&
+    typeof (value as { task?: unknown }).task === 'string' &&
+    (value as { task: string }).task.trim().length > 0 &&
+    typeof (value as { profile?: unknown }).profile === 'string' &&
+    Number.isSafeInteger((value as { maxRounds?: unknown }).maxRounds) &&
+    ((value as { maxRounds: number }).maxRounds > 0))
+}
+
+async function readExperimentRequest(runDir: string): Promise<ExperimentRequestSnapshot | undefined> {
+  const file = safeResolve(runDir, REQUEST_FILE)
+  try {
+    const value = await readJson<unknown>(file)
+    if (!isExperimentRequestSnapshot(value)) throw new AutoResearchError(`invalid experiment request: ${file}`, 'STATE_CORRUPT')
+    return value
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT' || (error instanceof Error && /cannot read .*ENOENT/i.test(error.message))) return undefined
+    throw error
+  }
+}
+
+async function resolveExperimentRequest(
+  request: ExperimentRunRequest,
+  runDir: string,
+  settings: ProjectSettings,
+  existingState: boolean,
+  legacyManifest: boolean,
+): Promise<{ value: ExperimentRequestSnapshot; persisted: boolean }> {
+  const saved = await readExperimentRequest(runDir)
+  if (saved) {
+    if (request.task !== undefined && request.task !== saved.task) throw new AutoResearchError('run directory belongs to a different experiment task/profile; use a new runDir', 'INVALID_ARGUMENT')
+    if (request.profile !== undefined && request.profile !== saved.profile) throw new AutoResearchError('run directory belongs to a different experiment task/profile; use a new runDir', 'INVALID_ARGUMENT')
+    if (request.maxRounds !== undefined && request.maxRounds !== saved.maxRounds) throw new AutoResearchError('experiment maxRounds is frozen for resume; use a new runDir', 'INVALID_ARGUMENT')
+    return { value: saved, persisted: false }
+  }
+
+  // A legacy manifest is the only recoverable input source for an identityless
+  // existing run. Its hashes can validate explicit task/profile arguments, but
+  // cannot recover either value when the caller omits it.
+  if (existingState && legacyManifest && (request.task === undefined || request.profile === undefined)) {
+    throw new AutoResearchError('legacy experiment resume requires explicit task and profile', 'INVALID_ARGUMENT')
+  }
+  if (request.task === undefined || request.task.trim().length === 0) throw new TypeError('task must be a non-empty string')
+  const maxRounds = request.maxRounds ?? settings.experiment.maxRounds ?? DEFAULT_EXPERIMENT_MAX_ROUNDS
+  if (!Number.isSafeInteger(maxRounds) || maxRounds < 1) throw new TypeError('maxRounds must be a positive finite integer')
+  const profile = request.profile ?? (settings.experiment.profile || '# PROFILE\n\n- Allowed: local experiments, public data, public literature.\n')
+  return { value: { version: 1, task: request.task, profile, maxRounds }, persisted: true }
+}
+
+async function persistExperimentRequest(runDir: string, value: ExperimentRequestSnapshot): Promise<void> {
+  await publishIdentityJson(safeResolve(runDir, REQUEST_FILE), value, (current): current is ExperimentRequestSnapshot => isExperimentRequestSnapshot(current) &&
+    current.task === value.task && current.profile === value.profile && current.maxRounds === value.maxRounds)
+}
+
+async function publishIdentityJson(file: string, value: unknown, same: (current: unknown) => boolean): Promise<void> {
+  const temporary = `${file}.${randomUUID()}.tmp`
+  await ensureDir(dirname(file))
+  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx' })
+  try {
+    try {
+      await link(temporary, file)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+      const current = await readJson<unknown>(file)
+      if (!same(current)) throw new AutoResearchError(`identity publication conflict: ${file}`, 'INVALID_ARGUMENT')
+    }
+  } finally {
+    try { await unlink(temporary) } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+  }
+}
+
 async function assertExperimentIdentity(runDir: string, task: string, profile: string): Promise<void> {
   const file = safeResolve(runDir, MANIFEST_FILE)
   const expected = { schema: 'autoresearch/experiment-manifest/v1', taskHash: identityHash(task), profileHash: identityHash(profile) }
@@ -130,7 +212,11 @@ async function assertExperimentIdentity(runDir: string, task: string, profile: s
     if (!((error as NodeJS.ErrnoException).code === 'ENOENT' || (error instanceof Error && /cannot read .*ENOENT/i.test(error.message)))) throw error
   }
   if (!current) {
-    await atomicWriteJson(file, expected)
+    await publishIdentityJson(file, expected, value => {
+      if (!value || typeof value !== 'object') return false
+      const candidate = value as typeof expected
+      return candidate.schema === expected.schema && candidate.taskHash === expected.taskHash && candidate.profileHash === expected.profileHash
+    })
     return
   }
   if (current.schema !== expected.schema || current.taskHash !== expected.taskHash || current.profileHash !== expected.profileHash) {
@@ -220,24 +306,61 @@ export const DEFAULT_EXPERIMENT_MAX_ROUNDS = 1
 async function executeExperimentTask(
   deps: ExperimentDependencies,
   request: ExperimentRunRequest,
+  onAdmitted?: () => void,
 ): Promise<ExperimentRunResult> {
-  const { runDir, task, agentContext } = request
-  const projectDir = request.projectDir ?? runDir
+  const { runDir, agentContext } = request
+  // Read existing metadata first, then publish the workflow binding before
+  // creating any experiment input/state files. This is the admission boundary
+  // that keeps research and experiment engines from adopting each other's runs.
+  const savedState = await loadState(runDir)
+  const savedRequest = await readExperimentRequest(runDir)
+  const legacyManifest = savedState !== undefined && await readOptionalText(safeResolve(runDir, MANIFEST_FILE)) !== undefined
+  if (savedState !== undefined && !savedRequest && !legacyManifest) {
+    throw new AutoResearchError('existing experiment run has no recoverable identity; choose an explicit legacy experiment run', 'INVALID_ARGUMENT')
+  }
+  if (savedRequest && !legacyManifest) {
+    throw new AutoResearchError('existing experiment run is missing its experiment manifest', 'STATE_CORRUPT')
+  }
+  // Validate an identityless legacy manifest before publishing a new project
+  // identity, so a rejected task/profile request leaves the legacy directory
+  // untouched and remains eligible for explicit recovery.
+  let resolved: { value: ExperimentRequestSnapshot; persisted: boolean } | undefined
+  if (legacyManifest) {
+    const legacySettings = await loadProjectSettings(request.projectDir ?? runDir)
+    resolved = await resolveExperimentRequest(request, runDir, legacySettings, true, true)
+    await assertExperimentIdentity(runDir, resolved.value.task, resolved.value.profile)
+  }
+  const identity = await bindRunProject({ runDir, projectDir: request.projectDir }, 'experiment', savedState !== undefined)
+  const projectDir = identity.projectDir
   const projectSettings = await loadProjectSettings(projectDir)
-  const maxRounds = request.maxRounds ?? projectSettings.experiment.maxRounds ?? DEFAULT_EXPERIMENT_MAX_ROUNDS
-  if (!Number.isSafeInteger(maxRounds) || maxRounds < 1) throw new TypeError('maxRounds must be a positive finite integer')
-  const profile = request.profile ?? (projectSettings.experiment.profile || '# PROFILE\n\n- Allowed: local experiments, public data, public literature.\n')
+  resolved ??= await resolveExperimentRequest(request, runDir, projectSettings, savedState !== undefined, legacyManifest)
+  const { task, profile, maxRounds } = resolved.value
   const reportPath = join(runDir, 'EXPERIMENT_REPORT.md')
+
+  await assertExperimentIdentity(runDir, task, profile)
+  if (resolved.persisted) await persistExperimentRequest(runDir, resolved.value)
+  // From this point onward the workflow, project, and frozen request have all
+  // been admitted. Output synchronization is safe even if execution pauses or
+  // fails later; pre-admission rejections must leave foreign runs untouched.
+  onAdmitted?.()
+  if (savedState && (savedState.status === 'COMPLETED' || savedState.status === 'FAILED')) {
+    return {
+      runDir,
+      status: savedState.status === 'COMPLETED' ? 'completed' : 'failed',
+      reportPath,
+      evidencePath: savedState.evidencePath,
+      cycles: savedState.cycle,
+      reason: savedState.lastError,
+    }
+  }
 
   await ensureDir(runDir)
   await ensureDir(join(runDir, 'input'))
-  await assertExperimentIdentity(runDir, task, profile)
   await writeIfMissing(join(runDir, 'input', 'idea.md'), `# IDEA\n\n## Direction\n\n${task}\n`)
   await writeIfMissing(join(runDir, 'PROFILE.md'), profile)
   await writeIfMissing(join(runDir, 'RUBRIC.md'), `# RUBRIC\n\n- Task: ${task}\n- Criteria: produce a reproducible experiment with real evidence.\n`)
   await freezeRubric(runDir)
 
-  const savedState = await loadState(runDir)
   const state: RunState = savedState ?? await createInitialState(runDir)
   await importResearchFailure(runDir, state.runId, request.failureReport)
   if (state.status === 'COMPLETED' || state.status === 'FAILED') {
@@ -388,12 +511,42 @@ async function executeExperimentTask(
 }
 
 export async function runExperimentTask(deps: ExperimentDependencies, request: ExperimentRunRequest): Promise<ExperimentRunResult> {
+  const historicalState = await loadState(request.runDir)
+  const savedIdentity = await readOptionalText(safeResolve(request.runDir, '.autoresearch', 'project-identity.json'))
+  if (historicalState && (historicalState.status === 'COMPLETED' || historicalState.status === 'FAILED') && savedIdentity === undefined) {
+    const savedRequest = await readExperimentRequest(request.runDir)
+    const manifest = await readOptionalText(safeResolve(request.runDir, MANIFEST_FILE))
+    if (manifest !== undefined) {
+      const task = request.task ?? savedRequest?.task
+      const profile = request.profile ?? savedRequest?.profile
+      if (task === undefined || profile === undefined) throw new AutoResearchError('legacy experiment terminal resume requires explicit task and profile', 'INVALID_ARGUMENT')
+      if (savedRequest && ((request.task !== undefined && request.task !== savedRequest.task) || (request.profile !== undefined && request.profile !== savedRequest.profile) || (request.maxRounds !== undefined && request.maxRounds !== savedRequest.maxRounds))) {
+        throw new AutoResearchError('run directory belongs to a different experiment task/profile or frozen maxRounds; use a new runDir', 'INVALID_ARGUMENT')
+      }
+      await assertExperimentIdentity(request.runDir, task, profile)
+    } else if (savedRequest) {
+      throw new AutoResearchError('existing experiment run is missing its experiment manifest', 'STATE_CORRUPT')
+    }
+    // Historical runs with no experiment metadata are immutable compatibility
+    // views. Do not bind, publish, or synchronize anything for them.
+    return {
+      runDir: request.runDir,
+      status: historicalState.status === 'COMPLETED' ? 'completed' : 'failed',
+      reportPath: join(request.runDir, 'EXPERIMENT_REPORT.md'),
+      evidencePath: historicalState.evidencePath,
+      cycles: historicalState.cycle,
+      reason: historicalState.lastError,
+    }
+  }
   // Reject source imports before finalization can mutate the source run.
   await assertFailureImportTarget(request.runDir, request.failureReport)
-  try { return await executeExperimentTask(deps, request) }
+  let experimentAdmitted = false
+  try { return await executeExperimentTask(deps, request, () => { experimentAdmitted = true }) }
   finally {
-    const state = await loadState(request.runDir)
-    if (state) await bindResearchOutputs(request.runDir, state.runId)
+    if (experimentAdmitted) {
+      const state = await loadState(request.runDir)
+      if (state) await bindResearchOutputs(request.runDir, state.runId)
+    }
   }
 }
 

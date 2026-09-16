@@ -1,87 +1,46 @@
+import { existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { readLastRun } from '../dist/session/last-run.js'
+import {
+  buildSessionPrompt,
+  ensureProfile,
+  parseArgs,
+  prepareSessionResume,
+  resolveSessionPaths,
+  shouldLaunchSession,
+} from './session-startup.mjs'
 
-const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
-const sessionPromptPath = join(pkgRoot, 'prompts', 'session', 'autoresearch.md')
+export async function startSession(argv = process.argv.slice(2), cwd = process.cwd(), deps = {}) {
+  const args = parseArgs(argv)
+  const paths = resolveSessionPaths(args, cwd)
 
-function parseArgs(argv) {
-  const args = { profile: 'autoresearch', prompt: undefined, resume: false }
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i]
-    switch (arg) {
-      case '--profile': args.profile = argv[++i]; break
-      case '--prompt': args.prompt = argv[++i]; break
-      case '--resume': args.resume = true; break
-      default:
-        console.error(`Unknown argument: ${arg}`)
-        process.exit(2)
-    }
-  }
-  return args
-}
-
-async function ensureProfile(profileName) {
-  const dshHome = process.env.DSH_HOME ?? join(homedir(), '.dsh')
-  const profileDir = join(dshHome, 'profiles', profileName)
-  const packageJsonPath = join(profileDir, 'package.json')
-  const patchPath = join(profileDir, 'cordis.patch.yml')
-  const workspacePath = join(profileDir, 'pnpm-workspace.yaml')
-  mkdirSync(profileDir, { recursive: true })
-
-  if (!existsSync(packageJsonPath)) {
-    await writeFile(packageJsonPath, `${JSON.stringify({
-      name: `dsh-profile-${profileName}`,
-      private: true,
-      dependencies: {},
-      dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
-    }, null, 2)}\n`, 'utf8')
-  }
-  const pkg = JSON.parse(await readFile(packageJsonPath, 'utf8'))
-  pkg.dependencies ??= {}
-  if (!pkg.dependencies['@athena/autoresearch']) {
-    pkg.dependencies['@athena/autoresearch'] = `link:${pkgRoot.replaceAll('\\', '/')}`
-    await writeFile(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8')
-  }
-  if (!existsSync(patchPath)) await writeFile(patchPath, '# User patch layer\n[]\n', 'utf8')
-  if (!existsSync(workspacePath)) await writeFile(workspacePath, 'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\n', 'utf8')
-
-  const comSpec = process.env.ComSpec || 'cmd.exe'
-  const install = spawnSync(comSpec, ['/d', '/s', '/c', 'pnpm install'], { cwd: profileDir, stdio: 'inherit' })
-  if (install.status !== 0) {
-    console.error(`pnpm install failed in ${profileDir}`)
-    process.exit(install.status ?? 1)
-  }
-  return profileDir
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2))
-  const profileDir = await ensureProfile(args.profile)
-  let prompt = args.prompt ?? await readFile(sessionPromptPath, 'utf8')
+  let preparation
   if (args.resume) {
-    const last = await readLastRun()
-    if (!last) {
-      console.error('[autoresearch] no last run found; start a new session without --resume')
-      process.exit(1)
+    // Prepare before ensureProfile: a blocked or ambiguous resume must not alter
+    // a DSH profile while deciding whether it is safe to launch.
+    preparation = await prepareSessionResume(paths, deps.prepare)
+    if (!shouldLaunchSession(preparation)) {
+      const message = buildSessionPrompt({ ...paths, preparation })
+      return { status: preparation.status === 'terminal' ? 'terminal' : 'blocked', message, exitCode: preparation.status === 'terminal' ? 0 : 2 }
     }
-    console.log(`[autoresearch] resuming last run: ${last.lastRunDir}`)
-    prompt = `${prompt}\n\n立即调用 paper_pipeline_resume，runDir: ${last.lastRunDir}`
   }
+
+  const profileDir = await (deps.ensureProfile ?? ensureProfile)(args.profile)
+  const guidance = buildSessionPrompt({ ...paths, preparation })
+  const prompt = args.prompt ? `${args.prompt}\n\n${guidance}` : guidance
   const nodeDir = dirname(process.execPath)
   const dshBin = join(nodeDir, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
-  console.log(`[autoresearch] starting DSH session profile=${args.profile} dir=${profileDir}`)
-  const result = existsSync(dshBin)
-    ? spawnSync(process.execPath, [dshBin, '--profile', args.profile, prompt], { stdio: 'inherit' })
-    : spawnSync('dsh', ['--profile', args.profile, prompt], { stdio: 'inherit', shell: true })
-  process.exit(result.status ?? 1)
+  const command = existsSync(dshBin) ? process.execPath : 'dsh'
+  const commandArgs = existsSync(dshBin) ? [dshBin, '--profile', args.profile, prompt] : ['--profile', args.profile, prompt]
+  const spawn = deps.spawn ?? spawnSync
+  const result = spawn(command, commandArgs, { cwd: paths.projectDir, stdio: 'inherit', ...(command === 'dsh' ? { shell: true } : {}) })
+  return { status: 'launched', profileDir, projectDir: paths.projectDir, runDir: paths.runDir, exitCode: result.status ?? 1 }
 }
 
-main().catch((error) => {
-  console.error(error)
-  process.exit(1)
-})
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
+  startSession().then((result) => {
+    if (result.status !== 'launched') console.error(result.message)
+    process.exitCode = result.exitCode
+  }).catch((error) => { console.error(error); process.exitCode = 1 })
+}

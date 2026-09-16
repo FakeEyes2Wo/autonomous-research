@@ -8,6 +8,7 @@ import { writeAutoMode } from './session/auto-mode.js'
 import type { Context } from '@deepseek-ai/cordis'
 import { installRequestAccounting } from './providers/request-accounting.js'
 import { bindToolWorkspacePaths } from './tools/workspace-paths.js'
+import { createStartupTools } from './tools/startup.js'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import { createLocalExperimentRuntime, type LocalExperimentConfig } from './runtime/local-authority.js'
 
@@ -117,6 +118,7 @@ export function apply(ctx: {
   const localGrant = config.localExperiments ? structuredClone(config.localExperiments) : undefined
   const experimentRuntimeForProject = localGrant ? (projectDir: string) => createLocalExperimentRuntime(localGrant, projectDir) : undefined
   const service = new AutoResearchService(provider, { reviewer, experimentRuntimeForProject })
+  const startup = createStartupTools((agentId) => ctx.sessions?.get(agentId)?.header.cwd)
   ctx.provide('autoresearch', service)
 
   ctx.commands.register({
@@ -169,6 +171,8 @@ export function apply(ctx: {
           '  /auto_research status <runDir>        show run state',
           '',
           'Tools:',
+          '  research_prepare                     route a task or verify project-scoped recovery',
+          '  project_paper_run                    explore an existing project and validate a paper',
           '  research_run                         full research loop',
           '  experiment_run                       standalone experiment',
           '  project_settings_get/save            project config',
@@ -180,6 +184,7 @@ export function apply(ctx: {
   })
 
   for (const tool of [
+    startup.prepare,
     researchHypothesisAdd,
     researchActionStart,
     researchActionFinish,
@@ -195,7 +200,7 @@ export function apply(ctx: {
     createResearchRunTool(service),
     createProjectPaperRunTool(service),
   ]) {
-    ctx.tools.register(bindToolWorkspacePaths(tool, (agentId) => ctx.sessions?.get(agentId)?.header.cwd))
+    ctx.tools.register(bindToolWorkspacePaths(startup.track(tool), (agentId) => ctx.sessions?.get(agentId)?.header.cwd))
   }
 }
 

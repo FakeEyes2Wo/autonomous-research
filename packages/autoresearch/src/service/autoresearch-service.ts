@@ -135,11 +135,22 @@ export class AutoResearchService {
     const runDir = options.runDir
     await assertFailureImportTarget(runDir, options.failureReport)
     if (options.maxCycles !== undefined && (!Number.isSafeInteger(options.maxCycles) || options.maxCycles < 1)) throw new TypeError('maxCycles must be a positive finite integer')
+    // Admit the run's project/workflow before any state or input mutation.
+    // Generic research may inherit project-paper identity on resume, while an
+    // experiment identity is exclusively owned by the experiment runner.
+    const existing = await loadState(runDir)
+    const savedIdentity = await readOptionalText(join(runDir, '.autoresearch', 'project-identity.json'))
+    const savedExperimentManifest = await readOptionalText(join(runDir, '.autoresearch', 'experiment-manifest.json'))
+    const savedExperimentRequest = await readOptionalText(join(runDir, '.autoresearch', 'experiment-request.json'))
+    if (!requestedWorkflow && existing && (existing.status === 'COMPLETED' || existing.status === 'FAILED') && savedIdentity === undefined && savedExperimentManifest === undefined && savedExperimentRequest === undefined) {
+      // Historical terminal runs predate identity metadata. Preserve their
+      // status as a read-only compatibility view instead of rebinding them.
+      return existing
+    }
+    const identity = await bindRunProject(options, requestedWorkflow, existing !== undefined)
     const logger = createLogger(runDir)
     logger.info(`AutoResearchService.run start runDir=${runDir}`)
     await ensureDir(runDir)
-    const existing = await loadState(runDir)
-    const identity = await bindRunProject(options, requestedWorkflow, existing !== undefined)
     const projectPaper = identity.workflow === 'project-paper'
     if (projectPaper && (options.candidatePath || options.failureReport)) throw new Error('project discovery candidate cannot be replaced on resume')
     if (options.candidatePath) {

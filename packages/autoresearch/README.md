@@ -284,6 +284,8 @@ node scripts/start-session.mjs --profile autoresearch --prompt "继续上次研�
 
 会话内可用：
 
+- `research_prepare`
+- `project_paper_run`
 - `experiment_run`
 - `project_settings_get`
 - `project_settings_save`
@@ -304,11 +306,29 @@ Slash 命令：
 
 其中 `/auto_research` 是轻量帮助命令；实际的“自动探索当前目录并执行研究”入口是 DSH 模式选择器中的 **AutoResearch** Agent Preset。
 
-断点续传流程：
+### 启动分流与断点恢复
 
-1. `paper_pipeline_last_run` 查看最近 runDir
-2. `paper_pipeline_status` 查看 checkpoint
-3. `paper_pipeline_resume` 继续
+main agent 先解释用户意图，再调用只读 `research_prepare`。工具核对当前 session 的项目路径、运行身份和状态，返回下一步调用；检查本身不调用模型、不创建运行、不读取密钥。
+
+| 用户目标 | intent | 执行入口 |
+| --- | --- | --- |
+| 从已有项目发现贡献并写论文 | `project-paper` | `project_paper_run` |
+| 开始新的研究方向 | `research` | `research_run` |
+| 完成单独实验并输出报告 | `experiment` | `experiment_run` |
+| 继续现有工作 | `resume` | 根据保存的工作流选择入口 |
+
+新任务选择一次独立的 runDir，建议使用 `<projectDir>/.autoresearch/runs/<任务名>`。已有源码不等于用户要求生成项目论文；意图不明确时返回 `needs-input`。
+
+恢复优先使用明确指定的 runDir，其次核对当前 session 成功执行过的运行，再检查当前项目 `.autoresearch/runs/` 下的运行。唯一有效的非终态运行可以选择；多个候选需要明确选择。session 提示仅保存在当前插件进程内，重启后使用项目目录扫描；项目外的旧运行需显式提供路径。全局 `paper_pipeline_last_run` 仅用于查询，不作为自动恢复依据。
+
+```bash
+node scripts/start-session.mjs --project-dir /path/to/project --resume
+node scripts/start-session.mjs --project-dir /path/to/project --resume --run-dir .autoresearch/runs/run-1
+```
+
+`WAITING` 沿用同一运行检查持久作业；`PAUSED` 返回暂停原因，待约束解决后再显式恢复；`COMPLETED/FAILED` 返回终态，不启动新任务。独立实验恢复使用保存的任务、profile 和轮数，不能用“继续”替换原任务。缺失身份的旧运行不能自动猜测归属，需核对原来的项目和执行入口。CLI 在恢复信息不足、损坏或暂停时先返回诊断，避免安装 profile 或启动模型会话。
+
+首轮工具调用仍由 main agent 根据 persona 发起，插件加载本身不会启动研究。
 
 ---
 
@@ -325,7 +345,7 @@ import { name, inject, apply } from '@athena/autoresearch'
 - 五个 research tools：`research_hypothesis_add` / `research_action_start` / `research_action_finish` / `research_evidence_add` / `research_tree_query`
 - 独立实验工具：`experiment_run`
 - 项目设置工具：`project_settings_get` / `project_settings_save` / `figure_api_test`
-- 一个控制工具：`research_run`
+- 启动检查与研究控制工具：`research_prepare` / `research_run` / `project_paper_run`
 - 每个 idea 由单个 combined reviewer 从方法论、统计、新颖性、可行性、可复现性等多角度审查
 
 ---
