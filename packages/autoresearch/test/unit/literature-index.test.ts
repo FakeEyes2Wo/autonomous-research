@@ -63,6 +63,37 @@ test('generation identity is reproducible and each exposure partition has a sepa
   })
 })
 
+test('generation identity is stable across host locale ordering', async () => {
+  await withCatalog(async (root, catalog) => {
+    const zDocument = await persistIndexedDocument(catalog, root, {
+      id: 'z', partitionId: 'z', title: 'Zulu', texts: ['stable corpus'],
+    })
+    const umlautDocument = await persistIndexedDocument(catalog, root, {
+      id: 'ä', partitionId: 'ä', title: 'Umlaut', texts: ['stable corpus'],
+    })
+    const spans = [...zDocument.spans, ...umlautDocument.spans]
+    const baseline = await buildGeneration(catalog, root, spans, { expectedActiveId: null, maxSpans: 4 })
+
+    const localeCompare = String.prototype.localeCompare
+    try {
+      String.prototype.localeCompare = function (other: string): number {
+        const left = String(this)
+        return left < other ? 1 : left > other ? -1 : 0
+      }
+      const underDifferentCollation = await buildGeneration(
+        catalog,
+        root,
+        [...spans].reverse(),
+        { expectedActiveId: null, maxSpans: 4 },
+      )
+      assert.equal(underDifferentCollation.id, baseline.id)
+      assert.equal(underDifferentCollation.manifestHash, baseline.manifestHash)
+    } finally {
+      String.prototype.localeCompare = localeCompare
+    }
+  })
+})
+
 test('lexical search accepts only authorized partitions and has stable score/span ordering', async () => {
   await withCatalog(async (root, catalog) => {
     const titleMatch = await persistIndexedDocument(catalog, root, {
@@ -93,7 +124,7 @@ test('lexical search accepts only authorized partitions and has stable score/spa
     assert.equal(hits[0]?.spanId, titleMatch.spans[0]?.id)
     assert.ok(hits.every((hit, index) => index === 0 ||
       hits[index - 1]!.score < hit.score ||
-      (hits[index - 1]!.score === hit.score && hits[index - 1]!.spanId.localeCompare(hit.spanId) <= 0)))
+      (hits[index - 1]!.score === hit.score && hits[index - 1]!.spanId <= hit.spanId)))
     assert.deepEqual(await searchLexical(catalog, root, {
       generationId: generation.id,
       query: '"* OR *"',

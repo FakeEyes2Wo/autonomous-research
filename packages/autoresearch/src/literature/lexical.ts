@@ -9,6 +9,7 @@ import {
   loadGenerationManifest,
   type GenerationManifest,
 } from './index-generation.js'
+import { compareCodeUnits } from './order.js'
 import { toFtsQuery } from './tokenize.js'
 
 export interface LexicalSearchRequest {
@@ -63,7 +64,7 @@ export async function searchLexical(
       database.close()
     }
   }
-  hits.sort((left, right) => left.score - right.score || left.spanId.localeCompare(right.spanId))
+  hits.sort((left, right) => left.score - right.score || compareCodeUnits(left.spanId, right.spanId))
   return hits.slice(0, request.maxResults)
 }
 

@@ -14,7 +14,7 @@ import {
   publishGeneration,
 } from '../../dist/literature/index-generation.js'
 import { searchLexical } from '../../dist/literature/lexical.js'
-import type { SourceSpan } from '../../dist/literature/contracts.js'
+import type { Catalog, SourceSpan, SqlStatement } from '../../dist/literature/contracts.js'
 import { persistIndexedDocument } from '../fixtures/literature-index.ts'
 import { withLibrary } from '../fixtures/literature.ts'
 
@@ -121,6 +121,41 @@ test('two publishers with the same expected active generation have exactly one C
   })
 })
 
+test('two publishers targeting the same generation report exactly one CAS winner', async () => {
+  await withLibrary(async (root) => {
+    const setup = await openCatalog(root)
+    let firstPublisher: Awaited<ReturnType<typeof openCatalog>> | undefined
+    let secondPublisher: Awaited<ReturnType<typeof openCatalog>> | undefined
+    try {
+      const baseFixture = await persistIndexedDocument(setup, root, {
+        id: 'same-base', partitionId: 'public', title: 'Base', texts: ['base evidence'],
+      })
+      const base = await buildGeneration(setup, root, baseFixture.spans, { expectedActiveId: null, maxSpans: 10 })
+      await publishGeneration(setup, root, base.id, null)
+      const nextFixture = await persistIndexedDocument(setup, root, {
+        id: 'same-next', partitionId: 'public', title: 'Next', texts: ['next evidence'],
+      })
+      const next = await buildGeneration(setup, root, [...baseFixture.spans, ...nextFixture.spans], {
+        expectedActiveId: base.id, maxSpans: 10,
+      })
+
+      firstPublisher = await openCatalog(root)
+      secondPublisher = await openCatalog(root)
+      const rendezvous = twoPartyRendezvous()
+      const outcomes = await Promise.allSettled([
+        publishGeneration(afterGenerationRead(firstPublisher, rendezvous), root, next.id, base.id),
+        publishGeneration(afterGenerationRead(secondPublisher, rendezvous), root, next.id, base.id),
+      ])
+      assert.equal(outcomes.filter(result => result.status === 'fulfilled').length, 1)
+      assert.equal(outcomes.filter(result => result.status === 'rejected' &&
+        (result.reason as { code?: string }).code === 'INDEX_CAS_FAILED').length, 1)
+      assert.equal((await getActiveGeneration(setup))?.id, next.id)
+    } finally {
+      await Promise.allSettled([setup.close(), firstPublisher?.close(), secondPublisher?.close()])
+    }
+  })
+})
+
 test('a process crash after a document checkpoint resumes the exact staging generation', { timeout: 30_000 }, async () => {
   await withLibrary(async (root) => {
     let catalog = await openCatalog(root)
@@ -219,4 +254,28 @@ async function waitForPartialCheckpoint(
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 2))
   }
   throw new Error('timed out waiting for a partial index checkpoint')
+}
+
+function twoPartyRendezvous(): () => Promise<void> {
+  let arrivals = 0
+  let release!: () => void
+  const bothArrived = new Promise<void>(resolveBoth => { release = resolveBoth })
+  return async () => {
+    arrivals += 1
+    if (arrivals === 2) release()
+    await bothArrived
+  }
+}
+
+function afterGenerationRead(catalog: Catalog, rendezvous: () => Promise<void>): Catalog {
+  return {
+    close: () => catalog.close(),
+    async transact(statements: SqlStatement[]) {
+      const result = await catalog.transact(statements)
+      if (statements.length === 1 && /SELECT body,status FROM index_generations/u.test(statements[0]!.sql)) {
+        await rendezvous()
+      }
+      return result
+    },
+  }
 }

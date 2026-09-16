@@ -15,6 +15,7 @@ import {
   type Work,
 } from './contracts.js'
 import { readObject } from './objects.js'
+import { compareCodeUnits } from './order.js'
 import { MAX_QUERY_TOKENS, TOKENIZER_VERSION, tokenize } from './tokenize.js'
 
 const MANIFEST_SCHEMA = 'autoresearch/literature-index-generation/v1' as const
@@ -194,7 +195,7 @@ export async function publishGeneration(
   }
   await validatePublishedDirectory(generationDirectory(root, id), manifest)
 
-  const [, , , pointerRows = []] = await catalog.transact([
+  const [, pointerRows = []] = await catalog.transact([
     {
       sql: `UPDATE index_generations
         SET status='retired', body=json_set(body,'$.status','retired')
@@ -202,7 +203,9 @@ export async function publishGeneration(
       params: [expectedActiveId],
     },
     {
-      sql: 'UPDATE index_state SET active_generation_id=? WHERE singleton=1 AND active_generation_id IS ?',
+      sql: `UPDATE index_state SET active_generation_id=?
+        WHERE singleton=1 AND active_generation_id IS ?
+        RETURNING active_generation_id`,
       params: [id, expectedActiveId],
     },
     {
@@ -211,9 +214,8 @@ export async function publishGeneration(
         WHERE id=? AND (SELECT active_generation_id FROM index_state WHERE singleton=1)=?`,
       params: [id, id],
     },
-    { sql: 'SELECT active_generation_id FROM index_state WHERE singleton=1', params: [] },
   ])
-  if (pointerRows[0]?.active_generation_id !== id) {
+  if (pointerRows.length !== 1 || pointerRows[0]?.active_generation_id !== id) {
     throw codedError('active generation compare-and-swap failed', 'INDEX_CAS_FAILED')
   }
 }
@@ -281,11 +283,11 @@ function stagingGenerationDirectory(root: string, id: string): string {
 }
 
 function makeManifest(records: CorpusRecords): GenerationManifest {
-  const spans = [...records.spans].sort((left, right) => left.id.localeCompare(right.id))
+  const spans = [...records.spans].sort((left, right) => compareCodeUnits(left.id, right.id))
   const configHash = hashJson(INDEX_CONFIG)
   const partitionScopes = validatePartitionScopes(spans)
   const documents = [...records.documents.values()]
-    .sort((left, right) => left.id.localeCompare(right.id))
+    .sort((left, right) => compareCodeUnits(left.id, right.id))
     .map((document): ManifestDocument => {
       const documentSpans = spans.filter(span => span.documentId === document.id)
       const processing = {
@@ -304,7 +306,7 @@ function makeManifest(records: CorpusRecords): GenerationManifest {
         workId: document.workId,
         rawHash: document.rawHash,
         mediaType: document.mediaType,
-        parserFingerprints: [...new Set(documentSpans.map(span => span.parserFingerprint))].sort(),
+        parserFingerprints: [...new Set(documentSpans.map(span => span.parserFingerprint))].sort(compareCodeUnits),
         spanIds: documentSpans.map(span => span.id),
         fingerprint: hashJson(processing),
       }
@@ -323,7 +325,7 @@ function makeManifest(records: CorpusRecords): GenerationManifest {
     documents,
     spans: manifestSpans,
     partitionScopes: [...partitionScopes.entries()]
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareCodeUnits(left, right))
       .map(([partitionId, scope]) => ({ partitionId, scope })),
   }
   const corpusHash = hashJson(corpus)
@@ -366,7 +368,7 @@ function visibilityScope(visibility: Visibility): VisibilityScope {
     projectId: visibility.projectId,
     runId: visibility.runId ?? null,
     split: visibility.split ?? null,
-    roles: [...visibility.roles].sort(),
+    roles: [...visibility.roles].sort(compareCodeUnits),
     policyHash: visibility.policyHash,
   }
 }
@@ -386,7 +388,7 @@ async function loadRegisteredCorpus(catalog: Catalog, inputSpans: SourceSpan[]):
     }
   })
 
-  const documentIds = [...new Set(spans.map(span => span.documentId))].sort()
+  const documentIds = [...new Set(spans.map(span => span.documentId))].sort(compareCodeUnits)
   const documentRows = await catalog.transact(documentIds.map(id => ({
     sql: 'SELECT raw_hash,body FROM documents WHERE id=?',
     params: [id],
@@ -416,7 +418,7 @@ async function loadRegisteredCorpus(catalog: Catalog, inputSpans: SourceSpan[]):
     }
   }
 
-  const workIds = [...new Set([...documents.values()].map(document => document.workId))].sort()
+  const workIds = [...new Set([...documents.values()].map(document => document.workId))].sort(compareCodeUnits)
   const workRows = await catalog.transact(workIds.map(id => ({
     sql: 'SELECT body FROM works WHERE id=?',
     params: [id],
@@ -619,7 +621,7 @@ async function writeCheckpoint(
     generationId: manifest.generationId,
     manifestHash: manifest.manifestHash,
     configHash: manifest.configHash,
-    completedDocumentIds: [...completed].sort(),
+    completedDocumentIds: [...completed].sort(compareCodeUnits),
   }
   try {
     await writeFile(temporary, `${canonicalJson(body)}\n`, { encoding: 'utf8', flag: 'wx' })
@@ -763,7 +765,7 @@ function canonical(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
         .filter(([, entry]) => entry !== undefined)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) => compareCodeUnits(left, right))
         .map(([key, entry]) => [key, canonical(entry)]),
     )
   }
