@@ -10,6 +10,9 @@ import { ExperimentPauseError } from './errors.js'
 import { validateWorkerResult } from './validation.js'
 import { resolveModelRoute } from '../policy/model-routing.js'
 import type { ProjectSettings } from '../settings/schema.js'
+import { captureResearchPlan, freezeResearchCycle, readResearchAttempt, registerResearchAttempt, assessResearchCycle, committedDecision, commitResearchDecision, researchPlanInput } from '../service/research-cycle.js'
+import { runtimeCapabilities } from '../service/runtime-capabilities.js'
+import { ResearchStore } from '../research/index.js'
 
 function plannerRuntimeConstraints(ctx: RunContext): string {
   const policy = ctx.policySnapshot
@@ -44,15 +47,16 @@ export async function runPlanner(
     input: {
       runDir: ctx.runDir,
       cycle: ctx.state.cycle,
-      idea,
+      idea: await researchPlanInput(ctx, idea),
       profile,
       rubric,
-      runtimeConstraints: plannerRuntimeConstraints(ctx),
+      runtimeConstraints: `${plannerRuntimeConstraints(ctx)}\nRecorded capabilities: ${await runtimeCapabilities(ctx)}`,
       treeSummary: treeSummary(ctx.tree),
       ...(feedback ? { plan: `Human review feedback on the previous plan/evidence:\n${feedback}` } : {}),
     },
     label: `plan cycle ${ctx.state.cycle}`,
   })
+  await captureResearchPlan(ctx, result.structured)
   return structuredText(result.structured, 'plan') ?? result.text
 }
 
@@ -75,14 +79,15 @@ export async function runMinimalPlan(
     input: {
       runDir: ctx.runDir,
       cycle: ctx.state.cycle,
-      idea,
+      idea: await researchPlanInput(ctx, idea),
       profile,
-      runtimeConstraints: plannerRuntimeConstraints(ctx),
+      runtimeConstraints: `${plannerRuntimeConstraints(ctx)}\nRecorded capabilities: ${await runtimeCapabilities(ctx)}`,
       treeSummary: treeSummary(ctx.tree),
     },
     label: `minimal plan cycle ${ctx.state.cycle}`,
   })
   const structured = (result.structured ?? {}) as { plan?: unknown; riskLevel?: unknown }
+  await captureResearchPlan(ctx, result.structured)
   const plan = typeof structured.plan === 'string' && structured.plan.trim() ? structured.plan : result.text
   const riskLevel = structured.riskLevel === 'high' || structured.riskLevel === 'medium' ? structured.riskLevel : 'low'
   return { plan, riskLevel }
@@ -266,6 +271,17 @@ export async function runWorker(
     minimalVerification: string
   },
 ): Promise<ActionResult> {
+  if (ctx.context.signal.aborted) throw new ExperimentPauseError('execution cancelled before worker dispatch')
+  await freezeResearchCycle(ctx, planText, experimentDesign)
+  const cached = await readResearchAttempt(ctx)
+  if (cached?.status === 'completed' && cached.result) {
+    const result = await validateWorkerResult(ctx.runDir, cached.result)
+    await assessResearchCycle(ctx, result)
+    return result
+  }
+  if (cached?.status === 'unknown') throw new ExperimentPauseError('worker execution outcome is unknown; verify backend receipt before redispatch')
+  await registerResearchAttempt(ctx, 'unknown')
+  try {
   const result = await runAgent(ctx, {
     role: 'research-worker',
     input: {
@@ -279,7 +295,22 @@ export async function runWorker(
     },
     label: `work cycle ${ctx.state.cycle}`,
   })
-  return validateWorkerResult(ctx.runDir, result.structured)
+  // Save the returned receipt before validation; failed execution is still an observation.
+  const action = await validateWorkerResult(ctx.runDir, result.structured)
+  await registerResearchAttempt(ctx, 'completed', action)
+  await runtimeCapabilities(ctx, 'passed')
+  await assessResearchCycle(ctx, action)
+  return action
+  } catch (error) {
+    await runtimeCapabilities(ctx, error instanceof ExperimentPauseError ? 'failed' : 'unknown')
+    if (error instanceof ExperimentPauseError) {
+      await registerResearchAttempt(ctx, 'failed')
+      await assessResearchCycle(ctx, { status: 'failed', summary: error.message, artifacts: [] }, error.message)
+    } else {
+      await assessResearchCycle(ctx, { status: 'failed', summary: String(error), artifacts: [] }, String(error), true)
+    }
+    throw error
+  }
 }
 
 export async function runEvidenceAgent(
@@ -303,6 +334,9 @@ export async function runSupervisor(
   ctx: RunContext,
   { planText, evidence }: { planText: string; evidence?: string },
 ): Promise<ResearchDecision> {
+  const cached = await committedDecision(ctx)
+  if (cached) return cached
+  const expectedSnapshot = await new ResearchStore(ctx.runDir).loadCurrent()
   const rubric = (await readOptionalText(join(ctx.runDir, 'RUBRIC.md'))) ?? ''
   const result = await runAgent(ctx, {
     role: 'supervisor',
@@ -319,5 +353,5 @@ export async function runSupervisor(
   if (result.structured === undefined) {
     throw new AutoResearchError('supervisor did not return structured decision', 'AGENT_FAILED')
   }
-  return parseDecision(result.structured)
+  return commitResearchDecision(ctx, result.structured, parseDecision(result.structured), expectedSnapshot ? { id: expectedSnapshot.id, hash: expectedSnapshot.content_hash } : undefined)
 }

@@ -16,6 +16,8 @@ import { openRequestLedger } from '../policy/request-ledger.js'
 import type { ProjectSettings } from '../settings/schema.js'
 import { isExperimentPauseError } from './errors.js'
 import { validateWorkerResult } from './validation.js'
+import { assertFailureImportTarget, importResearchFailure, type FailureReportImport } from '../service/failure-import.js'
+import { bindResearchOutputs } from '../service/research-outputs.js'
 import {
   runEvidenceAgent,
   runExperimentDesign,
@@ -35,6 +37,7 @@ export interface ExperimentDependencies {
 }
 
 export interface ExperimentRunRequest {
+  failureReport?: FailureReportImport
   runDir: string
   projectDir?: string
   task: string
@@ -213,7 +216,7 @@ export const DEFAULT_EXPERIMENT_MAX_ROUNDS = 1
  * collects evidence, reflects, and writes an experiment report without
  * brainstorming, ideation, or paper writing.
  */
-export async function runExperimentTask(
+async function executeExperimentTask(
   deps: ExperimentDependencies,
   request: ExperimentRunRequest,
 ): Promise<ExperimentRunResult> {
@@ -221,6 +224,7 @@ export async function runExperimentTask(
   const projectDir = request.projectDir ?? runDir
   const projectSettings = await loadProjectSettings(projectDir)
   const maxRounds = request.maxRounds ?? projectSettings.experiment.maxRounds ?? DEFAULT_EXPERIMENT_MAX_ROUNDS
+  if (!Number.isSafeInteger(maxRounds) || maxRounds < 1) throw new TypeError('maxRounds must be a positive finite integer')
   const profile = request.profile ?? (projectSettings.experiment.profile || '# PROFILE\n\n- Allowed: local experiments, public data, public literature.\n')
   const reportPath = join(runDir, 'EXPERIMENT_REPORT.md')
 
@@ -233,6 +237,7 @@ export async function runExperimentTask(
   await freezeRubric(runDir)
 
   const state: RunState = (await loadState(runDir)) ?? await createInitialState(runDir)
+  await importResearchFailure(runDir, state.runId, request.failureReport)
   if (state.status === 'COMPLETED' || state.status === 'FAILED') {
     return {
       runDir,
@@ -378,6 +383,16 @@ export async function runExperimentTask(
   }
 
   return completeExperiment(ctx, task, profile, reportPath, cycles, { finished, lastError: lastReason, updateLastError: true, logCompletion: true, includeReason: true })
+}
+
+export async function runExperimentTask(deps: ExperimentDependencies, request: ExperimentRunRequest): Promise<ExperimentRunResult> {
+  // Reject source imports before finalization can mutate the source run.
+  await assertFailureImportTarget(request.runDir, request.failureReport)
+  try { return await executeExperimentTask(deps, request) }
+  finally {
+    const state = await loadState(request.runDir)
+    if (state) await bindResearchOutputs(request.runDir, state.runId)
+  }
 }
 
 /**

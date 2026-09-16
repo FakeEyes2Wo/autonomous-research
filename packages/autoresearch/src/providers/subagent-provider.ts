@@ -6,6 +6,7 @@ import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, Role
 import { resolveModelRoute, type ResolvedModelRoute } from '../policy/model-routing.js'
 import { resolveBudget } from '../policy/budget.js'
 import { clipContext } from '../policy/context.js'
+import { assembleResearchContext, type ResearchContextPackage } from '../research-context/index.js'
 import { isBudgetExhaustedError } from '../policy/request-ledger.js'
 import { registerOwnedSession, withRequestBinding, type OwnedSessionBinding } from './request-accounting.js'
 import type { RequestLedger } from '../policy/request-ledger.js'
@@ -50,6 +51,7 @@ interface PersistedRegistry {
 
 const registryLocks = new Map<string, Promise<void>>()
 const taskLocks = new Map<string, Promise<void>>()
+const preparedResearchContexts = new WeakMap<RoleInput, ResearchContextPackage>()
 
 function withFeedback(prompt: string, feedback: string | undefined): string {
   return feedback ? `${prompt}\n\n## JSON Fix Required\n\n${feedback}` : prompt
@@ -109,6 +111,18 @@ const CLIPPABLE_FIELDS: Readonly<Record<string, 'treeSummary' | 'evidence' | 'pa
   paperFigures: 'paper',
 }
 
+// These are accepted inputs for the current role call, not historical projections.
+// buildBoundPrompt keeps each group complete or rejects the call before dispatch.
+const CURRENT_WORKFLOW_FIELDS = new Set<keyof RoleInput>([
+  'experimentDesign',
+  'minimalVerification',
+  'reflexion',
+  'paperPlan',
+  'paperMatrix',
+  'paperContract',
+  'paperFigures',
+])
+
 function contextBudget(route: ReturnType<typeof routeFor>, context: RoleExecutionContext) {
   const budget = context.policySnapshot?.budget
   return {
@@ -145,10 +159,40 @@ async function buildBoundPrompt(role: RoleName, input: RoleInput, route: ReturnT
     entries.forEach((entry, index) => { (clippedInput as unknown as Record<string, unknown>)[String(entry.field)] = index === 0 ? content : undefined })
   }
   const prompt = await buildPrompt(role, clippedInput)
-  const withFeedbackPrompt = withFeedback(prompt, feedback)
+  const researchContext = preparedResearchContexts.get(input)
+  const promptWithContext = researchContext ? `${prompt}\n\n${researchContext.rendered}` : prompt
+  const withFeedbackPrompt = withFeedback(promptWithContext, feedback)
   const maxInputTokens = route?.maxInputTokens ?? context.policySnapshot?.budget.maxInputTokens ?? 24_000
   if (estimatePromptTokens(withFeedbackPrompt) > maxInputTokens) throw contextInsufficientError(['prompt'])
   return withFeedbackPrompt
+}
+
+async function prepareResearchContext(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleInput> {
+  const request = input.researchContext
+  if (!request) return input
+  const projectId = context.projectDir ?? input.projectDir ?? input.runDir
+  if (request.scope.projectId !== projectId || (request.scope.runId !== undefined && context.runId !== undefined && request.scope.runId !== context.runId)) {
+    const error = new Error('research context scope does not match the active provider scope')
+    ;(error as Error & { code?: string }).code = 'CONTEXT_SCOPE_MISMATCH'
+    throw error
+  }
+  const stripped = { ...input }
+  for (const field of Object.keys(CLIPPABLE_FIELDS) as Array<keyof RoleInput>) {
+    if (!CURRENT_WORKFLOW_FIELDS.has(field)) (stripped as unknown as Record<string, unknown>)[field] = undefined
+  }
+  const route = routeFor(stripped, role, context)
+  const basePrompt = await buildPrompt(role, stripped)
+  const maxInputTokens = route?.maxInputTokens ?? context.policySnapshot?.budget.maxInputTokens ?? 24_000
+  const remaining = Math.max(0, maxInputTokens - estimatePromptTokens(basePrompt))
+  const assembled = await assembleResearchContext({
+    runDir: stripped.runDir,
+    role,
+    taskId: stripped.taskId ?? role,
+    request,
+    budget: { maxInputTokens: remaining },
+  })
+  preparedResearchContexts.set(stripped, assembled)
+  return stripped
 }
 
 function estimatePromptTokens(prompt: string): number {
@@ -161,7 +205,8 @@ function taskFingerprint(role: RoleName, input: RoleInput, context: RoleExecutio
     if (value !== undefined) result[String(field)] = value
     return result
   }, {})
-  return createHash('sha256').update(JSON.stringify({ role, taskId: input.taskId ?? role, cycle: input.cycle, fields, policyVersion: context.policySnapshot?.version, routing: context.policySnapshot?.modelRouting })).digest('hex').slice(0, 24)
+  const researchContextHash = preparedResearchContexts.get(input)?.manifest.renderedHash
+  return createHash('sha256').update(JSON.stringify({ role, taskId: input.taskId ?? role, cycle: input.cycle, fields, researchContextHash, policyVersion: context.policySnapshot?.version, routing: context.policySnapshot?.modelRouting })).digest('hex').slice(0, 24)
 }
 
 function sessionBinding(role: RoleName, taskId: string, childId: string, context: RoleExecutionContext, route: ReturnType<typeof routeFor>, budgetFailure?: { value?: unknown }, kind: 'role' | 'repair' = 'role'): OwnedSessionBinding | undefined {
@@ -565,6 +610,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
   }
 
   async run(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
+    input = await prepareResearchContext(role, input, context)
     const ledger: RequestLedger | undefined = context.requestLedger
     const route = routeFor(input, role, context)
     const taskId = input.taskId ?? role

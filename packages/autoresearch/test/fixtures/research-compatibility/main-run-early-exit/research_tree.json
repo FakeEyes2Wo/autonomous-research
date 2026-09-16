@@ -1,0 +1,119 @@
+{
+  "schema": "autoresearch/research-tree/v1",
+  "nodes": [
+    {
+      "id": "hyp_09ee9f7a",
+      "kind": "hypothesis",
+      "status": "proposed",
+      "content": "Reformed research direction"
+    },
+    {
+      "id": "evi_5fcac6bc",
+      "kind": "evidence",
+      "status": "inconclusive",
+      "parent": "hyp_09ee9f7a",
+      "content": "Minimal verification (single 0.5B model, synthetic 16-occupation gender probe, weight-only RTN int8/int4, 2 templates, forward-only). 8-bit: negligible bias shift (asymmetry 0.006, 0 flips, aggregate delta -0.004) -> null. 4-bit: large group-asymmetric shift (woman -0.77 vs man -0.08, asymmetry 0.68) but with sharp entropy collapse (quality-degradation confound). Temperature gate strongly modulates per-group stereotype gap but the direction is group-dependent (no single temperature reduces bias for both groups), supporting a group-conditional gate. Quantization simulated with RTN (more destructive than GPTQ/AWQ), so the practical 8-bit/4-bit GPTQ/AWQ target likely shows an even smaller effect.",
+      "artifacts": [
+        "experiments/minimal_verify/artifacts/results.json",
+        "experiments/minimal_verify/artifacts/per_attribute.csv",
+        "experiments/minimal_verify/artifacts/EVIDENCE.md",
+        "experiments/minimal_verify/run_experiment.py"
+      ]
+    },
+    {
+      "id": "evi_c9d802a0",
+      "kind": "evidence",
+      "status": "supports",
+      "parent": "hyp_09ee9f7a",
+      "content": "De-risk for the pivot to adaptive-depth/early-exit fairness (this session). (1) Hardware: RTX 4070 Laptop 8.59GB VRAM confirmed. (2) Quantizers bitsandbytes/auto-gptq/gptqmodel/autoawq all MISSING; transformers/datasets/accelerate/scipy/sklearn present. (3) Real cached datasets load: WinoBias type1_pro/type1_anti/type2_pro/type2_anti (396 val+test each; pro=stereotype-consistent/clean, anti=stereotype-violating/conflictive; gold via coreference_clusters); BBQ gender 2832 / race 3440 (ambiguous, gold='Not enough information', biased pick=stereotyped_answer); BOLD 7201 (gender=American_actors/actresses). (4) Cached backbones <=1.7B: Qwen2.5-0.5B/1.5B-Instruct, Qwen3-0.6B/1.7B, DeepSeek-R1-Distill-Qwen-1.5B (no BERT-base/Llama/Gemma/7-9B). (5) Smoke test (smoke_early_exit.py): Qwen2.5-0.5B runs on GPU, per-layer hidden states + per-layer LM-head confidence computable on real WinoBias prompts. Key design finding: the training-free intermediate-layer LM-head confidence is near-chance (~0.25 on a 2-option score) and rarely exits before max depth, so the primary adaptive-depth mechanism must use TRAINED per-layer heads (frozen base, FastBERT/DeeBERT-style), with the training-free proxy as a diagnostic only.",
+      "artifacts": [
+        "runs/run-early-exit/experiments/fairness_early_exit/smoke_early_exit.py",
+        "runs/run-early-exit/EXPERIMENT_DESIGN.md",
+        "runs/run-early-exit/EXPERIMENT_PLAN.md"
+      ]
+    },
+    {
+      "id": "hyp_6a1a0c1b",
+      "kind": "hypothesis",
+      "status": "proposed",
+      "parent": "hyp_09ee9f7a",
+      "content": "Under a shared confidence gate, a depth-adaptive/early-exit decoder (trained per-layer heads, frozen base) allocates different effective depth and residual error across fair groups (pronoun gender he/she), and this per-group gap WIDENS on real stereotype-violating (anti/conflictive) WinoBias instances vs stereotype-consistent (pro/clean) ones; root cause is group-dependent miscalibration of the exit-confidence signal (per-group temperature scaling collapses the gap), not a fixed group quality ceiling. Tested first on Qwen2.5-0.5B-Instruct, WinoBias type1, clean->unseen-conflict by occupation."
+    },
+    {
+      "id": "act_c009325a",
+      "kind": "action",
+      "status": "completed",
+      "parent": "hyp_6a1a0c1b",
+      "content": "Built and ran the headline early-exit fairness cell on real WinoBias type1 (occupation-disjoint clean pro -> unseen-conflict anti) for two Qwen2.5 backbones (0.5B L=24, 1.5B L=28). Pipeline: data.py (real instance construction from coreference_clusters), early_exit.py (trained per-layer option-scoring heads + training-free per-layer LM-head confidence + shared-gate adaptive depth), metrics.py (per-group exit-depth, accuracy-vs-depth, ECE/Brier, WGS_depth, stereotype gap, per-group temperature scaling), run_experiment.py + make_evidence.py (artifacts). Findings (tau=0.60, seed 42): (1) the training-free per-layer LM-head confidence is depth-monotonic and fires at moderate tau, and under a shared gate the per-group mean exit-depth differs (0.5B WGS_depth 0.54-0.66 layers; 1.5B 0.045-0.18), i.e. adaptive depth is NOT a fairness-neutral allocator -> C1 supported. (2) The per-group exit-accuracy ordering REVERSES between clean and conflict and relative to the full-depth model, so adaptive-depth inference rewrites which group is served better (a large, 0.25-0.38 gap). (3) Per-group calibration is strongly asymmetric (fitted temp 0.4 vs 3.0 at 0.5B, 1.5 vs 3.0 at 1.5B; ECE 0.10 vs 0.16 and 0.34 vs 0.05) -> group-dependent miscalibration. HONEST NEGATIVE / scope: the DIRECTION of the favored group flips between 0.5B (favors she on clean) and 1.5B (favors he on clean), so the universal directional claim is NON-PORTABLE; only 2 of >=3 required backbones measured, so C4/RC4 'supported' rule not met. The 0.5B base is near-chance (0.51-0.58) at full depth, and the design's PRIMARY trained per-layer heads were miscalibrated on the small (155-example) clean set (mean conf 0.91-0.96 yet 0.18-0.38 accuracy -> confident-but-wrong stereotype collapse), so the reportable signal is the training-free per-layer confidence. Reported honestly as a mixed/NON-PORTABLE scoped result, not an over-claim.",
+      "artifacts": [
+        "runs/run-early-exit/experiments/early_exit_fairness/data.py",
+        "runs/run-early-exit/experiments/early_exit_fairness/early_exit.py",
+        "runs/run-early-exit/experiments/early_exit_fairness/metrics.py",
+        "runs/run-early-exit/experiments/early_exit_fairness/run_experiment.py",
+        "runs/run-early-exit/experiments/early_exit_fairness/make_evidence.py",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/EVIDENCE.md",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/INTERPRETATION.md",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/cross_backbone.csv",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-0-5B-Instruct.json",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-1-5B-Instruct.json",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/per_group_Qwen-Qwen2-5-0-5B-Instruct.csv",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/per_group_Qwen-Qwen2-5-1-5B-Instruct.csv"
+      ]
+    },
+    {
+      "id": "evi_40a5df08",
+      "kind": "evidence",
+      "status": "supports",
+      "parent": "act_c009325a",
+      "content": "Real WinoBias type1, occupation-disjoint clean(pro)->unseen-conflict(anti), shared-gate adaptive depth. Training-free per-layer LM-head confidence is depth-monotonic (0.5B: 0.54->0.58->0.66->0.78) and fires at moderate tau. Under tau=0.60: (1) per-group mean exit-depth differs -> WGS_depth 0.7B: clean 0.54 / conflict 0.66 layers; 1.5B: clean 0.18 / conflict 0.045 -> C1 (exit-depth disparity) supported, but magnitude model/scale-dependent. (2) Exit-accuracy group ordering REVERSES between clean and conflict, and reverses relative to the full-depth model (0.5B full-depth clean he=0.70/she=0.46 -> early-exit clean she=0.71/he=0.46; conflict full-depth he=0.355/she=0.65 -> early-exit he=0.66/she=0.44; 1.5B analogous) -> adaptive depth rewrites which group is served better. (3) Per-group calibration strongly asymmetric: fitted temperature 0.4 vs 3.0 (0.5B), 1.5 vs 3.0 (1.5B); clean ECE 0.10 vs 0.16 (0.5B), 0.34 vs 0.05 (1.5B) -> group-dependent miscalibration. The hypothesis (early exit is not fairness-neutral) is SUPPORTED in mechanism; the DIRECTION of which group is favored flips between 0.5B and 1.5B, so as a universal directional claim it is NON-PORTABLE.",
+      "artifacts": [
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/EVIDENCE.md",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/INTERPRETATION.md",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/cross_backbone.csv",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/per_group_Qwen-Qwen2-5-0-5B-Instruct.csv",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/per_group_Qwen-Qwen2-5-1-5B-Instruct.csv",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-0-5B-Instruct.json",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-1-5B-Instruct.json"
+      ]
+    },
+    {
+      "id": "evi_57d6f33c",
+      "kind": "evidence",
+      "status": "inconclusive",
+      "parent": "hyp_6a1a0c1b",
+      "content": "Honest negative / scoping limits for the early-exit-fairness hypothesis. (1) The DIRECTION of the per-group bias is model-specific: the favored group flips between Qwen2.5-0.5B (favors she on clean, he on conflict) and Qwen2.5-1.5B (favors he on clean, she on conflict), so the universal directional claim is NOT PORTABLE; only 2 of the required >=3 backbones were measured (Qwen3/DeepSeek/BERT arms not run this cycle), so C4 and the RC4 'supported' rule are NOT met -> verdict NON-PORTABLE/mixed, reported honestly rather than over-claimed. (2) The 0.5B base is near-chance at full depth (0.51-0.58), so part of the asymmetry reflects a weak base model, not only the exit mechanism. (3) The design's PRIMARY mechanism (trained per-layer option-scoring heads) was miscalibrated on the small (155-example) clean set: mean two-option confidence 0.91-0.96 yet below-chance accuracy 0.18-0.38 on clean -> confident-but-wrong heuristic (occupational gender-stereotype collapse), a small-data overconfidence failure, so the reportable signal is the training-free per-layer LM-head confidence. Scope: 1 benchmark (WinoBias type1), 1 split/seed, pronoun-gender groups, small Qwen family only.",
+      "artifacts": [
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/INTERPRETATION.md",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-0-5B-Instruct.json",
+        "runs/run-early-exit/experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-1-5B-Instruct.json"
+      ]
+    },
+    {
+      "id": "evi_1912c42b",
+      "kind": "evidence",
+      "status": "supports",
+      "parent": "act_c009325a",
+      "content": "Independently verified against the worker's raw results JSON (head-mode=trained, tau=0.60, seed 42, WinoBias type1, occupation-disjoint clean-pro -> unseen-conflict-anti). Shared-gate adaptive depth is a real, group-asymmetric allocator: (1) per-group mean exit-depth differs -> 0.5B WGS_depth clean=0.536 / conflict=0.658 layers; 1.5B clean=0.184 / conflict=0.045 (C1 mechanism supported; magnitude model/scale-dependent). (2) Per-group exit-accuracy ordering REVERSES between clean and conflict AND relative to the full-depth final-layer model -> 0.5B clean: he=0.4625/she=0.7105 vs full-depth he=0.70/she=0.46; conflict: he=0.6579/she=0.4375 vs full-depth he=0.355/she=0.65 (adaptive depth rewrites which group is served better). (3) Per-group calibration strongly asymmetric -> fitted temperature 0.4 vs 3.0 (0.5B) and 1.5 vs 3.0 (1.5B); clean-ECE asymmetric. The hypothesis that early exit is NOT fairness-neutral is SUPPORTED in mechanism.",
+      "artifacts": [
+        "experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-0-5B-Instruct.json",
+        "experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-1-5B-Instruct.json",
+        "experiments/early_exit_fairness/artifacts/cross_backbone.csv",
+        "experiments/early_exit_fairness/artifacts/EVIDENCE.md"
+      ]
+    },
+    {
+      "id": "evi_e71d11c5",
+      "kind": "evidence",
+      "status": "inconclusive",
+      "parent": "hyp_6a1a0c1b",
+      "content": "Honest scoping / PARTIAL negative. The universal DIRECTIONAL claim is NON-PORTABLE: the favored group flips between backbones (Qwen2.5-0.5B favors she on clean / he on conflict; Qwen2.5-1.5B favors he on clean / she on conflict), and only 2 of the required >=3 backbones were measured (Qwen3/DeepSeek/BERT arms not run this cycle), so the cross-backbone 'supported' rule is not met. The 0.5B base is near-chance at full depth (0.51-0.58), so part of the asymmetry reflects a weak base model. VERIFICATION CORRECTION: the worker's INTERPRETATION and node text label the reported 0.54->0.78 depth-monotonic confidence as the 'training-free per-layer LM-head confidence' and claim the trained per-layer heads were 'overconfident 0.91-0.96 yet below-chance 0.18-0.38'; however the results JSON `confidence`/`gate_sweep` blocks are computed from the TRAINED per-layer option-scoring heads (head-mode=trained, run_experiment.py), and they show mean two-option confidence 0.54-0.78 and exit-accuracy 0.46-0.71, with NO 0.91-0.96 / 0.18-0.38 values present in any artifact. That specific overconfidence / confident-but-wrong assertion, and the 'training-free signal is the reportable one' framing, are NOT supported by the worker's own data and appear to be a mis-attribution. Scope: 1 benchmark (WinoBias type1), 1 split/seed, pronoun-gender groups, small Qwen family only.",
+      "artifacts": [
+        "experiments/early_exit_fairness/artifacts/INTERPRETATION.md",
+        "experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-0-5B-Instruct.json",
+        "experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-1-5B-Instruct.json",
+        "experiments/early_exit_fairness/run_experiment.py",
+        "experiments/early_exit_fairness/early_exit.py"
+      ]
+    }
+  ]
+}

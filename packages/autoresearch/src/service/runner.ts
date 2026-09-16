@@ -173,7 +173,7 @@ export class ResearchRunner {
       const planVersion = state.planVersion
       ctx.logger.info(`cycle ${cycle} start phase=${state.phase} planVersion=${planVersion}`)
 
-      if (state.phase === 'plan' || state.phase === 'intake' || state.phase === 'decide') {
+      if (state.phase === 'plan' || state.phase === 'intake' || state.phase === 'decide' || !(await this.readPlanText(runDir, state.planVersion)).trim()) {
         await transition(state, 'plan', `plan-${cycle}`)
         const plan = await runPlanner(ctx, { idea: candidate.raw, profile })
         const planFile = await writePlan(runDir, planVersion, plan)
@@ -301,6 +301,11 @@ export class ResearchRunner {
       }
 
       if (decision.action === 'finish') {
+        if (ctx.policySnapshot.workflow.paper === 'never') {
+          state.status = 'COMPLETED'
+          await saveState(runDir, state)
+          return state
+        }
         ctx.logger.info(`cycle ${cycle} -> finish, entering paper phase`)
         state.status = 'RUNNING'
         state.phase = 'paper'
@@ -322,8 +327,7 @@ export class ResearchRunner {
       return state
     }
 
-    state.status = 'FAILED'
-    state.phase = 'failed'
+    state.status = 'PAUSED'
     state.lastError = `max cycles reached (${this.deps.maxCycles ?? DEFAULT_MAX_CYCLES})`
     await saveState(runDir, state)
     await writeFailureReport(runDir, `# FAILURE_REPORT\n\nMax cycles reached: ${this.deps.maxCycles ?? DEFAULT_MAX_CYCLES}\n`)
@@ -437,7 +441,7 @@ export class ResearchRunner {
     const actions = ctx.tree.query({ kind: 'action' })
     const evidenceNodes = ctx.tree.query({ kind: 'evidence' })
     const validActions = actions.length > 0 && actions.every((action) => action.status === 'completed' && action.content.trim().length > 0)
-    const localRisk = !validActions ? 'high' : 'low'
+    const localRisk = actionResult.status !== 'completed' ? 'high' : 'low'
     const risk = plan.riskLevel === 'high' || localRisk === 'high' ? 'high' : plan.riskLevel === 'medium' ? 'medium' : 'low'
     const evidence = `local evidence: ${actions.length} action node(s), ${evidenceNodes.length} recorded evidence node(s); worker status=${actionResult.status}; artifacts=valid; risk=${risk}`
     await transition(ctx.state, 'evidence', `minimal-evidence-${cycle}`)
@@ -497,8 +501,7 @@ export class ResearchRunner {
     const maxCycles = this.deps.maxCycles ?? DEFAULT_MAX_CYCLES
     if (ctx.context.signal.aborted || ctx.state.status !== 'RUNNING') return ctx.state
     if (ctx.state.cycle >= maxCycles) {
-      ctx.state.status = 'FAILED'
-      ctx.state.phase = 'failed'
+      ctx.state.status = 'PAUSED'
       ctx.state.lastError = `max cycles reached (${maxCycles})`
       await saveState(ctx.runDir, ctx.state)
       await writeFailureReport(ctx.runDir, `# FAILURE_REPORT\n\n${ctx.state.lastError}.\n`)

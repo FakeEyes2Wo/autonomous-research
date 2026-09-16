@@ -22,6 +22,7 @@ import { validateProjectSettingsCandidate } from '../settings/migration.js'
 import type { AutoResearchService } from '../service/autoresearch-service.js'
 import {
   evidenceVerdictSchema,
+  failureReportSchema,
   humanReviewModeSchema,
   jsonOutput,
   renderJson,
@@ -30,7 +31,7 @@ import {
   stringArraySchema,
   stringSchema,
 } from './schemas.js'
-import { toResearchRunOptions } from './options.js'
+import { toResearchRunOptions, toFailureReportImport } from './options.js'
 
 export interface ToolExecutionContextLike {
   signal: AbortSignal
@@ -225,6 +226,7 @@ export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefini
         task: stringSchema('The user experiment task requirement'),
         profile: stringSchema('Optional PROFILE.md content'),
         maxRounds: { type: 'number', description: 'Optional maximum experiment rounds' },
+        failureReport: failureReportSchema,
       },
       required: ['runDir', 'task'],
       additionalProperties: false,
@@ -239,6 +241,7 @@ export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefini
         task: String(args.task),
         profile: typeof args.profile === 'string' ? args.profile : undefined,
         maxRounds: typeof args.maxRounds === 'number' ? args.maxRounds : undefined,
+        failureReport: toFailureReportImport(args.failureReport),
         agentContext: {
           parent: parent as never,
           signal: exec.signal,
@@ -432,6 +435,7 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
         candidatePath: stringSchema('Optional external idea file; copied into input/idea.md'),
         profilePath: stringSchema('Optional PROFILE.md path relative to runDir'),
         maxCycles: { type: 'number', description: 'Optional max research cycles' },
+        failureReport: failureReportSchema,
         humanReview: { ...humanReviewModeSchema, description: 'auto follows /auto command, on forces human gates, off skips them' },
         brainstorm: { ...humanReviewModeSchema, description: 'auto runs brainstorm when no candidate.md exists' },
         paper: {

@@ -39,7 +39,7 @@ test('minimal loop runs revise then finish and produces paper', async () => {
   }
 })
 
-test('minimal loop fails when supervisor decides fail', async () => {
+test('legacy loop pauses when supervisor fails without verified scientific evidence', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-loop-fail-'))
   try {
     await mkdir(join(dir, 'input'), { recursive: true })
@@ -50,9 +50,9 @@ test('minimal loop fails when supervisor decides fail', async () => {
     const service = new AutoResearchService(provider)
     const state = await service.run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
 
-    assert.equal(state.status, 'FAILED')
+    assert.equal(state.status, 'PAUSED')
     const report = await readFile(join(dir, 'FAILURE_REPORT.md'), 'utf8')
-    assert.match(report, /FAILURE_REPORT/)
+    assert.match(report, /PAUSED/)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

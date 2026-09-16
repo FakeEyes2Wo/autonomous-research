@@ -12,6 +12,8 @@ export const generalRoleSpecs = {
     outputSchema: objectSchema({
       plan: { type: 'string', required: true },
       riskLevel: { type: 'string', enum: ['low', 'medium', 'high'] },
+      hypothesis: { type: 'object', additionalProperties: true },
+      protocol: { type: 'object', additionalProperties: true },
     }),
   },
   'minimal-verifier': {
@@ -40,6 +42,7 @@ export const generalRoleSpecs = {
     outputSchema: objectSchema({
       action: { type: 'string', enum: ['continue', 'revise', 'finish', 'fail'], required: true },
       reason: { type: 'string', required: true },
+      candidates: { type: 'array', items: { type: 'object', additionalProperties: true } },
     }),
   },
 } satisfies Record<string, RoleSpec>

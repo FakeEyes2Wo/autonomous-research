@@ -17,8 +17,12 @@ import { loadProjectSecrets, loadProjectSettings } from '../settings/project-set
 import { isRecord } from '../settings/schema.js'
 import { createPolicySnapshot } from '../policy/model-routing.js'
 import { openRequestLedger } from '../policy/request-ledger.js'
+import { isExperimentPauseError } from '../experiment/errors.js'
+import { assertFailureImportTarget, importResearchFailure, type FailureReportImport } from './failure-import.js'
+import { bindResearchOutputs } from './research-outputs.js'
 
 export interface ResearchRunOptions {
+  failureReport?: FailureReportImport
   runDir: string
   projectDir?: string
   candidatePath?: string
@@ -115,6 +119,8 @@ export class AutoResearchService {
 
   async run(options: ResearchRunOptions, context: ResearchRunContext): Promise<RunState> {
     const runDir = options.runDir
+    await assertFailureImportTarget(runDir, options.failureReport)
+    if (options.maxCycles !== undefined && (!Number.isSafeInteger(options.maxCycles) || options.maxCycles < 1)) throw new TypeError('maxCycles must be a positive finite integer')
     const logger = createLogger(runDir)
     logger.info(`AutoResearchService.run start runDir=${runDir}`)
     await ensureDir(runDir)
@@ -123,6 +129,7 @@ export class AutoResearchService {
     }
     const existing = await loadState(runDir)
     const state = existing ?? await createInitialState(runDir)
+    await importResearchFailure(runDir, state.runId, options.failureReport)
     if (state.status === 'COMPLETED' || state.status === 'FAILED') {
       logger.info(`run already terminal status=${state.status}`)
       return state
@@ -181,6 +188,7 @@ export class AutoResearchService {
       requestLedger,
       }
       const result = await runner.run(runDir, state, tree, runContext)
+      await bindResearchOutputs(runDir, state.runId)
       await writeLastRun(runDir)
       logger.info(`AutoResearchService.run done status=${result.status}`)
       return result
@@ -191,6 +199,8 @@ export class AutoResearchService {
       state.lastError = String(error)
       await saveState(runDir, state)
       await writeFailureReport(runDir, `# PAUSED\n\n${String(error)}\n`)
+      await bindResearchOutputs(runDir, state.runId)
+      if (isExperimentPauseError(error)) return state
       throw error
     }
   }

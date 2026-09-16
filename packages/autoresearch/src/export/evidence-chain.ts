@@ -2,6 +2,8 @@ import { EVIDENCE_CHAIN_FILE } from '../core/utils.js'
 import type { ResearchTree } from '../core/research-tree.js'
 import type { ResearchNode } from '../core/types.js'
 import { atomicWriteJson, nowIso, readJson, safeResolve } from '../core/utils.js'
+import { ResearchStore } from '../research/index.js'
+import type { Claim, Evidence } from '../research/contracts.js'
 
 export interface EvidenceChain {
   schema: 'autoresearch/evidence-chain/v1'
@@ -10,6 +12,11 @@ export interface EvidenceChain {
   hypotheses: ResearchNode[]
   actions: ResearchNode[]
   evidence: ResearchNode[]
+  snapshot_id?: string
+  snapshot_hash?: string
+  protocol_hash?: string
+  claims?: Claim[]
+  scientific_evidence?: Evidence[]
 }
 
 export interface EvidenceChainResult {
@@ -25,13 +32,16 @@ export interface ExportEvidenceChainInput {
 
 async function writeEvidenceChain(runDir: string, runId: string, tree: ResearchTree): Promise<EvidenceChainResult> {
   const file = safeResolve(runDir, EVIDENCE_CHAIN_FILE)
+  const snapshot = await new ResearchStore(runDir).loadCurrent()
   const chain: EvidenceChain = {
     schema: 'autoresearch/evidence-chain/v1',
     run_id: runId,
     generated_at: nowIso(),
     hypotheses: tree.query({ kind: 'hypothesis' }),
     actions: tree.query({ kind: 'action' }),
-    evidence: tree.query({ kind: 'evidence' }),
+    evidence: tree.query({ kind: 'evidence' }).map(node => snapshot && !node.id.startsWith('research:') ? { ...node, status: 'unknown' } : node),
+    ...(snapshot ? { snapshot_id: snapshot.id, snapshot_hash: snapshot.content_hash, protocol_hash: snapshot.protocol.content_hash,
+      claims: snapshot.claims, scientific_evidence: snapshot.evidence } : {}),
   }
   await atomicWriteJson(file, chain)
   return { chain, file }

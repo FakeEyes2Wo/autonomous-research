@@ -6,6 +6,12 @@ export const runDirSchema = {
   description: 'Research run directory',
 }
 
+export const failureReportSchema = {
+  type: 'object', description: 'Explicitly import a historical failure report into this new run; source history is preserved and text remains unverified.',
+  properties: { sourceRunId: { type: 'string' }, sourcePath: { type: 'string', description: 'Absolute path to the source report' } },
+  required: ['sourceRunId', 'sourcePath'], additionalProperties: false,
+}
+
 export function stringSchema(description: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return { type: 'string', description, ...extra }
 }

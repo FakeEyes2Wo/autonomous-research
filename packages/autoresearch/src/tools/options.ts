@@ -1,6 +1,13 @@
 import type { HumanReviewMode } from '../session/auto-mode.js'
 import type { PaperOptions } from '../paper/pipeline.js'
 import type { ResearchRunOptions } from '../service/autoresearch-service.js'
+import type { FailureReportImport } from '../service/failure-import.js'
+
+export function toFailureReportImport(value: unknown): FailureReportImport | undefined {
+  if (value === undefined) return undefined
+  if (!value || typeof value !== 'object' || typeof (value as FailureReportImport).sourceRunId !== 'string' || typeof (value as FailureReportImport).sourcePath !== 'string') throw new TypeError('failureReport requires sourceRunId and sourcePath')
+  return { sourceRunId: (value as FailureReportImport).sourceRunId, sourcePath: (value as FailureReportImport).sourcePath }
+}
 
 /**
  * Tool-facing paper options. The tool schema exposes a few extra UI-only
@@ -85,5 +92,6 @@ export function toResearchRunOptions(args: Record<string, unknown>): ResearchRun
     humanReview: asHumanReviewMode(args.humanReview),
     brainstorm: asHumanReviewMode(args.brainstorm),
     paper: toPaperOptions(args.paper),
+    failureReport: toFailureReportImport(args.failureReport),
   }
 }

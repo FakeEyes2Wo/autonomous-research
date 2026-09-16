@@ -4,6 +4,8 @@ import { transition } from '../core/state.js'
 import type { RunPhase } from '../core/types.js'
 import { safeResolve, writeText } from '../core/utils.js'
 import type { RunContext } from './context.js'
+import { researchContextForRole } from './research-context.js'
+import { ExperimentPauseError } from '../experiment/errors.js'
 
 export interface AgentRequest {
   role: RoleName
@@ -26,11 +28,13 @@ function serializeTransition<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export async function runAgent(ctx: RunContext, request: AgentRequest): Promise<RoleOutput> {
+  if (ctx.context.signal.aborted) throw new ExperimentPauseError('research cancelled; no further role dispatch is permitted')
   ctx.logger.info(`[agent:${request.role}] start ${request.label}`)
   const started = Date.now()
   try {
     const input = {
       ...request.input,
+      researchContext: request.input.researchContext ?? await researchContextForRole(ctx, request.role),
       projectDir: request.input.projectDir ?? ctx.projectDir,
       taskId: request.input.taskId ?? request.label,
     }

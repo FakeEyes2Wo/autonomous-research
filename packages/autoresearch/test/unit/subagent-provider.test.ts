@@ -7,6 +7,8 @@ import { SubagentRoleAgentProvider } from '../../dist/providers/subagent-provide
 import { openRequestLedger } from '../../dist/policy/request-ledger.js'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import { installRequestAccounting, ownedSessionCount } from '../../dist/providers/request-accounting.js'
+import { sealContextRecord } from '../../dist/research-context/index.js'
+import { FileMemoryStore } from '../../dist/memory/index.js'
 
 const parent = { id: 'parent', session: { id: 'parent-session' } }
 
@@ -460,6 +462,194 @@ test('provider refuses a required context section that cannot fit the route cap'
   }
   await assert.rejects(
     () => new SubagentRoleAgentProvider(runtime as never).run('planner', { runDir, taskId: 'context-cap', treeSummary: 'a'.repeat(1000) }, context(runDir, undefined, policy({ budget: { ...policy().budget, maxInputTokens: 12, context: { treeSummaryTokens: 1, evidenceTokens: 1, paperTokens: 1, failureTokens: 1 } } }))),
+    (error: Error & { code?: string }) => error.code === 'CONTEXT_INSUFFICIENT',
+  )
+  assert.equal(starts, 0)
+})
+
+test('provider replaces unbounded legacy history with the selected context and persists its manifest', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-structured-context-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  let prompt = ''
+  const runtime = {
+    async start(_provider: string, value: { prompt: Array<{ text?: string }> }) {
+      prompt = value.prompt[0]?.text ?? ''
+      return { id: 'structured-child', result: Promise.resolve({ output: [{ type: 'text', text: '{"plan":"ok"}' }], stopReason: 'completed' }), async dispose() {} }
+    },
+  }
+  const scope = { projectId: runDir, branchId: 'branch-a', runId: 'run-1' }
+  const visibility = { visibility: 'run' as const, ...scope }
+  const constraint = sealContextRecord({ id: 'constraint', version: 1, layer: 0, kind: 'constraint', scope: visibility, required: true, payload: { rule: 'frozen protocol' }, source: { recordType: 'constraint' } })
+  const opposing = sealContextRecord({ id: 'negative', version: 1, layer: 2, kind: 'evidence', scope: visibility, required: true, polarity: 'opposing', topicIds: ['claim-1'], payload: { observation: 'negative interval' }, source: { recordType: 'evidence' } })
+  const foreign = sealContextRecord({ id: 'foreign', version: 1, layer: 2, kind: 'evidence', scope: { visibility: 'branch', projectId: runDir, branchId: 'branch-b' }, payload: { secret: 'OUT_OF_SCOPE_SECRET' }, source: { recordType: 'evidence' } })
+  const wideContext = context(runDir, undefined, policy({ budget: { ...policy().budget, maxInputTokens: 10_000 } }))
+  await new SubagentRoleAgentProvider(runtime as never).run('planner', {
+    runDir,
+    taskId: 'structured-context',
+    treeSummary: 'UNBOUNDED_LEGACY_TREE',
+    baselines: 'UNBOUNDED_LEGACY_EVIDENCE',
+    researchContext: { stage: 'design', scope, requiredRecordIds: ['constraint', 'negative'], queryTerms: ['claim-1'], records: [foreign, opposing, constraint] },
+  }, wideContext)
+  assert.match(prompt, /Structured research context/)
+  assert.match(prompt, /frozen protocol/)
+  assert.match(prompt, /negative interval/)
+  assert.doesNotMatch(prompt, /UNBOUNDED_LEGACY_TREE|UNBOUNDED_LEGACY_EVIDENCE|OUT_OF_SCOPE_SECRET/)
+  const manifests = await import('node:fs/promises').then(({ readdir }) => readdir(join(runDir, 'context')))
+  assert.equal(manifests.length, 1)
+  const manifest = JSON.parse(await readFile(join(runDir, 'context', manifests[0]!), 'utf8')) as { selected: Array<{ id: string }>; renderedHash: string }
+  assert.deepEqual(manifest.selected.map((entry) => entry.id), ['constraint', 'negative'])
+  assert.match(manifest.renderedHash, /^[a-f0-9]{64}$/)
+})
+
+test('structured worker prompt retains complete current design inputs while dropping legacy history', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-worker-current-input-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  const bus = eventBus()
+  let prompt = ''
+  const runtime = {
+    async startContinuable(spec: { childId?: string; request: { prompt: Array<{ text?: string }> } }) {
+      prompt = spec.request.prompt[0]?.text ?? ''
+      bus.emit({ id: spec.childId!, stopReason: 'completed', lastAssistantMessage: [{ type: 'text', text: '{"status":"completed","summary":"done","artifacts":[]}' }] })
+      return { childId: spec.childId!, messageId: 'message' }
+    },
+  }
+  const scope = { projectId: runDir, branchId: 'branch-a', runId: 'run-1' }
+  const state = sealContextRecord({ id: 'worker-state', version: 1, layer: 1, kind: 'state', scope: { visibility: 'run', ...scope }, required: true, payload: { phase: 'execute' }, source: { recordType: 'snapshot' } })
+  const wide = context(runDir, undefined, policy({ budget: { ...policy().budget, maxInputTokens: 20_000, context: { treeSummaryTokens: 10_000, evidenceTokens: 10_000, paperTokens: 10_000, failureTokens: 10_000 } } }))
+  await new SubagentRoleAgentProvider(runtime as never, { context: bus as never }).run('research-worker', {
+    runDir,
+    taskId: 'worker-current-input',
+    plan: 'CURRENT_PLAN_SENTINEL',
+    treeSummary: 'STALE_TREE_SENTINEL',
+    minimalVerification: 'CURRENT_VERIFICATION_SENTINEL',
+    experimentDesign: 'CURRENT_DESIGN_SENTINEL',
+    researchContext: { stage: 'execute', scope, records: [state] },
+  }, wide)
+  assert.match(prompt, /CURRENT_PLAN_SENTINEL/)
+  assert.match(prompt, /CURRENT_VERIFICATION_SENTINEL/)
+  assert.match(prompt, /CURRENT_DESIGN_SENTINEL/)
+  assert.doesNotMatch(prompt, /STALE_TREE_SENTINEL/)
+})
+
+test('structured writer prompt retains complete current paper contract inputs', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-writer-current-input-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  let prompt = ''
+  const runtime = {
+    async start(_provider: string, value: { prompt: Array<{ text?: string }> }) {
+      prompt = value.prompt[0]?.text ?? ''
+      return { id: 'writer-current-input', result: Promise.resolve({ output: [{ type: 'text', text: '{"mainTex":"paper","failureReport":"none"}' }], stopReason: 'completed' }), async dispose() {} }
+    },
+  }
+  const scope = { projectId: runDir, branchId: 'branch-a', runId: 'run-1' }
+  const state = sealContextRecord({ id: 'writer-state', version: 1, layer: 1, kind: 'state', scope: { visibility: 'run', ...scope }, required: true, payload: { phase: 'paper' }, source: { recordType: 'snapshot' } })
+  const wide = context(runDir, undefined, policy({ budget: { ...policy().budget, maxInputTokens: 20_000, context: { treeSummaryTokens: 10_000, evidenceTokens: 10_000, paperTokens: 10_000, failureTokens: 10_000 } } }))
+  await new SubagentRoleAgentProvider(runtime as never).run('writer', {
+    runDir,
+    taskId: 'writer-current-input',
+    plan: 'WRITER_PLAN_SENTINEL',
+    minimalVerification: 'WRITER_VERIFICATION_SENTINEL',
+    experimentDesign: 'WRITER_DESIGN_SENTINEL',
+    reflexion: 'WRITER_REFLEXION_SENTINEL',
+    paperPlan: 'PAPER_PLAN_SENTINEL',
+    paperMatrix: 'PAPER_MATRIX_SENTINEL',
+    paperContract: 'PAPER_CONTRACT_SENTINEL',
+    paperFigures: 'PAPER_FIGURES_SENTINEL',
+    modelScout: 'STALE_MODEL_SCOUT_SENTINEL',
+    researchContext: { stage: 'paper', scope, records: [state] },
+  }, wide)
+  for (const sentinel of ['WRITER_PLAN_SENTINEL', 'WRITER_VERIFICATION_SENTINEL', 'WRITER_DESIGN_SENTINEL', 'WRITER_REFLEXION_SENTINEL', 'PAPER_PLAN_SENTINEL', 'PAPER_MATRIX_SENTINEL', 'PAPER_CONTRACT_SENTINEL', 'PAPER_FIGURES_SENTINEL']) {
+    assert.match(prompt, new RegExp(sentinel))
+  }
+  assert.doesNotMatch(prompt, /STALE_MODEL_SCOUT_SENTINEL/)
+})
+
+test('structured provider fails before dispatch when a current workflow input cannot fit', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-current-input-cap-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  let starts = 0
+  const runtime = { async startContinuable() { starts += 1; throw new Error('must not start') } }
+  const scope = { projectId: runDir, branchId: 'branch-a', runId: 'run-1' }
+  const state = sealContextRecord({ id: 'bounded-state', version: 1, layer: 1, kind: 'state', scope: { visibility: 'run', ...scope }, required: true, payload: { phase: 'execute' }, source: { recordType: 'snapshot' } })
+  await assert.rejects(
+    () => new SubagentRoleAgentProvider(runtime as never).run('research-worker', {
+      runDir,
+      taskId: 'bounded-current-input',
+      experimentDesign: 'REQUIRED_DESIGN_SENTINEL'.repeat(100),
+      researchContext: { stage: 'execute', scope, records: [state] },
+    }, context(runDir, undefined, policy({ budget: { ...policy().budget, maxInputTokens: 20_000, context: { ...policy().budget.context, evidenceTokens: 1 } } }))),
+    (error: Error & { code?: string }) => error.code === 'CONTEXT_INSUFFICIENT',
+  )
+  assert.equal(starts, 0)
+})
+
+test('provider includes selected context identity in a continuable task fingerprint', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-context-fingerprint-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  const bus = eventBus()
+  let starts = 0
+  const runtime = {
+    async startContinuable(spec: { childId?: string }) {
+      starts += 1
+      bus.emit({ id: spec.childId!, stopReason: 'completed', lastAssistantMessage: [{ type: 'text', text: '{"summary":"done"}' }] })
+      return { childId: spec.childId!, messageId: 'message' }
+    },
+  }
+  const scope = { projectId: runDir, branchId: 'branch-a', runId: 'run-1' }
+  const first = sealContextRecord({ id: 'state', version: 1, layer: 1, kind: 'state', scope: { visibility: 'run', ...scope }, required: true, payload: { revision: 1 }, source: { recordType: 'snapshot' } })
+  const changed = sealContextRecord({ id: 'state', version: 2, layer: 1, kind: 'state', scope: { visibility: 'run', ...scope }, required: true, payload: { revision: 2 }, source: { recordType: 'snapshot' } })
+  const provider = new SubagentRoleAgentProvider(runtime as never, { context: bus as never })
+  const wideContext = context(runDir, undefined, policy({ budget: { ...policy().budget, maxInputTokens: 10_000 } }))
+  await provider.run('research-worker', { runDir, taskId: 'context-fingerprint', researchContext: { stage: 'execute', scope, records: [first] } }, wideContext)
+  await provider.run('research-worker', { runDir, taskId: 'context-fingerprint', researchContext: { stage: 'execute', scope, records: [first] } }, wideContext)
+  assert.equal((await import('node:fs/promises').then(({ readdir }) => readdir(join(runDir, 'context')))).length, 1)
+  await assert.rejects(
+    () => provider.run('research-worker', { runDir, taskId: 'context-fingerprint', researchContext: { stage: 'execute', scope, records: [changed] } }, wideContext),
+    /task registry conflict/,
+  )
+  assert.equal(starts, 1)
+  assert.equal((await import('node:fs/promises').then(({ readdir }) => readdir(join(runDir, 'context')))).length, 2)
+})
+
+test('provider rejects stale required structured context before starting a child', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-context-stale-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  let starts = 0
+  const runtime = { async start() { starts += 1; throw new Error('must not start') } }
+  const scope = { projectId: runDir, branchId: 'branch-a', runId: 'run-1' }
+  const source = sealContextRecord({ id: 'source', version: 2, layer: 2, kind: 'evidence', scope: { visibility: 'run', ...scope }, payload: { value: 2 }, source: { recordType: 'evidence' } })
+  const stale = sealContextRecord({ id: 'summary', version: 1, layer: 1, kind: 'summary', scope: { visibility: 'run', ...scope }, required: true, payload: { value: 1 }, dependencies: [{ id: 'source', version: 1, contentHash: '0'.repeat(64) }], source: { recordType: 'summary' } })
+  await assert.rejects(
+    () => new SubagentRoleAgentProvider(runtime as never).run('planner', { runDir, taskId: 'stale-context', researchContext: { stage: 'design', scope, records: [source, stale] } }, context(runDir)),
+    (error: Error & { code?: string }) => error.code === 'STALE_CONTEXT_DEPENDENCY',
+  )
+  assert.equal(starts, 0)
+})
+
+test('provider refuses required memory after its source invalidates the dependent summary', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-memory-invalidated-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  const store = new FileMemoryStore(runDir)
+  const scope = { visibility: 'run' as const, projectId: runDir, branchId: 'branch-a', runId: 'run-1' }
+  const source = (await store.append({
+    id: 'source', version: 1, kind: 'observation', scope, content: { observation: 'measured value' },
+    provenance: { sourceIds: ['evidence'], sourceHashes: { evidence: 'a'.repeat(64) }, createdAt: '2026-09-12T00:00:00.000Z' },
+    applicability: { appliesWhen: ['same protocol'], doesNotApplyWhen: ['changed scorer'] },
+    assessment: { status: 'validated_in_scope', method: 'formal validation', supportingSourceIds: ['evidence'], opposingSourceIds: [] }, dependencies: [], topicIds: ['claim-1'],
+  })).record
+  await store.append({
+    id: 'summary', version: 1, kind: 'interpretation', summary: true, scope, content: { observation: 'measured value', interpretation: 'derived lesson' },
+    provenance: { sourceIds: ['evidence'], sourceHashes: { evidence: 'a'.repeat(64) }, createdAt: '2026-09-12T00:00:00.000Z' },
+    applicability: { appliesWhen: ['same protocol'], doesNotApplyWhen: ['changed scorer'] },
+    assessment: { status: 'validated_in_scope', method: 'reviewed summary', supportingSourceIds: ['evidence'], opposingSourceIds: [] },
+    dependencies: [{ id: source.id, version: source.version, contentHash: source.contentHash }], topicIds: ['claim-1'],
+  })
+  await store.transition('source', 'invalidated', { method: 'scorer audit failed', opposingSourceIds: ['audit'] })
+  let starts = 0
+  const runtime = { async start() { starts += 1; throw new Error('must not start') } }
+  const requestScope = { projectId: runDir, branchId: 'branch-a', runId: 'run-1' }
+  await assert.rejects(
+    () => new SubagentRoleAgentProvider(runtime as never).run('planner', { runDir, taskId: 'invalidated-memory', researchContext: { stage: 'assess', scope: requestScope, requiredRecordIds: ['memory:summary'], records: [] } }, context(runDir)),
     (error: Error & { code?: string }) => error.code === 'CONTEXT_INSUFFICIENT',
   )
   assert.equal(starts, 0)

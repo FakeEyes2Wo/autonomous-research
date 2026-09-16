@@ -1,6 +1,7 @@
 import type { RoleName } from './roles/index.js'
 import type { ProjectSettings } from '../settings/schema.js'
 import type { RequestLedger } from '../policy/request-ledger.js'
+import type { ResearchContextRequest } from '../research-context/index.js'
 export type { RoleName } from './roles/index.js'
 
 export interface ParentAgentLike {
@@ -22,6 +23,7 @@ export interface RoleExecutionContext {
  * Fields shared by every role/domain.
  */
 export interface CommonRoleInput {
+  readonly researchContext?: ResearchContextRequest
   readonly runDir: string
   readonly projectDir?: string
   readonly taskId?: string

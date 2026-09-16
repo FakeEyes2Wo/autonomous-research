@@ -1,0 +1,36 @@
+{
+  "sourceCommit": "699e4959b1b72e82291d0627c46171c8a88a9e1a",
+  "note": "Byte-exact files from CURRENT main working snapshot, committed by parent before integration. Historical evidence prose remains unverified.",
+  "files": [
+    {
+      "path": "state.json",
+      "sourcePath": "packages/autoresearch/runs/run-early-exit/state.json",
+      "sha256": "a36dc48278d382e4bdb10c84baa6745e90fd783d808d53f90262f54595265326",
+      "bytes": 338
+    },
+    {
+      "path": "research_tree.json",
+      "sourcePath": "packages/autoresearch/runs/run-early-exit/research_tree.json",
+      "sha256": "744e1e31b2b195d752260a45923ce1a73b0d32f4c60a8342d41e91c95b02be5c",
+      "bytes": 13967
+    },
+    {
+      "path": "brainstorm/paper_records.json",
+      "sourcePath": "packages/autoresearch/runs/run-early-exit/brainstorm/paper_records.json",
+      "sha256": "15b276a34ca157e12fd215e3c298f00481607a06cdb3b0c0aecdff71b6b997b1",
+      "bytes": 155322
+    },
+    {
+      "path": "experiments/early_exit_fairness/artifacts/EVIDENCE.md",
+      "sourcePath": "packages/autoresearch/runs/run-early-exit/experiments/early_exit_fairness/artifacts/EVIDENCE.md",
+      "sha256": "971a1dd5d240589264368e88c3b64d775049908117af302d267f866daa7d66be",
+      "bytes": 5291
+    },
+    {
+      "path": "experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-0-5B-Instruct.json",
+      "sourcePath": "packages/autoresearch/runs/run-early-exit/experiments/early_exit_fairness/artifacts/results_Qwen-Qwen2-5-0-5B-Instruct.json",
+      "sha256": "11c5c1ef0b20a5328722d08656e78195a98cf8a50e76c4b3b6fefdcbb5460932",
+      "bytes": 27941
+    }
+  ]
+}
