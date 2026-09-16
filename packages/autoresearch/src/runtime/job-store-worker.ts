@@ -37,7 +37,10 @@ function accept(job: JobRecord, receipt: JobReceipt, now: number): JobRecord {
   if (job.receipt.backendId && receipt.backendId !== job.receipt.backendId) throw new Error('receipt backend identity conflict')
   if (!['submitting', 'running', 'succeeded', 'failed', 'cancel_requested', 'cancelled', 'unknown'].includes(receipt.status)) throw new Error('invalid receipt transition to queued/unsupported status')
   if (terminal(job.receipt.status)) return job
-  if (job.receipt.status === 'cancel_requested' && ['running', 'submitting', 'queued'].includes(receipt.status)) return job
+  // Cancellation is a durable command, not a transient backend observation.
+  // Retain it through uncertain/stale nonterminal observations, while still
+  // saving heartbeat/log updates and awaiting a terminal stop certificate.
+  if (job.receipt.status === 'cancel_requested' && !terminal(receipt.status)) receipt = { ...receipt, status: 'cancel_requested' }
   job.receipt = receipt
   db.prepare('INSERT OR IGNORE INTO receipts(job_id,digest,body) VALUES(?,?,?)').run(job.spec.id, createHash('sha256').update(canonical(receipt)).digest('hex'), JSON.stringify(receipt))
   if (terminal(receipt.status)) {
@@ -143,7 +146,8 @@ function dispatch(action: string, data: any): unknown {
   }
   if (action === 'markUnknown') {
     if (terminal(job.receipt.status)) return job
-    job.receipt.status = 'unknown'; job.cancellationReason ??= data.reason
+    if (job.receipt.status !== 'cancel_requested') job.receipt.status = 'unknown'
+    job.cancellationReason ??= data.reason
     return save(job)
   }
   if (action === 'requestCancel') {

@@ -111,6 +111,13 @@ try {
       const script = join(directory, 'run-job.ps1'), config = join(directory, 'runner.json')
       await writeFile(script, WINDOWS_JOB_RUNNER, 'utf8')
       await writeFile(config, JSON.stringify({ executable: job.spec.executable, commandLine: windowsCommandLine(job.spec.executable, job.spec.args), cwd: job.spec.cwd, cancelPath, resultPath, nonce }), 'utf8')
+      // Preparing launch files yields to control requests. Recheck the durable
+      // command immediately before launching, rather than using the old read.
+      job = await store.get(jobId)
+      if (job.receipt.status === 'cancel_requested' || (job.deadlineAt !== null && Date.now() >= job.deadlineAt)) {
+        await store.supervisorUpdate(jobId, nonce, { receipt: { ...job.receipt, status: 'cancelled' }, reason: job.cancellationReason ?? 'wall deadline exceeded before execution' })
+        await cleanup(); process.exit(0)
+      }
       child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, config], { cwd: job.spec.cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
     } else child = spawn(job.spec.executable, job.spec.args, { cwd: job.spec.cwd, env, detached: true, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
     child.stdout?.on('data', data => logs.write('stdout', data))
@@ -124,10 +131,11 @@ try {
       busy = true
       void (async () => {
         job = await store.get(jobId)
-        if (!terminal(job.receipt.status) && job.deadlineAt !== null && Date.now() >= job.deadlineAt) {
+        if (job.receipt.status === 'cancel_requested') await requestStop()
+        else if (!terminal(job.receipt.status) && job.deadlineAt !== null && Date.now() >= job.deadlineAt) {
           await store.supervisorUpdate(jobId, nonce, { receipt: { ...job.receipt, status: 'cancel_requested' }, reason: 'wall deadline exceeded' })
           await requestStop()
-        } else if (job.receipt.status === 'cancel_requested') await requestStop()
+        }
         if (Date.now() - heartbeat >= 5000) {
           heartbeat = Date.now()
           const current = await store.get(jobId)

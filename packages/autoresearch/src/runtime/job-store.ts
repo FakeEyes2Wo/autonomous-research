@@ -6,29 +6,53 @@ import type { BudgetSnapshot, JobRecord, JobReceipt, JobSpec, LogRecord, Runtime
 export class JobStore {
   private serial = 0
   private pending = new Map<number, { resolve: (value: any) => void; reject: (error: Error) => void }>()
-  private stopped = false
+  private state: 'open' | 'closing' | 'closed' = 'open'
+  private closePromise: Promise<void> | undefined
+  private failure: Error | undefined
+  private readonly exited: Promise<number>
   readonly ready: Promise<void>
   constructor(readonly root: string, private worker: Worker) {
+    let settleReady: ((error?: Error) => void) | undefined
     this.ready = new Promise((resolveReady, rejectReady) => {
-      worker.on('message', message => {
-        if (message.type === 'ready') { message.error ? rejectReady(new Error(message.error)) : resolveReady(); return }
-        const pending = this.pending.get(message.id)
-        if (!pending) return
-        this.pending.delete(message.id)
-        message.error ? pending.reject(new Error(message.error)) : pending.resolve(message.result)
-      })
-      const fail = (error: Error) => { this.stopped = true; rejectReady(error); for (const p of this.pending.values()) p.reject(error); this.pending.clear() }
-      worker.on('error', fail)
-      worker.on('exit', code => { if (!this.stopped) fail(new Error(`job worker exited (${code})`)) })
+      settleReady = error => error ? rejectReady(error) : resolveReady()
     })
+    this.exited = new Promise(resolveExit => {
+      worker.once('exit', code => {
+        resolveExit(code)
+        const error = new Error(`job worker exited (${code})`)
+        settleReady?.(error); settleReady = undefined
+        if (this.state === 'open' || this.pending.size > 0) this.fail(error)
+      })
+    })
+    worker.on('message', message => {
+      if (message.type === 'ready') {
+        settleReady?.(message.error ? new Error(message.error) : undefined); settleReady = undefined
+        return
+      }
+      const pending = this.pending.get(message.id)
+      if (!pending) return
+      this.pending.delete(message.id)
+      message.error ? pending.reject(new Error(message.error)) : pending.resolve(message.result)
+    })
+    worker.once('error', error => { settleReady?.(error); settleReady = undefined; this.fail(error) })
   }
-  private async call<T>(action: string, data: unknown = {}): Promise<T> {
-    await this.ready
-    if (this.stopped) throw new Error('job store is closed')
+  private fail(error: Error): void {
+    this.failure ??= error
+    for (const pending of this.pending.values()) pending.reject(this.failure)
+    this.pending.clear()
+  }
+  private call<T>(action: string, data: unknown = {}): Promise<T> {
+    if (this.failure) return Promise.reject(this.failure)
+    if (this.state !== 'open') return Promise.reject(new Error(`job store is ${this.state}`))
+    return this.post<T>(action, data)
+  }
+  private post<T>(action: string, data: unknown = {}): Promise<T> {
+    if (this.failure) return Promise.reject(this.failure)
     return new Promise<T>((resolveCall, reject) => {
       const id = ++this.serial
       this.pending.set(id, { resolve: resolveCall, reject })
-      this.worker.postMessage({ id, action, data })
+      try { this.worker.postMessage({ id, action, data }) }
+      catch (error) { this.pending.delete(id); reject(error) }
     })
   }
   enqueue(spec: JobSpec): Promise<JobRecord> { return this.call('enqueue', { spec }) }
@@ -45,12 +69,27 @@ export class JobStore {
   supervisorUpdate(jobId: string, nonce: string, update: { receipt?: JobReceipt; reason?: string; logs?: LogRecord[]; now?: number }): Promise<JobRecord> { return this.call('supervisorUpdate', { jobId, nonce, ...update, now: update.now ?? Date.now() }) }
   budget(): Promise<BudgetSnapshot> { return this.call('budget') }
   linkRequest(jobId: string, requestId: string): Promise<void> { return this.call('linkRequest', { jobId, requestId }) }
-  async close(): Promise<void> { if (this.stopped) return; await this.call('close'); this.stopped = true; await this.worker.terminate() }
+  close(): Promise<void> {
+    if (this.closePromise) return this.closePromise
+    if (this.state === 'closed') return Promise.resolve()
+    this.state = 'closing'
+    this.closePromise = this.finishClose()
+    return this.closePromise
+  }
+  private async finishClose(): Promise<void> {
+    try {
+      if (!this.failure) { await this.ready; await this.post('close') }
+      await this.exited
+    } catch (error) {
+      if (!this.failure) throw error
+      await this.exited
+    } finally { this.state = 'closed' }
+  }
 }
 export async function openJobStore(root: string, limits?: Partial<RuntimeLimits>): Promise<JobStore> {
   root = resolve(root)
   await mkdir(root, { recursive: true })
   const store = new JobStore(root, new Worker(new URL('./job-store-worker.js', import.meta.url), { workerData: { root, limits } }))
-  await store.ready
-  return store
+  try { await store.ready; return store }
+  catch (error) { await store.close().catch(() => {}); throw error }
 }

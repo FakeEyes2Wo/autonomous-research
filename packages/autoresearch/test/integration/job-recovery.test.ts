@@ -1,9 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { hostname, tmpdir } from 'node:os'
+import { randomUUID } from 'node:crypto'
 import { join, resolve } from 'node:path'
-import { fork } from 'node:child_process'
+import { fork, spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { openJobStore } from '../../dist/runtime/job-store.js'
 import { JobController } from '../../dist/runtime/job-controller.js'
@@ -156,4 +157,59 @@ test('supervisor enforces original wall deadline after controller goes away', lo
     assert.equal(done.deadlineAt! - done.startedAt!, 1200)
     assert.ok((await store.budget()).settledWallMs < 10000)
   } finally { await store.close(); await rm(root, { recursive: true, force: true }) }
+})
+
+test('cancellation before supervisor pipe readiness prevents real workload execution', { ...localOnly, timeout: 20000 }, async t => {
+  const root = await mkdtemp(join(tmpdir(), 'job-prestart-cancel-')); const store = await openJobStore(root)
+  try {
+    const input = spec(root), nonce = randomUUID(), startupId = randomUUID()
+    await store.enqueue(input)
+    const claim = await store.claim('job', 'original controller')
+    await store.beginSubmission('job', claim.fence)
+    await store.prepareSpawn('job', claim.fence, { nonce, startupId, host: hostname(), socket: `\\\\.\\pipe\\autoresearch-test-${nonce}`, pid: null })
+    await store.release('job', claim.fence)
+    const controller = new JobController(store, new LocalJobBackend(store))
+    const cancelled = await controller.cancel('job', 'cancel before control channel ready')
+    await controller.advance('job') // Another uncertain inspection must not erase intent.
+    const reservedBeforeProof = await store.budget()
+    const pendingBeforeProof = await store.get('job')
+    await assert.rejects(store.markUnknown('job', claim.fence, 'stale controller'), /fence/)
+    const supervisor = spawn(process.execPath, [resolve('dist/runtime/local-supervisor.js'), root, 'job', nonce], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+    t.after(() => { if (supervisor.exitCode === null) supervisor.kill('SIGKILL') })
+    let errors = ''; supervisor.stderr?.on('data', data => { errors += data })
+    const [exitCode] = await once(supervisor, 'exit')
+    assert.equal(exitCode, 0, errors)
+    const executions = await readFile(join(root, 'counter'), 'utf8').catch(error => { if (error.code === 'ENOENT') return ''; throw error })
+    assert.equal(executions, '', 'a delayed supervisor must not execute an already cancelled workload')
+    assert.equal(cancelled.status, 'cancel_requested')
+    assert.equal(pendingBeforeProof.receipt.status, 'cancel_requested')
+    assert.equal(reservedBeforeProof.reservedWallMs, input.budget.wallMs)
+    assert.equal((await store.get('job')).receipt.status, 'cancelled')
+    assert.equal((await store.budget()).reservedWallMs, 0)
+  } finally { await store.close(); await rm(root, { recursive: true, force: true }) }
+})
+
+test('supervisor polling honors cancellation despite uncertain control responses', { ...localOnly, timeout: 20000 }, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'job-unreachable-cancel-')); const store = await openJobStore(root)
+  class UnreachableControl extends LocalJobBackend {
+    atFence(fence: number) { return new UnreachableControl(store, fence) }
+    async cancel(jobId: string) { return { ...(await store.get(jobId)).receipt, status: 'unknown' as const } }
+    async inspect(jobId: string) { return { ...(await store.get(jobId)).receipt, status: 'unknown' as const } }
+  }
+  try {
+    const controller = new JobController(store, new UnreachableControl(store))
+    await controller.enqueue(spec(root, { JOB_DELAY: '15000' })); await controller.advance('job')
+    const end = Date.now() + 10000
+    while (Date.now() < end && !(await readFile(join(root, 'counter'), 'utf8').catch(() => ''))) await pause(50)
+    assert.ok(await readFile(join(root, 'counter'), 'utf8'))
+    await controller.cancel('job', 'control response lost')
+    await controller.advance('job')
+    const done = await finish(store, 3000)
+    assert.equal(done.receipt.status, 'cancelled')
+    assert.equal(done.cancellationReason, 'control response lost')
+    assert.equal((await store.budget()).reservedWallMs, 0)
+  } finally {
+    await new JobController(store, new LocalJobBackend(store)).cancel('job', 'test cleanup')
+    await finish(store); await store.close(); await rm(root, { recursive: true, force: true })
+  }
 })
