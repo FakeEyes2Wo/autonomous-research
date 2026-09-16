@@ -7,7 +7,8 @@ export const projectRoleSpecs = {
   'project-explorer': {
     sections: ['projectInventory'],
     outputSchema: objectSchema({
-      contributions: { type: 'array', minItems: 1, maxItems: 5, required: true, items: { type: 'object', additionalProperties: false, properties: {
+      // DSH supports a bounded JSON Schema subset; validateDiscovery enforces 1..5.
+      contributions: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
         id: text, claim: text, status: { type: 'string', enum: ['observed-implementation', 'proposed'], required: true },
         sourceIds: strings, limitations: strings, validation: strings, researchQuestion: text,
       } } },
