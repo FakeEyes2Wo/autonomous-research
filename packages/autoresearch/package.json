@@ -11,7 +11,14 @@
     "./settings-contract": "./dist/settings-contract.js",
     "./policy": "./dist/policy/index.js"
   },
-  "files": ["dist", "prompts", "templates", "presets", "docs", "README.md"],
+  "files": [
+    "dist",
+    "prompts",
+    "templates",
+    "presets",
+    "docs",
+    "README.md"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -32,7 +39,10 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.9.2"
   },
-  "engines": { "node": ">=22.19.0", "dsh": ">=0.1.5-alpha.1" },
+  "engines": {
+    "node": ">=22.19.0",
+    "dsh": ">=0.1.5-alpha.1"
+  },
   "license": "MIT",
   "dependencies": {
     "cytoscape": "^3.34.2",
@@ -41,6 +51,8 @@
     "graphology-layout-forceatlas2": "^0.10.1",
     "graphology-metrics": "^2.4.0",
     "graphology-types": "^0.24.8",
+    "parse5": "8.0.0",
+    "pdfjs-dist": "6.3.289",
     "yaml": "^2.9.0"
   }
 }
