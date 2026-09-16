@@ -11,11 +11,12 @@ export interface ParentAgentLike {
 }
 
 export interface RoleExecutionContext {
+  readonly experimentRuntime?: import('../experiment/runtime-adapter.js').ExperimentRuntimeAuthority
   readonly parent: ParentAgentLike
   readonly signal: AbortSignal
   readonly projectDir?: string
   readonly runId?: string
-  readonly policySnapshot?: Pick<ProjectSettings, 'version'|'model'|'modelRouting'|'workflow'|'budget'>
+  readonly policySnapshot?: Pick<ProjectSettings, 'version'|'model'|'modelRouting'|'workflow'|'budget'> & Partial<Pick<ProjectSettings, 'literature'>>
   readonly requestLedger?: RequestLedger
 }
 
@@ -88,6 +89,7 @@ export interface PaperRoleInput {
 export interface RoleInput extends CommonRoleInput, ResearchRoleInput, BrainstormRoleInput, PaperRoleInput {}
 
 export interface RoleOutput {
+  readonly literatureSources?: import('../literature/context-adapter.js').RegisteredLiteratureSource[]
   readonly text: string
   readonly structured?: unknown
   readonly stopReason: string

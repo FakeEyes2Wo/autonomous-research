@@ -15,8 +15,8 @@ import { ResearchRunner } from './runner.js'
 import type { PaperOptions } from '../paper/pipeline.js'
 import { loadProjectSecrets, loadProjectSettings } from '../settings/project-settings.js'
 import { isRecord } from '../settings/schema.js'
-import { createPolicySnapshot } from '../policy/model-routing.js'
-import { openRequestLedger } from '../policy/request-ledger.js'
+import { createPolicySnapshot, frozenLiteratureSettings } from '../policy/model-routing.js'
+import { openRequestLedger, isBudgetExhaustedError } from '../policy/request-ledger.js'
 import { isExperimentPauseError } from '../experiment/errors.js'
 import { assertFailureImportTarget, importResearchFailure, type FailureReportImport } from './failure-import.js'
 import { bindResearchOutputs } from './research-outputs.js'
@@ -50,6 +50,8 @@ async function copyExternalIdea(runDir: string, candidatePath: string): Promise<
 export interface AutoResearchServiceOptions {
   reviewer?: HumanReviewer
   reviewGates?: ReviewGateId[]
+  /** Trusted host injection; never accepted from model-facing tool arguments. */
+  experimentRuntimeForProject?: (projectDir: string) => Promise<NonNullable<RoleExecutionContext['experimentRuntime']>>
 }
 
 const POLICY_SNAPSHOT_FILE = join('.autoresearch', 'policy-snapshot.json')
@@ -101,13 +103,13 @@ async function loadFrozenPolicy(runDir: string, projectSettings: Awaited<ReturnT
       if (!isFrozenPolicySnapshot(parsed)) {
         throw new Error('invalid policy snapshot shape')
       }
-      return freezePolicy(parsed as FrozenPolicySnapshot)
+      return freezePolicy({ ...parsed, literature: frozenLiteratureSettings(parsed.literature) } as FrozenPolicySnapshot)
     } catch {
       throw new Error('invalid frozen policy snapshot at ' + path)
     }
   }
   const snapshot = { ...createPolicySnapshot(projectSettings), model: structuredClone(projectSettings.model) }
-  if (existing) snapshot.workflow.mode = 'legacy'
+  if (existing) { snapshot.workflow.mode = 'legacy'; snapshot.literature = frozenLiteratureSettings(undefined) }
   await writeText(path, JSON.stringify(snapshot, null, 2) + '\n')
   return freezePolicy(snapshot)
 }
@@ -204,6 +206,7 @@ export class AutoResearchService {
       })
       const runContext: ResearchRunContext = {
       ...context,
+      ...(this.deps.options.experimentRuntimeForProject ? { experimentRuntime: await this.deps.options.experimentRuntimeForProject(projectDir) } : {}),
       projectDir,
       runId: state.runId,
       policySnapshot,
@@ -223,7 +226,7 @@ export class AutoResearchService {
       await saveState(runDir, state)
       await writeFailureReport(runDir, `# PAUSED\n\n${String(error)}\n`)
       await bindResearchOutputs(runDir, state.runId)
-      if (isExperimentPauseError(error)) return state
+      if (isExperimentPauseError(error) || isBudgetExhaustedError(error)) return state
       throw error
     }
   }

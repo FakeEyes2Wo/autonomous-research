@@ -1,6 +1,7 @@
 import * as pdfjs from './vendor/pdfjs/pdf.mjs';
 import { decideSync, samePdfLoadTarget } from './workbench-sync.js';
 import { installChat } from './workbench-chat.js';
+import { installLiterature } from './literature-client.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/autoresearch/vendor/pdfjs/pdf.worker.mjs';
 const $ = (id) => document.getElementById(id);
@@ -9,6 +10,7 @@ const params = new URL(location.href).searchParams;
 const workspaceManaged = params.get('workspaceManaged') === '1';
 const state = { projects: [], projectId: '', documents: [], document: null, savedSource: '', csrf: '', engine: null, loading: true, saving: false, building: false, generation: 0, projectListGeneration: 0, managedReady: false, managedPendingProject: undefined, selectionId: null, pdf: null, pdfRevision: null, pdfTask: null, pdfPending: null, renderTask: null, renderGeneration: 0, pdfGeneration: 0, page: 1 };
 const projectCache = new Map();
+const literature = installLiterature({ getCsrf: () => state.csrf });
 const currentDirty = () => Boolean(state.document && ui.editor.value !== state.savedSource);
 const cachedDirty = () => [...projectCache.values()].some((item) => item.source !== item.savedSource);
 const dirty = () => currentDirty() || cachedDirty();
@@ -102,6 +104,7 @@ function rememberCurrentDraft() {
 }
 
 function clearCurrentProject(text = '请从 DSH 左侧选择工作区会话。') {
+  literature.setProject(null);
   rememberCurrentDraft();
   ++state.generation;
   state.projectId = ''; state.document = null; state.savedSource = ''; state.documents = []; state.engine = null; state.loading = false; state.building = false;
@@ -110,6 +113,7 @@ function clearCurrentProject(text = '请从 DSH 左侧选择工作区会话。')
 }
 
 function retainUnavailableDraft(text = '当前 DSH 工作区已移除。未保存草稿仍在此页面，可复制，但不能保存到其他工作区。') {
+  literature.setProject(null);
   const projectId = state.projectId;
   const document = state.document;
   rememberCurrentDraft();
@@ -242,6 +246,7 @@ async function readDocument(id, generation = state.generation) {
 
 async function loadProject(projectId, preferredDocument, { discardOrphan = false } = {}) {
   if (!projectId || !state.projects.some((project) => project.id === projectId)) return;
+  literature.setProject(projectId);
   if (discardOrphan && projectId === state.projectId && state.document?.orphaned) projectCache.delete(projectId);
   else rememberCurrentDraft();
   const generation = ++state.generation;

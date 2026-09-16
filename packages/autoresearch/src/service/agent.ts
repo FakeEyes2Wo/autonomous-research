@@ -34,7 +34,7 @@ export async function runAgent(ctx: RunContext, request: AgentRequest): Promise<
   try {
     const input = {
       ...request.input,
-      researchContext: request.input.researchContext ?? await researchContextForRole(ctx, request.role),
+      researchContext: request.input.researchContext ?? await researchContextForRole(ctx, request.role, request.input),
       projectDir: request.input.projectDir ?? ctx.projectDir,
       taskId: request.input.taskId ?? request.label,
     }

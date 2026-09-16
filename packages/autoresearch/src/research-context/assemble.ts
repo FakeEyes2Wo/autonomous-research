@@ -63,7 +63,7 @@ export async function assembleResearchContext(input: {
   }
   const header = `## Structured research context\n${canonicalContextJson(identity)}\n### Complete records\n`
   const available = Math.max(0, Math.floor(input.budget.maxInputTokens) - estimateTokens(header))
-  const memory = await new FileMemoryStore(input.runDir).query({ scope: input.request.scope, role: input.role })
+  const memory = input.role === 'research-worker' ? [] : await new FileMemoryStore(input.runDir).query({ scope: input.request.scope, role: input.role })
   const records = [...input.request.records, ...memoryRecordsToContextRecords(memory)]
   const selection = selectContextRecords(records, {
     role: input.role,

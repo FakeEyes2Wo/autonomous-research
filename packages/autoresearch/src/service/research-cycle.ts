@@ -3,19 +3,63 @@ import { join } from 'node:path'
 import type { ActionResult, ResearchDecision } from '../core/types.js'
 import { atomicWriteJson, readOptionalText, safeResolve, writeText } from '../core/utils.js'
 import { ResearchStore, sealRecord, hashContent, assessEvidence, createRevision } from '../research/index.js'
-import type { Claim, Hypothesis, Protocol, Evidence, ResearchSnapshot, RevisionCandidate } from '../research/contracts.js'
+import type { Claim, Hypothesis, Protocol, Evidence, ResearchSnapshot, SourceRef } from '../research/contracts.js'
+import { buildCandidateBatch } from '../research/candidate-batch.js'
 import { ExperimentPauseError } from '../experiment/errors.js'
 import type { RunContext } from './context.js'
 import { validateScientificEvidence } from '../experiment/evidence-validator.js'
 import { recordResearchExperience } from '../memory/index.js'
+import type { RegisteredLiteratureSource } from '../literature/context-adapter.js'
 
 export const cyclePath = (ctx: RunContext, name: string) => safeResolve(ctx.runDir, 'cycles', `cycle-${ctx.state.cycle}`, name)
 const unknownFingerprints = { code: 'unknown', data: 'unknown', treatment: 'unknown', model: 'unknown' }
 const stamp = (id: string, version = 1) => ({ id, version, created_at: new Date().toISOString(), source_refs: [] })
 const record = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {}
 
-export async function captureResearchPlan(ctx: RunContext, structured: unknown): Promise<void> {
-  await atomicWriteJson(cyclePath(ctx, 'planner-output.json'), record(structured))
+function plannerLiteratureIds(spec: Record<string, unknown>): string[] | undefined {
+  if (!Object.hasOwn(spec, 'allowed_literature_span_ids')) return undefined
+  const ids = spec.allowed_literature_span_ids
+  if (!Array.isArray(ids) || ids.some(id => typeof id !== 'string' || !id.trim() || id !== id.trim()) || new Set(ids).size !== ids.length) {
+    throw new ExperimentPauseError('PLANNER_LITERATURE_ALLOWLIST_INVALID: expected unique nonempty span IDs')
+  }
+  return [...ids] as string[]
+}
+
+/** Exposure sources come from the trusted provider's final prompt, never from structured model output. */
+export async function captureResearchPlan(ctx: RunContext, structured: unknown, exposedSources: readonly RegisteredLiteratureSource[] = []): Promise<void> {
+  const planner = record(structured), ids = plannerLiteratureIds(record(planner.protocol))
+  if (ids !== undefined) {
+    const store = new ResearchStore(ctx.runDir), sources: SourceRef[] = []
+    for (const id of ids) {
+      const source = exposedSources.find(source => source.spanId === id)?.sourceRef
+      if (!source || source.id !== id || !source.path || !source.hash) throw new ExperimentPauseError(`PLANNER_LITERATURE_UNEXPOSED: ${id}`)
+      const captured = await store.captureSource(source.path, id)
+      if (captured.hash !== source.hash) throw new ExperimentPauseError(`PLANNER_LITERATURE_SOURCE_CHANGED: ${id}`)
+      sources.push(captured)
+    }
+    const receipt = await store.captureBytes(JSON.stringify({ planHash: hashContent(planner), allowedSpanIds: ids, allowlistHash: hashContent(ids), sources }), `planner-literature-${ctx.state.cycle}`)
+    // Capture before publishing the plan. Interrupted writes fail closed on a receipt/plan mismatch.
+    await atomicWriteJson(cyclePath(ctx, 'planner-literature.json'), receipt)
+  }
+  await atomicWriteJson(cyclePath(ctx, 'planner-output.json'), planner)
+}
+
+async function frozenPlannerLiterature(ctx: RunContext, planner: Record<string, unknown>): Promise<{ ids?: string[]; sourceRefs: SourceRef[] }> {
+  const ids = plannerLiteratureIds(record(planner.protocol))
+  if (ids === undefined) return { sourceRefs: [] }
+  const fail = (): never => { throw new ExperimentPauseError('PLANNER_LITERATURE_RECEIPT_MISMATCH: recapture the plan with its exposed sources') }
+  const receipt = record(JSON.parse((await readOptionalText(cyclePath(ctx, 'planner-literature.json'))) ?? '{}')) as unknown as SourceRef
+  if (!receipt.path || !receipt.hash) fail()
+  const store = new ResearchStore(ctx.runDir)
+  if ((await store.captureSource(receipt.path!, receipt.id)).hash !== receipt.hash) fail()
+  const saved = record(JSON.parse(await readFile(safeResolve(ctx.runDir, receipt.path!), 'utf8')))
+  if (saved.planHash !== hashContent(planner) || saved.allowlistHash !== hashContent(ids) || hashContent(saved.allowedSpanIds) !== hashContent(ids) || !Array.isArray(saved.sources)) fail()
+  const sources = saved.sources as SourceRef[]
+  if (sources.length !== ids.length) fail()
+  for (const [index, source] of sources.entries()) {
+    if (!source || source.id !== ids[index] || !source.path || !source.hash || (await store.captureSource(source.path, source.id)).hash !== source.hash) fail()
+  }
+  return { ids, sourceRefs: [receipt, ...sources] }
 }
 
 /** The controller commits the exact scientific contract before any worker can run. */
@@ -33,6 +77,7 @@ export async function freezeResearchCycle(ctx: RunContext, planText: string, des
   const parent = await store.loadCurrent()
   const planner = record(JSON.parse((await readOptionalText(cyclePath(ctx, 'planner-output.json'))) ?? '{}'))
   const spec = record(planner.protocol)
+  const literature = await frozenPlannerLiterature(ctx, planner)
   const idea = (await readOptionalText(join(ctx.runDir, 'input', 'idea.md'))) ?? planText
   const claim: Claim = parent?.claims.find(c => c.id === parent.active_claim.id && c.version === parent.active_claim.version) ?? sealRecord({
     ...stamp('claim-1'), statement: idea, scope: 'user goal and PROFILE', parents: [], supporting_evidence_ids: [], opposing_evidence_ids: [], status: 'proposed', reason: 'No validated evidence yet.',
@@ -45,6 +90,7 @@ export async function freezeResearchCycle(ctx: RunContext, planText: string, des
     decision_rule: String(spec.decision_rule ?? 'unknown'), scope: claim.scope, mode: 'unknown', status: 'proposed', discovery_source_ids: [],
   } as Omit<Hypothesis, 'content_hash'>)
   const fingerprints = record(spec.fingerprints)
+  const ideaCapture = record(JSON.parse((await readOptionalText(safeResolve(ctx.runDir, 'research', 'idea-capture.json'))) ?? '{}'))
   const known = ['code', 'data', 'treatment', 'model'].every(key => typeof fingerprints[key] === 'string' && fingerprints[key] !== 'unknown') &&
     typeof spec.decision_rule === 'string' && typeof spec.split === 'string' && typeof spec.stopping_rule === 'string' && Array.isArray(spec.controls)
   const protocol: Protocol = sealRecord({
@@ -56,13 +102,16 @@ export async function freezeResearchCycle(ctx: RunContext, planText: string, des
     missing_policy: String(spec.missing_policy ?? 'unknown'), duplicate_policy: 'block_conflicts',
     fingerprints: known ? fingerprints as unknown as Protocol['fingerprints'] : { ...unknownFingerprints }, provenance: known ? 'known' : 'unknown',
     decision_rule: String(spec.decision_rule ?? 'unknown'),
-    source_refs: [await store.captureBytes(JSON.stringify({ planText, design }), `execution-plan-${ctx.state.cycle}`)],
+    ...(literature.ids === undefined ? {} : { allowed_literature_span_ids: literature.ids }),
+    source_refs: [await store.captureBytes(JSON.stringify({ planText, design }), `execution-plan-${ctx.state.cycle}`), ...literature.sourceRefs],
   })
   const snapshot = sealRecord({
     ...stamp(`cycle-${ctx.state.cycle}-frozen`, (parent?.version ?? 0) + 1), schema: 'autoresearch/research-snapshot/v1' as const,
+    source_refs: Array.isArray(ideaCapture.source_refs) ? ideaCapture.source_refs as SourceRef[] : [],
     branch_id: parent?.branch_id ?? ctx.state.runId, ...(parent ? { parent_snapshot_id: parent.id } : {}),
     active_claim: { id: claim.id, version: claim.version }, active_hypothesis: { id: hypothesis.id, version: hypothesis.version },
     claims: parent?.claims ?? [claim], hypotheses: parent?.hypotheses ?? [hypothesis], protocol, evidence: parent?.evidence ?? [], budget: parent?.budget ?? { revisions: 0, repairs: 0 },
+    ...(parent?.candidate_batches ? { candidate_batches: parent.candidate_batches } : {}),
   })
   const committed = await store.commit(snapshot)
   await atomicWriteJson(cyclePath(ctx, 'protocol.json'), protocol)
@@ -129,7 +178,7 @@ export async function assessResearchCycle(ctx: RunContext, action: ActionResult,
   const hypothesis = frozen.hypotheses.find(h => h.id === frozen.active_hypothesis.id && h.version === frozen.active_hypothesis.version)!
   const allEvidence = [...frozen.evidence, evidence]
   // Historical protocol versions stay in the snapshot but do not masquerade as rows from this frozen batch.
-  const assessment = assessEvidence({ claim, hypothesis, protocol: frozen.protocol, evidence: allEvidence.filter(e => e.protocol_hash === frozen.protocol.content_hash), discoveryEvidence: allEvidence, repairAttempts: frozen.budget.repairs, maxRepairAttempts: 2 })
+  const assessment = assessEvidence({ claim, hypothesis, protocol: frozen.protocol, evidence: allEvidence.filter(e => e.protocol_hash === frozen.protocol.content_hash), discoveryEvidence: allEvidence, discoverySourceRefs: hypothesis.source_refs, repairAttempts: frozen.budget.repairs, maxRepairAttempts: 2 })
   const updatedClaim = sealRecord({ ...claim, version: claim.version + 1, status: assessment.claim_status,
     parents: [{ id: claim.id, version: claim.version }],
     supporting_evidence_ids: assessment.supporting_evidence_ids, opposing_evidence_ids: assessment.opposing_evidence_ids, reason: assessment.reason })
@@ -187,41 +236,67 @@ async function materializeCommittedDecision(ctx: RunContext, snapshot: ResearchS
   return { action, reason: decision.reason }
 }
 
-export async function commitResearchDecision(ctx: RunContext, output: unknown, legacy: ResearchDecision, expectedSnapshot?: { id: string; hash: string }): Promise<ResearchDecision> {
+export async function commitResearchDecision(ctx: RunContext, output: unknown, legacy: ResearchDecision, expectedSnapshot?: { id: string; hash: string }, admission: { registeredSpans?: SourceRef[]; remainingCostMicros?: number } = {}): Promise<ResearchDecision> {
   if (ctx.context.signal.aborted) throw new ExperimentPauseError('research cancelled before scientific revision')
   const store = new ResearchStore(ctx.runDir)
-  const parent = await store.loadCurrent()
-  if (expectedSnapshot && (parent?.id !== expectedSnapshot.id || parent.content_hash !== expectedSnapshot.hash)) throw new ExperimentPauseError('research snapshot changed after supervisor input; reassessment is required')
-  if (!parent?.assessment) return legacy
+  const initial = await store.loadCurrent()
+  if (!initial?.assessment) {
+    if (expectedSnapshot && initial?.content_hash !== expectedSnapshot.hash) throw new ExperimentPauseError('research snapshot changed after supervisor input; reassessment is required')
+    return legacy
+  }
+  const proposalSnapshot = expectedSnapshot ? await store.loadSnapshot(expectedSnapshot.id) : initial
+  if (expectedSnapshot && proposalSnapshot.content_hash !== expectedSnapshot.hash) throw new ExperimentPauseError('research proposal snapshot hash mismatch')
   const raw = record(output)
-  const candidates = Array.isArray(raw.candidates) ? raw.candidates.slice(0, 3) as RevisionCandidate[] : []
-  const oldHypothesis = parent.hypotheses.find(h => h.id === parent.active_hypothesis.id && h.version === parent.active_hypothesis.version)!
-  const candidate = ['invalid_measurement', 'execution_error'].includes(parent.assessment.category) ? undefined : candidates.find(c => c &&
-    ['statement', 'scope', 'mechanism', 'prediction', 'falsification', 'measurement', 'decision_rule', 'rationale'].every(key => typeof record(c)[key] === 'string' && String(record(c)[key]).trim()) &&
-    c.statement.trim() !== oldHypothesis.statement.trim() && c.prediction.trim() !== oldHypothesis.prediction.trim() &&
-    Array.isArray(c.alternatives) && c.alternatives.every(v => typeof v === 'string') && Array.isArray(c.evidence_ids) && c.evidence_ids.length > 0 &&
-    c.evidence_ids.every(id => parent.assessment!.admissible_evidence_ids.includes(id)))
-  const strict = parent.protocol.provenance === 'known'
-  const taskFinished = legacy.action === 'finish' && (!strict || parent.assessment.category === 'supported')
+  const rawSource = await store.captureBytes(JSON.stringify({ output, expectedSnapshot: expectedSnapshot ?? { id: initial.id, hash: initial.content_hash } }), `candidate-proposals-${ctx.state.cycle}`)
+  const ideaCapture = record(JSON.parse((await readOptionalText(safeResolve(ctx.runDir, 'research', 'idea-capture.json'))) ?? '{}'))
+  for (let retry = 0; retry < 3; retry++) {
+  const parent = await store.loadCurrent()
+  if (!parent?.assessment) throw new ExperimentPauseError('research snapshot changed; reassessment is required')
+  if (parent.decision?.id === `decision-${ctx.state.cycle}`) return materializeCommittedDecision(ctx, parent)
   const ledger = await ctx.context.requestLedger?.snapshot()
-  const atLimit = !taskFinished && (ctx.state.cycle >= (ctx.deps.maxCycles ?? 10) || (ledger !== undefined && (ledger.remainingRoleCalls === 0 || ledger.remainingTokens === 0)))
-  const limitReason = `budget_exhausted: maxCycles/maxRounds or global role/token limit reached; ${parent.assessment.reason}`
+  let batch = buildCandidateBatch({ id: `candidate-batch-${ctx.state.cycle}`, parent, proposalParent: proposalSnapshot.active_hypothesis,
+    proposalSnapshotHash: proposalSnapshot.content_hash, rawCandidates: Array.isArray(raw.candidates) ? raw.candidates : [], rawSource,
+    registeredSpans: admission.registeredSpans, selectionInput: { snapshotHash: parent.content_hash, remainingCost: admission.remainingCostMicros ?? null,
+      registeredAlternatives: [...new Set(parent.hypotheses.flatMap(h => h.alternatives))],
+      testedMechanismKeys: (parent.candidate_batches ?? []).flatMap(b => b.entries.filter(e => e.candidate.status === 'selected').map(e => e.candidate.mechanismKey)),
+      exploratoryBudget: { policy: 'controller-caps-v1', remainingCycles: Math.max(0, Math.min((ctx.deps.maxCycles ?? 10) - ctx.state.cycle, (ctx.deps.maxCycles ?? 10) - parent.budget.revisions)),
+        remainingRoleCalls: ledger?.remainingRoleCalls ?? null, remainingTokens: ledger?.remainingTokens ?? null } } })
+  const candidate = batch.entries.find(entry => entry.candidate.id === batch.selection.selectedId)?.revision
+  const strict = parent.protocol.provenance === 'known'
+  const taskFinished = legacy.action === 'finish' && ((!strict && !candidate) || parent.assessment.category === 'supported')
+  const atLimit = !taskFinished && (batch.selection.stopReason === 'budget' || ctx.state.cycle >= (ctx.deps.maxCycles ?? 10) || (ledger !== undefined && (ledger.remainingRoleCalls === 0 || ledger.remainingTokens === 0)))
+  const limitReason = `budget_exhausted: maxCycles/maxRounds, role/token caps, or monetary admission limit reached; ${parent.assessment.reason}`
   const nextProtocol = candidate ? sealRecord({ ...parent.protocol, id: `pending-protocol-${ctx.state.cycle + 1}`, version: 1,
     hypothesis: { id: parent.active_hypothesis.id, version: Math.max(...parent.hypotheses.filter(h => h.id === parent.active_hypothesis.id).map(h => h.version)) + 1 },
+    allowed_literature_span_ids: undefined,
     provenance: 'unknown' as const, fingerprints: { ...unknownFingerprints }, split: 'requires fresh validation data',
   }) : undefined
   const revised = createRevision({ decisionId: `decision-${ctx.state.cycle}`, parentSnapshot: parent, assessment: parent.assessment,
     ...(candidate && !atLimit && !taskFinished ? { candidate, nextProtocol } : {}), reason: atLimit ? limitReason : strict && !taskFinished ? parent.assessment.reason : legacy.reason, maxRevisions: ctx.deps.maxCycles ?? 10 })
-  const shouldPause = atLimit || (legacy.action === 'fail' && (!strict || !candidate))
-  const finalSnapshot = shouldPause ? sealRecord({ ...revised, decision: sealRecord({ ...revised.decision!, action: 'pause' as const }) }) : taskFinished
+  const shouldPause = atLimit || (legacy.action === 'fail' && !candidate)
+  const finalAction = shouldPause ? sealRecord({ ...revised, decision: sealRecord({ ...revised.decision!, action: 'pause' as const }) }) : taskFinished
     ? sealRecord({ ...revised, decision: sealRecord({ ...revised.decision!, action: 'finish' as const }) }) : revised
-  const committed = await store.commit(finalSnapshot)
+  if (batch.selection.selectedId && finalAction.decision!.action !== 'revise') {
+    const id = batch.selection.selectedId
+    const reason = `deferred_controller_action:${finalAction.decision!.action}`
+    const reasons = [...batch.selection.reasons[id]!.filter(item => item !== 'selected'), reason]
+    batch = sealRecord({ ...batch, selection: { ...batch.selection, selectedId: null, reasons: { ...batch.selection.reasons, [id]: reasons } },
+      entries: batch.entries.map(entry => entry.candidate.id === id ? { ...entry, candidate: { ...entry.candidate, status: 'deferred' as const }, reasons: [...entry.admissionReasons, ...reasons] } : entry) })
+  }
+  if (Array.isArray(ideaCapture.source_refs)) batch = sealRecord({ ...batch, source_refs: [...batch.source_refs, ...ideaCapture.source_refs as SourceRef[]] })
+  const finalSnapshot = sealRecord({ ...finalAction, candidate_batches: [...(parent.candidate_batches ?? []), batch],
+    decision: sealRecord({ ...finalAction.decision!, candidate_batch_id: batch.id, source_refs: [...finalAction.decision!.source_refs, { id: batch.id, hash: batch.content_hash }] }) })
+  let committed: ResearchSnapshot
+  try { committed = await store.commit(finalSnapshot, parent.content_hash) }
+  catch (error) { if (/stale snapshot/.test(String(error)) && retry < 2) continue; throw error }
   if (candidate && committed.decision?.candidate) {
     await writeText(join(ctx.runDir, 'RESEARCH_NEXT_PLAN.md'), JSON.stringify({ hypothesis: committed.decision.candidate, evidence_snapshot: parent.id, constraints: 'New hypothesis is exploratory; use fresh validation data and a newly frozen protocol.' }, null, 2))
   } else if (strict && parent.assessment.next_action === 'repair') {
     await writeText(join(ctx.runDir, 'RESEARCH_NEXT_PLAN.md'), `Repair measurement/execution before further science: ${parent.assessment.reason}`)
   }
   return materializeCommittedDecision(ctx, committed)
+  }
+  throw new ExperimentPauseError('research snapshot kept changing; rebuild selection on resume')
 }
 
 export async function researchPlanInput(ctx: RunContext, idea: string): Promise<string> {

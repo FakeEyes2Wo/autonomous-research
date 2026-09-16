@@ -9,6 +9,10 @@ export interface ResearchNode {
   parent?: string
   content: string
   artifacts?: string[]
+  /** Derived candidate projection; canonical records live in ResearchStore. */
+  candidate?: { id: string; batchId: string; snapshotHash: string; parentVersion: number; reasons: string[] }
+  /** Rebuilt from the frozen task graph, job receipt and admitted collection. */
+  runtimeTask?: { graphId: string; graphHash: string; taskId: string; jobId: string; attemptId: string; dependsOn: string[]; candidateIds: string[]; snapshotHash: string; admissionKey?: string }
 }
 
 export const RUN_STATUSES = ['RUNNING', 'WAITING', 'PAUSED', 'FAILED', 'COMPLETED'] as const

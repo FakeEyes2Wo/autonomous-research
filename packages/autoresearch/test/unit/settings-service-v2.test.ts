@@ -16,6 +16,9 @@ test('missing settings can be created by revision-checked patch', async (t) => {
   const after = await patchProjectSettingsDocument(dir, { expectedRevision: emptyRevision, ops: [{ op: 'replace', path: '/budget/maxRunTokens', value: 999 }] })
   assert.equal(after.source, 'v2')
   assert.equal(after.settings.budget.maxRunTokens, 999)
+  assert.deepEqual(after.settings.literature, { mode: 'off', maxResults: 8, maxContextChars: 12000 })
+  const lexical = await patchProjectSettingsDocument(dir, { expectedRevision: after.revision, ops: [{ op: 'replace', path: '/literature/mode', value: 'lexical' }] })
+  assert.equal(lexical.settings.literature.mode, 'lexical')
 })
 
 test('two first writers cannot both commit against the missing revision', async (t) => {

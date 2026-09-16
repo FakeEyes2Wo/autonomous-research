@@ -11,10 +11,10 @@ import { exportEvidenceChain } from '../export/evidence-chain.js'
 import { createRunContext, reloadTree } from '../service/context.js'
 import type { ResearchRunnerOptions } from '../service/types.js'
 import { loadProjectSettings } from '../settings/project-settings.js'
-import { createPolicySnapshot } from '../policy/model-routing.js'
+import { createPolicySnapshot, frozenLiteratureSettings } from '../policy/model-routing.js'
 import { openRequestLedger } from '../policy/request-ledger.js'
 import type { ProjectSettings } from '../settings/schema.js'
-import { isExperimentPauseError } from './errors.js'
+import { isExperimentPauseError, DurableExperimentWaitingError } from './errors.js'
 import { validateWorkerResult } from './validation.js'
 import { assertFailureImportTarget, importResearchFailure, type FailureReportImport } from '../service/failure-import.js'
 import { bindResearchOutputs } from '../service/research-outputs.js'
@@ -48,7 +48,7 @@ export interface ExperimentRunRequest {
 
 export interface ExperimentRunResult {
   runDir: string
-  status: 'completed' | 'failed' | 'paused'
+  status: 'completed' | 'failed' | 'paused' | 'waiting'
   reportPath: string
   evidencePath?: string
   cycles: number
@@ -67,7 +67,7 @@ function freezePolicy<T>(value: T): T {
   return value
 }
 
-async function loadExperimentPolicy(runDir: string, settings: ProjectSettings): Promise<NonNullable<RoleExecutionContext['policySnapshot']>> {
+async function loadExperimentPolicy(runDir: string, settings: ProjectSettings, existing: boolean): Promise<NonNullable<RoleExecutionContext['policySnapshot']>> {
   const file = safeResolve(runDir, SNAPSHOT_FILE)
   try {
     const parsed = await readJson<unknown>(file)
@@ -75,11 +75,12 @@ async function loadExperimentPolicy(runDir: string, settings: ProjectSettings): 
       !('model' in parsed) || !('modelRouting' in parsed) || !('workflow' in parsed) || !('budget' in parsed)) {
       throw new AutoResearchError(`invalid experiment policy snapshot: ${file}`, 'STATE_CORRUPT')
     }
-    return freezePolicy(parsed as NonNullable<RoleExecutionContext['policySnapshot']>)
+    return freezePolicy({ ...parsed, literature: frozenLiteratureSettings((parsed as { literature?: unknown }).literature) } as NonNullable<RoleExecutionContext['policySnapshot']>)
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && !(error instanceof Error && /cannot read .*ENOENT/i.test(error.message))) throw error
   }
   const snapshot = { ...createPolicySnapshot(settings), model: structuredClone(settings.model) }
+  if (existing) snapshot.literature = frozenLiteratureSettings(undefined)
   await atomicWriteJson(file, snapshot)
   return freezePolicy(snapshot)
 }
@@ -138,7 +139,7 @@ async function assertExperimentIdentity(runDir: string, task: string, profile: s
 }
 
 function isBudgetPause(error: unknown): boolean {
-  return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'BUDGET_EXHAUSTED')
+  return Boolean(error && typeof error === 'object' && ['BUDGET_EXHAUSTED', 'CONTEXT_INSUFFICIENT'].includes(String((error as { code?: string }).code)))
 }
 
 type ExperimentContext = ReturnType<typeof createRunContext>
@@ -149,12 +150,12 @@ async function persistTerminalExperiment(
   profile: string,
   reportPath: string,
   cycles: number,
-  status: 'failed' | 'paused',
+  status: 'failed' | 'paused' | 'waiting',
   reason: string,
   phase?: 'failed',
   failureReport?: string,
 ): Promise<ExperimentRunResult> {
-  ctx.state.status = status === 'failed' ? 'FAILED' : 'PAUSED'
+  ctx.state.status = status === 'failed' ? 'FAILED' : status === 'waiting' ? 'WAITING' : 'PAUSED'
   if (phase) ctx.state.phase = phase
   ctx.state.lastError = reason
   await saveState(ctx.runDir, ctx.state)
@@ -236,7 +237,8 @@ async function executeExperimentTask(
   await writeIfMissing(join(runDir, 'RUBRIC.md'), `# RUBRIC\n\n- Task: ${task}\n- Criteria: produce a reproducible experiment with real evidence.\n`)
   await freezeRubric(runDir)
 
-  const state: RunState = (await loadState(runDir)) ?? await createInitialState(runDir)
+  const savedState = await loadState(runDir)
+  const state: RunState = savedState ?? await createInitialState(runDir)
   await importResearchFailure(runDir, state.runId, request.failureReport)
   if (state.status === 'COMPLETED' || state.status === 'FAILED') {
     return {
@@ -250,7 +252,7 @@ async function executeExperimentTask(
   }
   state.status = 'RUNNING'
   await saveState(runDir, state)
-  const policySnapshot = await loadExperimentPolicy(runDir, projectSettings)
+  const policySnapshot = await loadExperimentPolicy(runDir, projectSettings, Boolean(savedState))
   const requestLedger = agentContext.requestLedger ?? await openRequestLedger({
     runDir,
     runId: state.runId,
@@ -374,7 +376,7 @@ async function executeExperimentTask(
   } catch (error) {
     if (!isBudgetPause(error) && !isExperimentPauseError(error)) throw error
     const reason = error instanceof Error ? error.message : String(error)
-    return persistTerminalExperiment(ctx, task, profile, reportPath, cycles, 'paused', reason, undefined, `# PAUSED\n\n${reason}\n`)
+    return persistTerminalExperiment(ctx, task, profile, reportPath, cycles, error instanceof DurableExperimentWaitingError ? 'waiting' : 'paused', reason, undefined, `# PAUSED\n\n${reason}\n`)
   }
 
   if (!finished) {
@@ -468,7 +470,7 @@ async function runMinimalExperiment(
   } catch (error) {
     if (!isBudgetPause(error) && !isExperimentPauseError(error)) throw error
     const reason = error instanceof Error ? error.message : String(error)
-    return persistTerminalExperiment(ctx, task, profile, reportPath, cycles, 'paused', reason, undefined, `# PAUSED\n\n${reason}\n`)
+    return persistTerminalExperiment(ctx, task, profile, reportPath, cycles, error instanceof DurableExperimentWaitingError ? 'waiting' : 'paused', reason, undefined, `# PAUSED\n\n${reason}\n`)
   }
   if (!finished) {
     const reason = `experiment did not finish within maxRounds=${maxRounds}`
@@ -491,7 +493,7 @@ function buildExperimentReport(
   cycles: number,
   reason: string | undefined,
   evidencePath: string | undefined,
-  status: 'completed' | 'failed' | 'paused' = reason ? 'failed' : 'completed',
+  status: 'completed' | 'failed' | 'paused' | 'waiting' = reason ? 'failed' : 'completed',
   finished = true,
 ): string {
   return `# EXPERIMENT_REPORT

@@ -214,7 +214,7 @@ export const researchTreeQuery: ToolDefinitionLike = {
   },
 }
 
-export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefinitionLike {
+export function createExperimentRunTool(provider: RoleAgentProvider, experimentRuntimeForProject?: (projectDir: string) => Promise<NonNullable<import('../agents/types.js').RoleExecutionContext['experimentRuntime']>>): ToolDefinitionLike {
   return {
     name: 'experiment_run',
     description: 'Run a standalone automatic experiment from a user task requirement.',
@@ -245,6 +245,7 @@ export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefini
         agentContext: {
           parent: parent as never,
           signal: exec.signal,
+          ...(experimentRuntimeForProject ? { experimentRuntime: await experimentRuntimeForProject(typeof args.projectDir === 'string' ? args.projectDir : String(args.runDir)) } : {}),
         },
       })
     },

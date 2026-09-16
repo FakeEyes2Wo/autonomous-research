@@ -33,3 +33,16 @@ function toPointer(path) {
   if (path.startsWith('/')) return path;
   return `/${path.split('.').map((part) => part.replaceAll('~', '~0').replaceAll('/', '~1')).join('/')}`;
 }
+
+/** One instance owns asynchronous import/index operations for this host. */
+export async function resolveLiteratureService(ctx) {
+  const injected = typeof ctx?.get === 'function' ? ctx.get('autoresearchLiterature') : ctx?.autoresearchLiterature;
+  const methods = ['listPapers', 'search', 'getSource', 'getSpan', 'importSources', 'buildIndex', 'getOperation'];
+  let service = injected;
+  if (!service) {
+    try { const { LiteratureService } = await import('@athena/autoresearch/literature'); service = new LiteratureService(); }
+    catch { return undefined; }
+  }
+  if (methods.some(method => typeof service[method] !== 'function')) return undefined;
+  return Object.fromEntries(methods.map(method => [method, service[method].bind(service)]));
+}

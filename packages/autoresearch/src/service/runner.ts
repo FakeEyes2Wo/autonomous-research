@@ -28,8 +28,9 @@ import {
 } from '../experiment/steps.js'
 import { runPaper } from './steps/paper.js'
 import type { ResearchRunnerOptions } from './types.js'
-import { isExperimentPauseError } from '../experiment/errors.js'
+import { isExperimentPauseError, DurableExperimentWaitingError } from '../experiment/errors.js'
 import { validateWorkerResult } from '../experiment/validation.js'
+import { loadTaskGraph } from '../experiment/task-graph.js'
 
 export type { ResearchRunnerOptions } from './types.js'
 
@@ -44,6 +45,7 @@ export class ResearchRunner {
 
   async run(runDir: string, state: RunState, tree: ResearchTree, context: RoleExecutionContext): Promise<RunState> {
     const ctx = createRunContext(this.deps, runDir, state, tree, context)
+    const resumingDurable = Boolean(await loadTaskGraph(runDir, `cycle-${state.cycle}`))
     ctx.logger.info(`run started runDir=${runDir} runId=${state.runId} status=${state.status} cycle=${state.cycle}`)
 
     // A paper checkpoint owns the remaining work. Prelude roles are paid work
@@ -87,7 +89,7 @@ export class ResearchRunner {
       return this.runMinimal(ctx, candidate.raw, profile)
     }
 
-    const shouldBrainstorm = this.shouldBrainstorm(runDir)
+    const shouldBrainstorm = !resumingDurable && this.shouldBrainstorm(runDir)
     if (shouldBrainstorm) {
       await transition(state, 'brainstorm', 'brainstorm-pipeline')
       const brainstormOptions = {
@@ -111,7 +113,7 @@ export class ResearchRunner {
     ctx.logger.info(`intake done direction=${candidate.direction.slice(0, 80)}`)
 
     let deepDive = { relatedPapers: '', baselines: '' }
-    if (!shouldBrainstorm && this.deps.deepDiveEnabled !== false) {
+    if (!resumingDurable && !shouldBrainstorm && this.deps.deepDiveEnabled !== false) {
       try {
         deepDive = await runInitialDeepDive(
           { provider: this.deps.provider, topN: this.deps.deepDiveTopN },
@@ -131,14 +133,14 @@ export class ResearchRunner {
 
     const pool = await HypothesisPool.load(runDir)
 
-    if (tree.query({ kind: 'hypothesis' }).length <= 1) {
+    if (!resumingDurable && tree.query({ kind: 'hypothesis' }).length <= 1) {
       await runIdeaGeneration(ctx, { idea: candidate.raw, profile, relatedPapers: deepDive.relatedPapers, baselines: deepDive.baselines })
     }
     pool.syncFromTree(ctx.tree, state.runId)
     await pool.save()
     await reloadTree(ctx)
 
-    const ideaVerdict = await reviewGate(ctx, {
+    const ideaVerdict = resumingDurable ? { verdict: 'proceed' as const } : await reviewGate(ctx, {
       gate: 'idea',
       title: 'Ideas are ready to proceed?',
       detail: treeSummary(ctx.tree),
@@ -154,8 +156,8 @@ export class ResearchRunner {
       await reloadTree(ctx)
     }
 
-    await ensureRubric(ctx, { idea: candidate.raw, profile })
-    const rubricVerdict = await reviewGate(ctx, {
+    if (!resumingDurable) await ensureRubric(ctx, { idea: candidate.raw, profile })
+    const rubricVerdict = resumingDurable ? { verdict: 'proceed' as const } : await reviewGate(ctx, {
       gate: 'rubric',
       title: 'Rubric is ready to freeze?',
       detail: await readRubric(runDir),
@@ -184,15 +186,20 @@ export class ResearchRunner {
       }
 
       const planText = await this.readPlanText(runDir, state.planVersion)
-      const [minimalVerification, modelScout] = await Promise.all([
+      const frozenGraph = await loadTaskGraph(runDir, `cycle-${cycle}`)
+      let minimalVerification = (await readOptionalText(join(runDir, 'MINIMAL_VERIFICATION.md'))) ?? ''
+      let modelScout = (await readOptionalText(join(runDir, 'MODEL_SCOUT.md'))) ?? ''
+      let experimentDesign = (await readOptionalText(join(runDir, 'EXPERIMENT_DESIGN.md'))) ?? planText
+      if (!frozenGraph) {
+      ;[minimalVerification, modelScout] = await Promise.all([
         runMinimalVerification(ctx, { planText }),
         runModelScout(ctx, { planText }),
       ])
-      let experimentDesign = await runExperimentDesign(ctx, { planText, minimalVerification, modelScout })
+      experimentDesign = await runExperimentDesign(ctx, { planText, minimalVerification, modelScout })
       try {
         experimentDesign = await runExperimentReflexion(ctx, { planText, minimalVerification, modelScout, initialDesign: experimentDesign })
       } catch (error) {
-        if (isExperimentPauseError(error)) return this.pauseRun(ctx, error.message)
+        if (isExperimentPauseError(error)) return this.pauseRun(ctx, error.message, error instanceof DurableExperimentWaitingError)
         throw error
       }
 
@@ -225,6 +232,7 @@ export class ResearchRunner {
           return this.pauseRun(ctx, `revised experiment design still needs human revision: ${experimentVerdict.feedback ?? 'no feedback'}`)
         }
       }
+      }
 
       await transition(state, 'work', `work-${cycle}`)
       const workDir = safeResolve(runDir, WORK_DIR, `cycle-${String(cycle).padStart(2, '0')}`)
@@ -233,7 +241,7 @@ export class ResearchRunner {
       try {
         actionResult = await validateWorkerResult(runDir, await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification }))
       } catch (error) {
-        if (isExperimentPauseError(error)) return this.pauseRun(ctx, error.message)
+        if (isExperimentPauseError(error)) return this.pauseRun(ctx, error.message, error instanceof DurableExperimentWaitingError)
         throw error
       }
       await recordResult(state, `work-${cycle}`, actionResult as unknown as Record<string, unknown>)
@@ -344,9 +352,9 @@ export class ResearchRunner {
     return ctx.state
   }
 
-  private async pauseRun(ctx: RunContext, reason: string): Promise<RunState> {
+  private async pauseRun(ctx: RunContext, reason: string, waiting = false): Promise<RunState> {
     ctx.logger.warn(`run paused: ${reason}`)
-    ctx.state.status = 'PAUSED'
+    ctx.state.status = waiting ? 'WAITING' : 'PAUSED'
     ctx.state.lastError = reason
     await saveState(ctx.runDir, ctx.state)
     await writeFailureReport(ctx.runDir, `# PAUSED\n\n${reason}\n`)
@@ -397,8 +405,8 @@ export class ResearchRunner {
     }
 
     const review = ctx.policySnapshot.workflow.experimentReview
-    const pauseForEvidence = async (reason = 'worker evidence is insufficient or unsafe; supervisor cannot override the evidence gate'): Promise<RunState> => {
-      ctx.state.status = 'PAUSED'
+    const pauseForEvidence = async (reason = 'worker evidence is insufficient or unsafe; supervisor cannot override the evidence gate', waiting = false): Promise<RunState> => {
+      ctx.state.status = waiting ? 'WAITING' : 'PAUSED'
       ctx.state.lastError = reason
       await saveState(ctx.runDir, ctx.state)
       await writeFailureReport(ctx.runDir, `# PAUSED\n\n${ctx.state.lastError}.\n`)
@@ -429,7 +437,7 @@ export class ResearchRunner {
         await recordResult(ctx.state, `minimal-work-${cycle}`, actionResult)
       }
     } catch (error) {
-      if (isExperimentPauseError(error)) return pauseForEvidence(error.message)
+      if (isExperimentPauseError(error)) return pauseForEvidence(error.message, error instanceof DurableExperimentWaitingError)
       if (savedWork) return pauseForEvidence(error instanceof Error ? error.message : String(error))
       throw error
     }

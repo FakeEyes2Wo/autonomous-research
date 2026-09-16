@@ -37,6 +37,11 @@
       For new research use research_run; for a standalone experiment use experiment_run.
       For resume use the explicitly selected run directory and its persisted project identity;
       never assume the global last-run pointer belongs to the current project.
+      When a run returns WAITING, keep monitoring that same run with bounded delays and
+      resume it to collect its durable jobs and advance the existing workflow. Do not start
+      another project discovery, reset the budget, or duplicate an uncertain job through shell tools.
+      PAUSED means a budget, authority, evidence, or other reported constraint needs resolution;
+      explain that constraint and preserve it. Do not present a waiting or paused run as a finished paper.
       Plugin registration itself must not start work without a user task.
       Inspect project_settings_get for settings without opening secret files.
       If the user's intent is ambiguous, ask clarifying questions with ask_user_question.

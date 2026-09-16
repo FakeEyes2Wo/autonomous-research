@@ -66,7 +66,7 @@ export class ResearchStore {
   }
 
   private records(snapshot: ResearchSnapshot): VersionedRecord[] {
-    return [snapshot, ...snapshot.claims, ...snapshot.hypotheses, snapshot.protocol, ...snapshot.evidence, ...(snapshot.assessment ? [snapshot.assessment, ...snapshot.assessment.failures] : []), ...(snapshot.decision ? [snapshot.decision] : [])]
+    return [snapshot, ...snapshot.claims, ...snapshot.hypotheses, snapshot.protocol, ...snapshot.evidence, ...(snapshot.candidate_batches ?? []), ...(snapshot.assessment ? [snapshot.assessment, ...snapshot.assessment.failures] : []), ...(snapshot.decision ? [snapshot.decision] : [])]
   }
 
   private async history(snapshot: ResearchSnapshot): Promise<ResearchSnapshot[]> {
@@ -90,6 +90,11 @@ export class ResearchStore {
     for (const record of this.records(snapshot)) verifyRecord(record)
     const history = await this.history(snapshot)
     const records = history.flatMap((state) => this.records(state))
+    for (const batch of snapshot.candidate_batches ?? []) {
+      if (batch.snapshotHash !== batch.selection.snapshotHash || batch.snapshotHash !== batch.selectionInput.snapshotHash ||
+        !history.some(state => state.content_hash === batch.snapshotHash)) throw new Error('candidate selection snapshot mismatch')
+      if (batch.entries.length !== batch.selection.candidateIds.length || batch.entries.some(entry => !batch.selection.candidateIds.includes(entry.candidate.id))) throw new Error('candidate selection set mismatch')
+    }
     const historicalHashes = new Map<string, string>()
     for (const record of records) {
       const key = `${record.id}:${record.version}`
@@ -141,7 +146,7 @@ export class ResearchStore {
         if (!target || target.statement !== claim.statement || target.scope !== claim.scope || !protocol || !hypothesis) return false
         const rows = assessment.source_refs.map((ref) => snapshot.evidence.find((row) => row.id === ref.id && row.content_hash === ref.hash))
         if (rows.some((row) => !row)) return false
-        const verified = assessEvidence({ claim: target, hypothesis, protocol, evidence: rows.filter((row) => !!row), discoveryEvidence: snapshot.evidence, createdAt: assessment.created_at })
+        const verified = assessEvidence({ claim: target, hypothesis, protocol, evidence: rows.filter((row) => !!row), discoveryEvidence: snapshot.evidence, discoverySourceRefs: hypothesis.source_refs, createdAt: assessment.created_at })
         const allowed = claim.status === 'supported' ? verified.supporting_evidence_ids : verified.opposing_evidence_ids
         const declared = claim.status === 'supported' ? assessment.supporting_evidence_ids : assessment.opposing_evidence_ids
         return verified.claim_status === claim.status && ids.length > 0 && ids.every((id) => allowed.includes(id) && declared.includes(id) && assessment.admissible_evidence_ids.includes(id))
@@ -192,12 +197,13 @@ export class ResearchStore {
     }
   }
 
-  async commit(snapshot: ResearchSnapshot): Promise<ResearchSnapshot> {
+  async commit(snapshot: ResearchSnapshot, expectedHash?: string): Promise<ResearchSnapshot> {
     safeId(snapshot.id)
     const release = await this.lock()
     try {
       await this.validate(snapshot)
       const current = await this.loadCurrent()
+      if (expectedHash !== undefined && current?.content_hash !== expectedHash) throw new Error('stale snapshot hash; rebuild selection inputs')
       let existing: ResearchSnapshot | undefined
       try { existing = await this.loadSnapshot(snapshot.id) }
       catch (error) { if (!missing(error)) throw error }
@@ -218,6 +224,9 @@ export class ResearchStore {
             const retained = snapshot[key].find((r) => r.id === old.id && r.version === old.version)
             if (!retained || retained.content_hash !== old.content_hash) throw new Error('historical research lineage cannot be overwritten or dropped')
           }
+        }
+        for (const old of current.candidate_batches ?? []) {
+          if (!snapshot.candidate_batches?.some(batch => batch.id === old.id && batch.content_hash === old.content_hash)) throw new Error('historical candidate batches cannot be dropped')
         }
       }
       // A decision ID is globally stable within a run, even if callers change the snapshot ID.

@@ -42,6 +42,7 @@ export interface ContextRecord extends ContextRecordInput {
 }
 
 export interface ResearchContextRequest {
+  readonly literature?: import('../literature/context-adapter.js').LiteratureContextBinding
   readonly stage: string
   readonly scope: ResearchContextScope
   readonly snapshot?: { readonly id: string; readonly contentHash: string }

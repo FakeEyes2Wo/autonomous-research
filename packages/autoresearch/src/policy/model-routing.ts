@@ -1,4 +1,5 @@
 import type { CapabilityTier, ModelRouteSettings, ProjectSettings } from '../settings/schema.js'
+import { validateProjectSettingsCandidate } from '../settings/migration.js'
 
 export interface RoutingSignals { quality_low?: boolean; fatal_flaw?: boolean; evidence_conflict?: boolean; high_stakes_decision?: boolean; context_truncated?: boolean; [key: string]: boolean | undefined }
 export interface RoleTask { role: string; task: string; signals?: RoutingSignals; upgradesUsed?: number }
@@ -33,6 +34,13 @@ export function resolveModelRoute(settings: ProjectSettings, request: RoleTask):
 
 export function isSemanticUpgradeSignal(signal: string): boolean { return semanticUpgradeSignals.has(signal) }
 
-export function createPolicySnapshot(settings: ProjectSettings): Pick<ProjectSettings, 'version'|'modelRouting'|'workflow'|'budget'> {
-  return structuredClone({ version: settings.version, modelRouting: settings.modelRouting, workflow: settings.workflow, budget: settings.budget })
+export function createPolicySnapshot(settings: ProjectSettings): Pick<ProjectSettings, 'version'|'modelRouting'|'workflow'|'budget'|'literature'> {
+  return structuredClone({ version: settings.version, modelRouting: settings.modelRouting, workflow: settings.workflow, budget: settings.budget, literature: settings.literature })
+}
+
+/** Missing legacy fields remain off, independent of current project settings. */
+export function frozenLiteratureSettings(value: unknown): ProjectSettings['literature'] {
+  const validated = validateProjectSettingsCandidate({ version: 2, ...(value === undefined ? {} : { literature: value }) })
+  if (!validated.valid) throw new Error('invalid frozen literature policy')
+  return validated.settings!.literature
 }

@@ -15,3 +15,7 @@ Rules:
 - Context: the cited paper actually establishes the claim it supports.
 - If no .bib or no \cite usage, return NOT_APPLICABLE.
 - REPLACE/REMOVE must be surfaced for human approval.
+
+## Registered literature
+
+Use only the provided registered source span IDs. External spans are author-reported claims, not validated experimental outcomes. Preserve conditions, source versions and locators. Include contrary and mixed evidence; missing required sources block a decision. Citation locator validity does not establish semantic support. Unreviewed interpretations remain candidates with unknown support. A correction or retraction marked re_review_required requires renewed assessment.

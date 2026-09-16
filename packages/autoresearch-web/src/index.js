@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { URL } from 'node:url';
 import { API_PREFIX } from './contract.js';
-import { resolveSettingsService } from './core-bridge.js';
+import { resolveSettingsService, resolveLiteratureService } from './core-bridge.js';
+import { createLiterature } from './literature.js';
 import { createWorkbench } from './workbench.js';
 import { registerWorkbenchAssets } from './workbench-assets.js';
 import { createProjectRegistry } from './workspace-projects.js';
@@ -98,6 +99,8 @@ export async function apply(ctx, config = {}) {
   if (!ctx?.webServer?.register) throw new Error('autoresearch-web requires the DSH webServer service');
   const registry = createProjectRegistry(ctx, config);
   const service = getSettingsService(ctx) ?? await resolveSettingsService(ctx);
+  const literatureService = await resolveLiteratureService(ctx);
+  const literature = literatureService ? createLiterature({ ...literatureService, getProject: registry.find }) : null;
   const csrfToken = randomBytes(24).toString('hex');
   const workbench = createWorkbench({ ...config, projects: [] }, { getProject: registry.find });
 
@@ -122,6 +125,10 @@ export async function apply(ctx, config = {}) {
         return json(res, 200, { projects: (await registry.list()).map(publicProject), serviceAttached: service !== undefined, csrfToken });
       }
       if (await workbench.handle(req, res)) return;
+      if (pathname.startsWith(`${API_PREFIX}/literature/`)) {
+        if (!literature) return error(res, 503, 'core_literature_service_unavailable', 'The core literature service is not attached.');
+        if (await literature.handle(req, res)) return;
+      }
       if (!service) return serviceUnavailable(res);
       try {
         if (pathname === `${API_PREFIX}/settings` && req.method === 'GET') {

@@ -1,10 +1,28 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, readFile, mkdir, writeFile, symlink } from 'node:fs/promises'
+import { mkdtemp, rm, readFile, mkdir, writeFile, symlink, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runExperimentTask } from '../../dist/experiment/runner.js'
 import { FakeAgentProvider } from '../integration/fake-agent-provider.ts'
+
+test('legacy experiment resume keeps literature off despite lexical current project settings', async (t) => {
+  for (const missingSnapshot of [false, true]) {
+    const runDir = await mkdtemp(join(tmpdir(), 'ar-literature-policy-'))
+    t.after(() => rm(runDir, { recursive: true, force: true }))
+    await mkdir(join(runDir, '.autoresearch'), { recursive: true })
+    await writeFile(join(runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\nliterature:\n  mode: lexical\n')
+    const observed: string[] = []
+    const provider = { async run(_role, _input, ctx) { observed.push(ctx.policySnapshot.literature.mode); throw new Error('fixture stop before transport') } }
+    const request = { runDir, task: 'policy resume', maxRounds: 1, agentContext: { parent: { id: 'parent', session: { id: 'parent' } }, signal: new AbortController().signal } }
+    await assert.rejects(runExperimentTask({ provider }, request), /fixture stop/)
+    const policyPath = join(runDir, '.autoresearch', 'policy-snapshot.json')
+    if (missingSnapshot) await unlink(policyPath)
+    else { const policy = JSON.parse(await readFile(policyPath, 'utf8')); delete policy.literature; await writeFile(policyPath, JSON.stringify(policy)) }
+    await assert.rejects(runExperimentTask({ provider }, request), /fixture stop/)
+    assert.deepEqual(observed, ['lexical', 'off'])
+  }
+})
 
 test('standalone experiment runs a task and writes a report', async (t) => {
   const runDir = await mkdtemp(join(tmpdir(), 'ar-experiment-'))

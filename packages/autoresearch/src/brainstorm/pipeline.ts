@@ -42,6 +42,7 @@ import {
 import { renderPaperWiki } from './wiki-render.js'
 import { selectCuratedPapers, writeCuratedPapers } from './curated-papers.js'
 import { importPaperRecords } from '../literature/import.js'
+import { withResearchContextProvider } from '../service/research-context.js'
 
 const DEFAULTS = {
   surveyMinSurveys: 3,
@@ -137,6 +138,7 @@ export async function runBrainstorm(
   deps: BrainstormDependencies,
   request: BrainstormRequest,
 ): Promise<string> {
+  deps = { ...deps, provider: withResearchContextProvider(deps.provider) }
   const { runDir, agentContext } = request
   await ensureDir(brainstormDirPath(runDir))
 

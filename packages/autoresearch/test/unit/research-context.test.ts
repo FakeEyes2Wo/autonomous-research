@@ -151,6 +151,9 @@ test('context assembly accepts an unchanged dependent memory record', async (t) 
     budget: { maxInputTokens: 2_000 },
   })
   assert.deepEqual(new Set(result.selection.selected.map((entry) => entry.record.id)), new Set(['memory:source', 'memory:summary']))
+  const actor = await assembleResearchContext({ runDir, role: 'research-worker', taskId: 'actor',
+    request: { stage: 'work', scope: requestScope, records: [] }, budget: { maxInputTokens: 2000 } })
+  assert.equal(actor.selection.selected.length, 0, 'workers must not inherit historical treatment memory')
 })
 
 test('research context fails when a required conflict has a stale opposing side', () => {

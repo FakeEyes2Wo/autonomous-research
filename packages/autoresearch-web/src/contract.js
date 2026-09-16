@@ -25,5 +25,12 @@ export const ROUTE_CONTRACT = Object.freeze({
   listProjects: `GET ${API_PREFIX}/projects`,
   read: `GET ${API_PREFIX}/settings?projectId=<opaque-id>`,
   validate: `POST ${API_PREFIX}/settings/validate`,
-  patch: `PATCH ${API_PREFIX}/settings`
+  patch: `PATCH ${API_PREFIX}/settings`,
+  literaturePapers: `GET ${API_PREFIX}/literature/papers?projectId=<opaque-id>`,
+  literatureSearch: `GET ${API_PREFIX}/literature/search?projectId=<opaque-id>&q=<query>&generationId=<generation-id>`,
+  literatureSource: `GET ${API_PREFIX}/literature/source?projectId=<opaque-id>&documentId=<document-id>`,
+  literatureSpan: `GET ${API_PREFIX}/literature/span?projectId=<opaque-id>&spanId=<span-id>&generationId=<generation-id>`,
+  literatureImport: `POST ${API_PREFIX}/literature/import`,
+  literatureIndex: `POST ${API_PREFIX}/literature/index`,
+  literatureOperation: `GET ${API_PREFIX}/literature/operations?projectId=<opaque-id>&operationId=<operation-id>`
 });

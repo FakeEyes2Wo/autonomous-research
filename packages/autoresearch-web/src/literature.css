@@ -1,0 +1,30 @@
+#literature-dialog { width: min(1100px, calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); box-sizing: border-box; padding: 20px; border: 1px solid var(--border, #ccc); border-radius: 12px; color: var(--dsw-alias-label-primary, #252525); background: var(--dsw-alias-bg-base, #fff); overflow: auto; }
+#literature-dialog::backdrop { background: #0007; }
+#literature-dialog * { box-sizing: border-box; min-width: 0; }
+#literature-dialog [hidden] { display: none !important; }
+.literature-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.literature-toolbar h2 { flex: 1; margin: 0; }
+#literature-dialog button, #literature-dialog select, #literature-dialog input { font: inherit; padding: 7px 10px; border: 1px solid #9997; border-radius: 6px; background: transparent; color: inherit; max-width: 100%; }
+#literature-dialog button { cursor: pointer; margin: 4px; }
+#literature-dialog button:disabled { opacity: .5; cursor: default; }
+#literature-dialog :focus-visible { outline: 3px solid #3274c5; outline-offset: 2px; }
+#literature-query { flex: 1; }
+#literature-dialog p, #literature-dialog h3, #literature-dialog dd, #literature-dialog blockquote { overflow-wrap: anywhere; }
+.literature-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.literature-paper, .literature-hit { padding: 12px; border: 1px solid #9995; border-radius: 8px; margin-block: 10px; }
+.literature-paper h3 { margin: 0 0 8px; font-size: 16px; }
+.literature-paper p { margin: 5px 0; font-size: 13px; }
+.literature-warning { color: #a15c00; }
+#literature-dialog dl { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, 3fr); gap: 8px; font-size: 13px; }
+#literature-dialog dd { margin: 0; }
+#literature-dialog summary { cursor: pointer; padding: 8px 0; }
+#literature-dialog textarea { width: 100%; padding: 8px; min-height: 72px; font: inherit; color: inherit; background: transparent; border: 1px solid #9997; }
+#literature-source-text, #literature-excerpt { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+#literature-canvas { max-width: 100%; height: auto; }
+#literature-dialog blockquote { margin: 8px 0; border-left: 3px solid #9995; padding-left: 10px; }
+#literature-page { width: 80px; }
+@media (max-width: 720px) {
+  #literature-dialog { padding: 12px; }
+  .literature-toolbar h2 { flex-basis: 100%; font-size: 20px; }
+  .literature-columns { grid-template-columns: minmax(0, 1fr); }
+}

@@ -12,7 +12,7 @@ import {
   type WorkflowMode,
 } from './schema.js'
 
-const CORE_KEYS = new Set(['version', 'revision', 'paperExploration', 'figureApi', 'model', 'experiment', 'modelRouting', 'workflow', 'budget', 'extensions'])
+const CORE_KEYS = new Set(['version', 'revision', 'paperExploration', 'figureApi', 'model', 'experiment', 'modelRouting', 'workflow', 'budget', 'literature', 'extensions'])
 
 function clone<T>(value: T): T { return structuredClone(value) }
 function num(value: unknown, fallback: number): number { return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback }
@@ -35,6 +35,7 @@ function migrateRole(raw: Record<string, unknown>): RoleRouteSettings {
 export function migrateProjectSettings(input: unknown): ProjectSettings {
   const value = isRecord(input) ? input : {}
   const base = clone(DEFAULT_PROJECT_SETTINGS)
+  const literature = isRecord(value.literature) ? value.literature : {}
   const paper = isRecord(value.paperExploration) ? value.paperExploration : {}
   const figure = isRecord(value.figureApi) ? value.figureApi : {}
   const model = isRecord(value.model) ? value.model : {}
@@ -48,6 +49,7 @@ export function migrateProjectSettings(input: unknown): ProjectSettings {
 
   const next: ProjectSettings = {
     ...base,
+    literature: { mode: literature.mode === 'lexical' ? 'lexical' : 'off', maxResults: num(literature.maxResults, base.literature.maxResults), maxContextChars: num(literature.maxContextChars, base.literature.maxContextChars) },
     paperExploration: {
       maxPapers: num(paper.maxPapers, base.paperExploration.maxPapers), minSurveys: num(paper.minSurveys, base.paperExploration.minSurveys), minClusters: num(paper.minClusters, base.paperExploration.minClusters),
       latestWindowYears: num(paper.latestWindowYears, base.paperExploration.latestWindowYears), latestPerDirection: num(paper.latestPerDirection, base.paperExploration.latestPerDirection), maxSelectedDirections: num(paper.maxSelectedDirections, base.paperExploration.maxSelectedDirections),
@@ -95,6 +97,15 @@ function enumField(value: Record<string, unknown>, key: string, path: string, al
   if (value[key] !== undefined && (typeof value[key] !== 'string' || !allowed.includes(value[key]))) errors.push(error(`${path}/${key}`, 'ENUM', `must be one of ${allowed.join(', ')}`))
 }
 function validateRawShape(candidate: Record<string, unknown>, errors: ValidationError[]): void {
+  const literature = nested(candidate.literature, '/literature', errors)
+  if (literature) {
+    checkKeys(literature, '/literature', ['mode', 'maxResults', 'maxContextChars'], errors)
+    enumField(literature, 'mode', '/literature', ['off', 'lexical'], errors)
+    for (const [key, min, max] of [['maxResults', 1, 40], ['maxContextChars', 1000, 100000]] as const) {
+      const value = literature[key]
+      if (value !== undefined && (typeof value !== 'number' || !Number.isSafeInteger(value) || value < min || value > max)) errors.push(error(`/literature/${key}`, 'RANGE', `must be an integer from ${min} to ${max}`))
+    }
+  }
   if (candidate.version !== undefined && (typeof candidate.version !== 'number' || !Number.isInteger(candidate.version))) errors.push(error('/version', 'VERSION', 'version must be an integer'))
   stringField(candidate, 'revision', '/', errors)
 

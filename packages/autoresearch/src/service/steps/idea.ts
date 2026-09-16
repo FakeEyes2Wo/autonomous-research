@@ -1,4 +1,5 @@
-import { newId, readOptionalText } from '../../core/utils.js'
+import { atomicWriteJson, newId, readOptionalText, safeResolve } from '../../core/utils.js'
+import { ResearchStore, hashContent } from '../../research/index.js'
 import { recordResult, transition } from '../../core/state.js'
 import type { FalsifiabilityReport, IdeaDraft, IdeaPackage, SkepticReport, ValidationPlan } from '../../domain/idea.js'
 import { freezeRubric, rubricPath, writeRubric } from '../../domain/files.js'
@@ -7,6 +8,7 @@ import { blockingEvidence, lightHardGate, preGate, structuralCheck } from '../..
 import { runAgent, structuredText, treeSummary } from '../agent.js'
 import { runReflexion } from '../agent-loop.js'
 import type { RunContext } from '../context.js'
+import type { RegisteredLiteratureSource } from '../../literature/context-adapter.js'
 
 export interface IdeaGenerationInput {
   idea: string
@@ -68,10 +70,14 @@ export async function ensureRubric(ctx: RunContext, { idea, profile, feedback }:
 
 export async function runIdeaGeneration(ctx: RunContext, { idea, profile, relatedPapers, baselines, failureDirections, insight, feedback }: IdeaGenerationInput): Promise<void> {
   await transition(ctx.state, 'ideation', 'idea-generate')
-  const result = await runAgent(ctx, {
-    role: 'idea-generator',
-    input: {
+  const store = new ResearchStore(ctx.runDir)
+  const capturePath = safeResolve(ctx.runDir, 'research', 'idea-capture.json')
+  const earlier = JSON.parse((await readOptionalText(capturePath)) ?? '{"source_refs":[]}') as { source_refs: import('../../research/contracts.js').SourceRef[] }
+  // A proposal keeps its content identity; each authorized assessment round has a separate accounted identity.
+  const reviewAttemptId = newId('idea-review')
+  const generationInput = {
       runDir: ctx.runDir,
+      taskId: `${reviewAttemptId}:generate`,
       idea,
       profile,
       treeSummary: treeSummary(ctx.tree),
@@ -80,28 +86,77 @@ export async function runIdeaGeneration(ctx: RunContext, { idea, profile, relate
       ...(failureDirections ? { failureDirections } : {}),
       ...(insight ? { insight } : {}),
       ...(feedback ? { plan: `Human review feedback on the previous idea generation:\n${feedback}` } : {}),
-    },
+  }
+  const reviewAttemptSource = await store.captureBytes(JSON.stringify({ schema: 'autoresearch/idea-review-attempt/v1',
+    id: reviewAttemptId, cycle: ctx.state.cycle, input: generationInput }), 'idea-review-attempt')
+  earlier.source_refs.push(reviewAttemptSource)
+  await atomicWriteJson(capturePath, earlier)
+  const result = await runAgent(ctx, {
+    role: 'idea-generator',
+    input: generationInput,
     label: 'generate ideas',
   })
   const structured = result.structured as { hypotheses?: IdeaDraft[] } | undefined
-  const drafts = structured?.hypotheses ?? []
+  const drafts = Array.isArray(structured?.hypotheses) ? structured.hypotheses : []
+  const rawSource = await store.captureBytes(JSON.stringify({ reviewAttemptId, output: result.structured ?? null, text: result.text }), 'idea-generation-proposals')
+  earlier.source_refs.push(...(result.literatureSources ?? []).map(source => source.sourceRef))
+  await atomicWriteJson(capturePath, { source_refs: [...earlier.source_refs, rawSource] })
+  const evaluations: { raw: unknown; id: string; status: string; reasons: string[]; revised?: IdeaPackage }[] = []
   const rejections: string[] = []
   const kept: IdeaPackage[] = []
 
   const candidateLimit = Math.max(1, Math.floor(ctx.policySnapshot.workflow.candidateLimit))
-  for (const draft of drafts.slice(0, candidateLimit)) {
+  const occurrences = new Map<string, number>()
+  const proposals = drafts.map(draft => {
+    const hash = hashContent(draft)
+    const occurrence = (occurrences.get(hash) ?? 0) + 1
+    occurrences.set(hash, occurrence)
+    return { draft, id: `idea-${hash}-${occurrence}` }
+  }).sort((a, b) => a.id.localeCompare(b.id))
+  for (const [index, { draft, id }] of proposals.entries()) {
+    const registered = new Map((result.literatureSources ?? []).map(source => [source.spanId, source.sourceRef]))
+    let requireRegistered = result.literatureSources !== undefined || ctx.policySnapshot.literature?.mode === 'lexical'
+    const unregistered = (value: IdeaDraft) => requireRegistered && [
+      ...(Array.isArray(value?.sources) ? value.sources : []),
+      ...(Array.isArray(value?.supported_premises) ? value.supported_premises.flatMap(p => p.supporting_refs ?? []) : []),
+    ].some(sourceId => !registered.has(sourceId))
+    const evaluation = { raw: draft, id, status: 'proposed', reasons: [] as string[], revised: undefined as IdeaPackage | undefined }
+    evaluations.push(evaluation)
+    if (unregistered(draft)) {
+        evaluation.status = 'rejected'
+        evaluation.reasons.push('unregistered_source_span')
+        rejections.push(`unregistered source span in ${id}`)
+        continue
+    }
+    if (index >= candidateLimit) {
+      evaluation.status = 'deferred'
+      evaluation.reasons.push('controller_idea_review_limit')
+      continue
+    }
     let pkg: IdeaPackage = {
       ...draft,
-      idea_id: newId('idea'),
+      idea_id: id,
       generation_strategy: 'candidate_grounded',
       lineage_op: 'generate',
     }
-    const reflex = await runIdeaReflexion(ctx, pkg)
+    const reflex = await runIdeaReflexion(ctx, pkg, reviewAttemptId, feedback, sources => {
+      requireRegistered = true
+      for (const source of sources) { registered.set(source.spanId, source.sourceRef); earlier.source_refs.push(source.sourceRef) }
+    })
     pkg = reflex.pkg
+    evaluation.revised = pkg
+    if (unregistered(pkg)) {
+      evaluation.status = 'rejected'
+      evaluation.reasons.push('unregistered_source_span')
+      rejections.push(`unregistered source span after reflexion in ${id}`)
+      continue
+    }
     const structural = structuralCheck(pkg)
     const pre = preGate(structural, reflex.falsifiability)
     if (pre.verdict !== 'PASS') {
       rejections.push(`pre_gate ${pkg.idea_id}: ${pre.blocking_factor} - ${blockingEvidence(pre)}`)
+      evaluation.status = 'rejected'
+      evaluation.reasons.push(rejections[rejections.length - 1]!)
       continue
     }
 
@@ -114,13 +169,21 @@ export async function runIdeaGeneration(ctx: RunContext, { idea, profile, relate
     const decision = lightHardGate(structural, reflex.falsifiability, [reflex.review], validation)
     if (decision.verdict === 'PASS' || decision.verdict === 'EXPLORATORY') {
       kept.push(pkg)
+      evaluation.status = 'eligible'
     } else {
       rejections.push(`${decision.verdict} ${pkg.idea_id}: ${decision.blocking_factor} - ${blockingEvidence(decision)}`)
+      evaluation.status = 'rejected'
+      evaluation.reasons.push(rejections[rejections.length - 1]!)
     }
   }
 
-  for (const pkg of kept) {
-    ctx.tree.add('hypothesis', pkg.statement, { status: 'proposed', artifacts: pkg.sources })
+  const evaluationSource = await store.captureBytes(JSON.stringify({ schema: 'autoresearch/idea-candidates/v1', reviewAttemptId, reviewAttemptSource, rawSource, candidateLimit, evaluations }), 'idea-generation-evaluations')
+  await atomicWriteJson(capturePath, { source_refs: [...earlier.source_refs, rawSource, evaluationSource] })
+  for (const evaluation of evaluations) {
+    const content = evaluation.revised?.statement ?? String((evaluation.raw as IdeaDraft)?.statement ?? 'Malformed idea proposal')
+    const attributes = { status: evaluation.status, artifacts: [rawSource.path!, evaluationSource.path!] }
+    if (!ctx.tree.query({ id: evaluation.id }).length) ctx.tree.add('hypothesis', content, { id: evaluation.id, ...attributes })
+    else ctx.tree.update(evaluation.id, { content, ...attributes })
   }
   await ctx.tree.save()
   await recordResult(ctx.state, 'idea-generate', { generated: drafts.length, kept: kept.length, rejections })
@@ -149,9 +212,13 @@ interface IdeaReflexionState {
   review: SkepticReport
 }
 
-async function runIdeaReflexion(ctx: RunContext, pkg: IdeaPackage): Promise<IdeaReflexionState> {
+async function runIdeaReflexion(ctx: RunContext, pkg: IdeaPackage, reviewAttemptId: string, feedback?: string, onSources?: (sources: RegisteredLiteratureSource[]) => void): Promise<IdeaReflexionState> {
   let currentPkg = pkg
-  const call = (role: Parameters<typeof runAgent>[1]['role'], input: Parameters<typeof runAgent>[1]['input'], label: string) => runAgent(ctx, { role, input, label })
+  const call = async (role: Parameters<typeof runAgent>[1]['role'], input: Parameters<typeof runAgent>[1]['input'], label: string) => {
+    const result = await runAgent(ctx, { role, input: { ...input, taskId: `${reviewAttemptId}:${pkg.idea_id}:${label}` }, label })
+    if (result.literatureSources !== undefined) onSources?.(result.literatureSources)
+    return result
+  }
 
   return runReflexion<IdeaReflexionState>(call, 'idea-reflexion', {
     reflexion: (state, round) =>
@@ -159,6 +226,7 @@ async function runIdeaReflexion(ctx: RunContext, pkg: IdeaPackage): Promise<Idea
     buildInput: (current, _round, reflexion) => ({
       runDir: ctx.runDir,
       ideaPackage: JSON.stringify(current?.pkg ?? pkg, null, 2),
+      ...(!current && feedback ? { plan: `Human review feedback for this assessment round:\n${feedback}` } : {}),
       ...(current ? { plan: reflexion, revisedIdeaPackage: JSON.stringify(current.pkg, null, 2) } : {}),
     }),
     parse: (result) => {

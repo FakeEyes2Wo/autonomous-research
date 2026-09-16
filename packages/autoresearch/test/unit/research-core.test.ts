@@ -102,6 +102,9 @@ test('revision retains judged parent versions and creates exploratory evidence-l
   assert.equal(next.budget.tokens, 123)
   assert.equal(next.budget.revisions, 1)
   assert.notEqual(next.protocol.content_hash, parent.protocol.content_hash)
+  const withLiterature = core.createRevision({ decisionId: 'literature', parentSnapshot: parent, assessment,
+    candidate: { ...candidate, source_span_refs: [{ id: 'span', path: 'research/sources/hash', hash: 'a'.repeat(64) }] }, nextProtocol, reason: 'registered literature', createdAt: at })
+  assert.deepEqual(withLiterature.hypotheses.at(-1).discovery_source_ids, ['e', 'span'])
   assert.throws(() => core.createRevision({ decisionId: 'bad', parentSnapshot: parent, assessment, candidate: { ...candidate, statement: 'A beats B' }, nextProtocol, reason: 'repeat' }), /unchanged/i)
 })
 
@@ -136,6 +139,16 @@ test('discovery evidence IDs resolve to source artifacts and fresh data stays ad
   assert.equal(unresolved.claim_status, 'inconclusive')
   const fresh = core.sealRecord({ ...f.evidence[0], artifacts: [{ id: 'fresh', path: 'fresh.json', hash: 'fresh-hash' }] })
   assert.equal(core.assessEvidence({ ...f, hypothesis, evidence: [fresh], discoveryEvidence: [discovery] }).claim_status, 'refuted')
+})
+
+test('captured literature discovery refs resolve without becoming scientific evidence and prevent raw source reuse', () => {
+  const f = fixture()
+  const source = { id: 'literature-span', path: 'research/sources/literature', hash: 'a'.repeat(64) }
+  const hypothesis = core.sealRecord({ ...f.hypothesis, discovery_source_ids: [source.id], source_refs: [source] })
+  assert.equal(core.assessEvidence({ ...f, hypothesis, discoverySourceRefs: [source] }).claim_status, 'refuted')
+  assert.ok(core.assessEvidence({ ...f, hypothesis }).excluded_evidence[0].reasons.includes('discovery_provenance_unresolved'))
+  const reused = core.sealRecord({ ...f.evidence[0], artifacts: [source] })
+  assert.ok(core.assessEvidence({ ...f, hypothesis, evidence: [reused], discoverySourceRefs: [source] }).excluded_evidence[0].reasons.includes('discovery_data_reused'))
 })
 
 test('assessment and failure IDs distinguish timestamps and changed recovery actions', () => {

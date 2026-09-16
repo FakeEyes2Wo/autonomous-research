@@ -359,7 +359,7 @@ import 返回的 `mappings[].workId`，`projectId` 使用实际项目绝对路�
     "visibility": {
       "projectId": "<项目的真实绝对路径>",
       "partitionId": "main",
-      "roles": ["researcher"],
+      "roles": ["reader", "researcher", "paper-survey", "paper-frontier-miner", "idea-generator", "idea-reflexion", "planner", "supervisor", "hypothesis-reviser", "writer", "citation-auditor"],
       "policyHash": "<项目策略的64位SHA-256>"
     }
   }]
@@ -402,3 +402,88 @@ test/
   unit/            单元测试
   integration/     集成测试
 ```
+## Existing project to paper
+
+In the `auto_research` preset, the main agent can dispatch `project_paper_run`
+with an existing `projectDir` and a separate `runDir`. The service captures a
+bounded source inventory, generates source-linked contribution candidates, then
+uses the normal research loop for supplementary validation and paper generation.
+Historical results remain unverified until the evidence checks admit them.
+`research_run` with the saved `runDir` resumes the same project identity and
+frozen budget; it does not repeat completed discovery or reset spent tokens.
+
+Discovery is tool-free. Its default inventory is at most 40 files, 8 KiB per
+file and 40 KiB total, with visible omissions. Missing or changed required source
+bytes stop resume. A paused budget is returned as `PAUSED` with the saved phase
+and error; a paused run is not a completed paper.
+
+For example, the main agent can call:
+
+```json
+{
+  "projectDir": "C:/research/my-project",
+  "runDir": "C:/research/my-project/.autoresearch/runs/project-paper-1",
+  "maxCycles": 3
+}
+```
+
+Use a fresh run directory for the initial `project_paper_run`; subsequently call
+`research_run` with that same `runDir`. The main agent schedules missing validation
+within the frozen budget before entering the paper pipeline. Historical project
+observations never become validated findings simply because the model describes
+them as such. With the local execution grant below, keep the run directory inside
+the bound project root. Budget or unsupported-validator pauses require resolution
+before the corresponding scientific claim can advance.
+
+## Trusted local experiment execution
+
+Durable task graphs require a host execution grant. The model-facing tools cannot
+create or enlarge this grant. To allow trusted local programs, configure the
+AutoResearch Cordis plugin in the host profile, for example:
+
+```yaml
+- id: autoresearch
+  config:
+    localExperiments:
+      projectRoots: ['C:/research/my-project']
+      executables: ['C:/Program Files/nodejs/node.exe']
+      envNames: ['EXPERIMENT_SEED']
+      maxWallMs: 300000
+      maxRunWallMs: 3600000
+      maxLogBytes: 1048576
+      maxArtifactBytes: 10485760
+```
+
+Use the actual absolute executable path on the host. Each job's working directory
+must resolve inside the run's authorized project; executable, environment names
+and per-job budgets are checked before execution. Concurrency is one and aggregate
+wall usage/reservations persist across controller restarts. Without a grant,
+task-graph execution pauses. This grants execution of trusted programs; it is not
+a sandbox for hostile code. The local backend currently requires Windows process
+tree containment. CPU, GPU and currency hard caps are unavailable and remain null.
+
+Embedding applications can instead supply
+`AutoResearchServiceOptions.experimentRuntimeForProject(projectDir)` and the
+equivalent optional factory to `createExperimentRunTool`. The factory is a trusted
+host API, separate from model-generated task graphs and project settings files.
+
+文献角色权限使用实际角色名：CLI 默认 researcher，Web 阅读使用 reader，研究 planner/supervisor 等分别核对权限。Web 显式入库由服务端赋予当前项目的标准阅读/研究角色；浏览器不能自报角色或其他项目。已有受限文档不会自动扩权。research-worker 还必须满足冻结 protocol 的 allowed_literature_span_ids。
+
+新研究需在项目设置中明确启用 literature.mode: lexical（默认 off）。maxResults 范围 1–40，默认 8；maxContextChars 范围 1000–100000，默认 12000。索引构建必须显式执行，研究固定使用首次绑定的 generation，恢复不会自动切换新文献版本。
+
+## Durable runtime verification
+
+The default software suite includes a three-minute Windows subprocess recovery
+test. Longer controlled runs are explicit and make no model calls:
+
+```sh
+node scripts/runtime-soak.mjs --duration-hours 2 --config test/fixtures/jobs/soak-config.json --output <empty-directory>
+node scripts/runtime-soak.mjs --duration-hours 24 --config test/fixtures/jobs/soak-config.json --output <another-empty-directory>
+```
+
+Keep the process running until `report.json` records its terminal outcome. The
+report derives restart, duplicate-submission, lost-result and budget counts from
+the persisted jobs and execution logs. A running or interrupted test is not a
+completed duration check. See [verification record](../../docs/verification/2026-09-16-research-rag-runtime.md)
+for actual results and the separate limits of mocked, local-process and paid-model
+checks.

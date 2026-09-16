@@ -7,9 +7,120 @@ import { AutoResearchService } from '../../dist/service/autoresearch-service.js'
 import { runExperimentTask } from '../../dist/experiment/runner.js'
 import { FakeAgentProvider } from './fake-agent-provider.ts'
 import { ResearchStore } from '../../dist/research/index.js'
+import { sealRecord } from '../../dist/research/records.js'
+import { commitResearchDecision } from '../../dist/service/research-cycle.js'
+import { synchronizeResearchViews } from '../../dist/service/research-outputs.js'
 import type { RoleName, RoleInput, RoleExecutionContext } from '../../dist/agents/types.js'
 
 const context = () => ({ parent: { id: 'fixture', session: { id: 'fixture' } }, signal: new AbortController().signal })
+
+test('B2 retains every raw proposal and selects past the third independently of arrival order', async (t) => {
+  const selected: string[] = []
+  for (const reverse of [false, true]) {
+    const dir = await setup('minimal')
+    t.after(() => rm(dir, { recursive: true, force: true }))
+    const provider = new EvidenceProvider()
+    const original = provider.run.bind(provider)
+    provider.run = async (role, input, ctx) => {
+      const result = await original(role, input, ctx)
+      if (role === 'supervisor' && input.cycle === 1) {
+        const base = result.structured.candidates[0]
+        const candidates = [null, { ...base, evidence_ids: ['forged'] }, { ...base, feasible: false },
+          { ...base, estimatedCost: 1 }, { ...base, estimatedCost: 9 }, { ...base, sourceSpanIds: ['forged-span'] }]
+        result.structured.candidates = reverse ? candidates.reverse() : candidates
+      }
+      return result
+    }
+    await runExperimentTask({ provider }, { runDir: dir, task: 'All proposals.', maxRounds: 2, agentContext: context() })
+    const store = new ResearchStore(dir)
+    const snapshot = await store.loadSnapshot('snapshot-decision-1')
+    const batch = snapshot.candidate_batches![0]!
+    assert.equal(batch.entries.length, 6)
+    assert.equal(batch.selection.candidateIds.length, 6)
+    assert.equal(batch.entries.find(e => e.candidate.id === batch.selection.selectedId)!.candidate.estimatedCost, 1)
+    assert.ok(batch.entries.some(e => e.raw === null && e.candidate.status === 'rejected'))
+    assert.ok(batch.entries.some(e => e.reasons.includes('unregistered_evidence')))
+    assert.ok(batch.entries.some(e => e.reasons.includes('unregistered_span')))
+    assert.ok(batch.entries.some(e => e.candidate.status === 'deferred'))
+    const source = JSON.parse(await readFile(join(dir, batch.source_refs[0]!.path!), 'utf8'))
+    assert.equal(source.output.candidates.length, 6)
+    assert.equal(batch.snapshotHash, (await store.loadSnapshot('cycle-1-assessment')).content_hash)
+    assert.equal((await store.loadCurrent())!.candidate_batches!.length, 2)
+    const nodes = JSON.parse(await readFile(join(dir, 'research_tree.json'), 'utf8')).nodes.filter(node => node.candidate?.batchId === batch.id)
+    assert.equal(nodes.length, 6)
+    assert.ok(nodes.some(node => node.status === 'rejected'))
+    selected.push(batch.selection.selectedId!)
+  }
+  assert.equal(selected[0], selected[1])
+})
+
+test('B2 rebuilds selection after a CAS race and binds the committed batch to the new basis', async (t) => {
+  const dir = await setup('minimal')
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const commit = ResearchStore.prototype.commit
+  let injected = false
+  let basis = ''
+  t.mock.method(ResearchStore.prototype, 'commit', async function(snapshot, expectedHash) {
+    if (!injected && snapshot.decision?.id === 'decision-1') {
+      injected = true
+      const current = (await this.loadCurrent())!
+      const refreshed = sealRecord({ ...current, id: 'refreshed-basis', version: current.version + 1, parent_snapshot_id: current.id })
+      basis = refreshed.content_hash
+      await commit.call(this, refreshed)
+    }
+    return commit.call(this, snapshot, expectedHash)
+  })
+  await runExperimentTask({ provider: new EvidenceProvider() }, { runDir: dir, task: 'CAS race.', maxRounds: 2, agentContext: context() })
+  const snapshot = await new ResearchStore(dir).loadSnapshot('snapshot-decision-1')
+  assert.equal(snapshot.parent_snapshot_id, 'refreshed-basis')
+  assert.equal(snapshot.candidate_batches![0]!.snapshotHash, basis)
+  assert.ok(snapshot.candidate_batches![0]!.basis.includes('rebuilt_after_snapshot_change'))
+  assert.equal(snapshot.decision!.action, 'revise')
+})
+
+test('B2 deferred candidates reopen under a new budget basis while the prior decision stays immutable', async (t) => {
+  const dir = await setup('minimal')
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  await runExperimentTask({ provider: new EvidenceProvider() }, { runDir: dir, task: 'Deferred proposal.', maxRounds: 1, agentContext: context() })
+  const store = new ResearchStore(dir)
+  const before = (await store.loadCurrent())!
+  assert.equal(before.candidate_batches![0]!.entries[0]!.candidate.status, 'deferred')
+  const ctx = { runDir: dir, projectDir: dir, state: { cycle: 2, runId: before.branch_id }, deps: { maxCycles: 3 }, context: context() }
+  await commitResearchDecision(ctx as any, { candidates: [] }, { action: 'revise', reason: 'Explicit extended exploration budget.' }, { id: before.id, hash: before.content_hash })
+  const after = (await store.loadCurrent())!
+  assert.equal(after.decision!.action, 'revise')
+  assert.equal(after.candidate_batches!.length, 2)
+  assert.equal(after.candidate_batches![1]!.entries[0]!.reconsideredFrom, before.candidate_batches![0]!.id)
+  assert.ok(after.candidate_batches![1]!.basis.some(reason => reason.startsWith('reopened:')))
+  assert.equal((await store.loadSnapshot(before.id)).content_hash, before.content_hash)
+})
+
+test('B2 idea review cap retains every deferred draft and rebuilds the tree from canonical captured history', async (t) => {
+  const dir = await setup('legacy')
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const settings = join(dir, '.autoresearch', 'project-settings.yaml')
+  await writeFile(settings, (await readFile(settings, 'utf8')).replace('mode: legacy', 'mode: legacy\n  candidateLimit: 2'))
+  const provider = new FakeAgentProvider({ decisions: ['finish'] })
+  const original = provider.run.bind(provider)
+  provider.run = async (role, input, ctx) => {
+    const result = await original(role, input, ctx)
+    if (role === 'idea-generator') {
+      const base = result.structured.hypotheses[0]
+      result.structured.hypotheses = Array.from({ length: 7 }, (_, i) => ({ ...base, statement: `Proposal ${i}: ${base.statement}` }))
+    }
+    return result
+  }
+  await new AutoResearchService(provider).run({ runDir: dir, maxCycles: 1, brainstorm: 'off', humanReview: 'off' }, context())
+  const snapshot = (await new ResearchStore(dir).loadCurrent())!
+  const ref = snapshot.candidate_batches![0]!.source_refs.find(ref => ref.id === 'idea-generation-evaluations')!
+  const captured = JSON.parse(await readFile(join(dir, ref.path!), 'utf8'))
+  assert.equal(captured.evaluations.length, 7)
+  assert.equal(captured.evaluations.filter(e => e.status === 'deferred').length, 5)
+  await rm(join(dir, 'research_tree.json'))
+  const tree = await synchronizeResearchViews(dir, snapshot)
+  assert.equal(tree.nodes.filter(node => node.id.startsWith('idea-')).length, 7)
+  assert.equal(tree.nodes.filter(node => node.id.startsWith('idea-') && node.status === 'deferred').length, 5)
+})
 async function setup(mode: string) {
   const dir = await mkdtemp(join(tmpdir(), 'ar-evidence-loop-'))
   await mkdir(join(dir, 'input'), { recursive: true })

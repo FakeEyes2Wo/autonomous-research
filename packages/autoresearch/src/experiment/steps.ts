@@ -6,13 +6,17 @@ import { parseDecision } from '../core/types.js'
 import { readRubric } from '../domain/files.js'
 import { runAgent, runStage, structuredText, treeSummary } from '../service/agent.js'
 import type { RunContext } from '../service/context.js'
-import { ExperimentPauseError } from './errors.js'
+import { ExperimentPauseError, DurableExperimentWaitingError } from './errors.js'
 import { validateWorkerResult } from './validation.js'
 import { resolveModelRoute } from '../policy/model-routing.js'
 import type { ProjectSettings } from '../settings/schema.js'
 import { captureResearchPlan, freezeResearchCycle, readResearchAttempt, registerResearchAttempt, assessResearchCycle, committedDecision, commitResearchDecision, researchPlanInput } from '../service/research-cycle.js'
 import { runtimeCapabilities } from '../service/runtime-capabilities.js'
 import { ResearchStore } from '../research/index.js'
+import { freezeTaskGraph, loadTaskGraph, tasksFromExecutionPlan } from './task-graph.js'
+import { advanceExperimentGraph, writeRuntimeHandoff } from './runtime-adapter.js'
+import { cyclePath, writeResearchReport } from '../service/research-cycle.js'
+import { synchronizeResearchViews } from '../service/research-outputs.js'
 
 function plannerRuntimeConstraints(ctx: RunContext): string {
   const policy = ctx.policySnapshot
@@ -56,7 +60,7 @@ export async function runPlanner(
     },
     label: `plan cycle ${ctx.state.cycle}`,
   })
-  await captureResearchPlan(ctx, result.structured)
+  await captureResearchPlan(ctx, result.structured, result.literatureSources)
   return structuredText(result.structured, 'plan') ?? result.text
 }
 
@@ -87,7 +91,7 @@ export async function runMinimalPlan(
     label: `minimal plan cycle ${ctx.state.cycle}`,
   })
   const structured = (result.structured ?? {}) as { plan?: unknown; riskLevel?: unknown }
-  await captureResearchPlan(ctx, result.structured)
+  await captureResearchPlan(ctx, result.structured, result.literatureSources)
   const plan = typeof structured.plan === 'string' && structured.plan.trim() ? structured.plan : result.text
   const riskLevel = structured.riskLevel === 'high' || structured.riskLevel === 'medium' ? structured.riskLevel : 'low'
   return { plan, riskLevel }
@@ -272,7 +276,28 @@ export async function runWorker(
   },
 ): Promise<ActionResult> {
   if (ctx.context.signal.aborted) throw new ExperimentPauseError('execution cancelled before worker dispatch')
-  await freezeResearchCycle(ctx, planText, experimentDesign)
+  const frozen = await freezeResearchCycle(ctx, planText, experimentDesign)
+  const graphId = `cycle-${ctx.state.cycle}`
+  let graph = await loadTaskGraph(ctx.runDir, graphId)
+  const planner = JSON.parse((await readOptionalText(cyclePath(ctx, 'planner-output.json'))) ?? '{}')
+  if (graph || planner.taskGraph !== undefined) {
+    try {
+      graph ??= await freezeTaskGraph({ runDir: ctx.runDir, id: graphId, goal: planText, snapshot: frozen, tasks: tasksFromExecutionPlan(planner.taskGraph, ctx.runDir, graphId, frozen) })
+      if (!ctx.context.experimentRuntime) { await writeRuntimeHandoff(ctx.runDir, graph); throw new ExperimentPauseError('DURABLE_AUTHORITY_REQUIRED: configure the trusted host localExperiments project/executable permissions before resuming; no job dispatched.') }
+      const result = await advanceExperimentGraph({ runDir: ctx.runDir, graph, runtime: ctx.context.experimentRuntime })
+      const snapshot = (await new ResearchStore(ctx.runDir).loadCurrent())!
+      await writeResearchReport(ctx, snapshot)
+      ctx.tree = await synchronizeResearchViews(ctx.runDir, snapshot)
+      if (result.status === 'waiting') throw new DurableExperimentWaitingError(result.reason)
+      if (result.status === 'paused') throw new ExperimentPauseError(result.reason)
+      const action: ActionResult = { status: 'completed', summary: result.reason, artifacts: result.artifacts }
+      await registerResearchAttempt(ctx, 'completed', action)
+      return action
+    } catch (error) {
+      if (error instanceof ExperimentPauseError) throw error
+      throw new ExperimentPauseError(`durable graph paused: ${String(error)}`)
+    }
+  }
   const cached = await readResearchAttempt(ctx)
   if (cached?.status === 'completed' && cached.result) {
     const result = await validateWorkerResult(ctx.runDir, cached.result)
@@ -353,5 +378,5 @@ export async function runSupervisor(
   if (result.structured === undefined) {
     throw new AutoResearchError('supervisor did not return structured decision', 'AGENT_FAILED')
   }
-  return commitResearchDecision(ctx, result.structured, parseDecision(result.structured), expectedSnapshot ? { id: expectedSnapshot.id, hash: expectedSnapshot.content_hash } : undefined)
+  return commitResearchDecision(ctx, result.structured, parseDecision(result.structured), expectedSnapshot ? { id: expectedSnapshot.id, hash: expectedSnapshot.content_hash } : undefined, { registeredSpans: result.literatureSources?.map(source => source.sourceRef) })
 }

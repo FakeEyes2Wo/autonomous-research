@@ -6,6 +6,8 @@ export function assessEvidence(input: AssessmentInput): ResearchAssessment {
   const { claim, hypothesis, protocol, evidence } = input
   for (const record of [claim, hypothesis, protocol, ...evidence]) verifyRecord(record)
   const discovery = (hypothesis.discovery_source_ids ?? []).map((id) => (input.discoveryEvidence ?? evidence).find((row) => row.id === id))
+  const captured = (input.discoverySourceRefs ?? []).filter(ref => ref.path && ref.hash)
+  const missingDiscovery = (hypothesis.discovery_source_ids ?? []).filter(id => !(input.discoveryEvidence ?? evidence).some(row => row.id === id) && !captured.some(ref => ref.id === id))
   for (const row of discovery) if (row) verifyRecord(row)
   const excluded: ResearchAssessment['excluded_evidence'] = []
   const admitted: Evidence[] = []
@@ -21,8 +23,9 @@ export function assessEvidence(input: AssessmentInput): ResearchAssessment {
     if (row.split !== protocol.split || hashContent(row.fingerprints) !== hashContent(protocol.fingerprints) || Object.values(protocol.fingerprints).some((v) => !v || v === 'unknown')) reasons.push('fingerprint_or_split_mismatch')
     if (row.execution === 'unknown') reasons.push('execution_unknown')
     if (row.execution === 'error' && protocol.failure_policy !== 'include_as_outcome') reasons.push('execution_error')
-    if (discovery.some((source) => !source)) reasons.push('discovery_provenance_unresolved')
+    if (missingDiscovery.length) reasons.push('discovery_provenance_unresolved')
     if (discovery.some((source) => source && (source.id === row.id || source.fingerprints.data === row.fingerprints.data || source.split === row.split || source.artifacts.some((ref) => row.artifacts.some((current) => current.id === ref.id || (!!current.hash && current.hash === ref.hash)))))) reasons.push('discovery_data_reused')
+    if (captured.some(ref => (hypothesis.discovery_source_ids ?? []).includes(ref.id) && row.artifacts.some(current => current.id === ref.id || current.hash === ref.hash))) reasons.push('discovery_data_reused')
     if (reasons.length) excluded.push({ id: row.id, reasons })
     else admitted.push(row)
   }

@@ -5,4 +5,11 @@ export declare const ROUTE_CONTRACT: Readonly<{
   read: string
   validate: string
   patch: string
+  literaturePapers: string
+  literatureSearch: string
+  literatureSource: string
+  literatureSpan: string
+  literatureImport: string
+  literatureIndex: string
+  literatureOperation: string
 }>

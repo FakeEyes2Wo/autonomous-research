@@ -25,6 +25,52 @@ or PATH. No machine-specific compiler path, mandatory local proxy or browser CDN
 is built in. Editing and saving still work if Tectonic is unavailable.
 PDF.js and its resources are copied into `dist/vendor/pdfjs` during the build.
 
+## Literature reading
+
+Open **文献目录** in the workbench for the selected project. The directory shows
+title, authors, version, reading coverage, relevance and ingestion state; each
+paper expands to all 15 fields with provenance and verification labels. Opening
+a source does not manufacture an analysis card or mark it as read. Abstract-only
+sources, partial parsing and citations awaiting review are explicitly labelled.
+
+Search uses the displayed immutable index generation. Results show verbatim
+excerpts, section/page, document version and a selectable citation. PDF.js opens
+the cited page using locally bundled resources. Without reliable coordinates it
+does not claim a highlighted passage. HTML sources are served and rendered as
+plain extracted text. Project, document and generation changes abort old reads;
+late responses cannot replace the current view.
+
+Import and index building happen only after clicking their explicit buttons.
+Import accepts a JSON manifest with `works` and `documents`, for example:
+
+```json
+{
+  "works": [{ "id": "paper-1", "title": "Example paper", "authors": null,
+    "aliases": [], "metadataSources": [], "status": "candidate" }],
+  "documents": [{ "workId": "paper-1", "sourceKind": "abstract",
+    "source": { "kind": "text", "text": "Abstract supplied by the author." } }]
+}
+```
+
+Sources can be text or public URLs (`{"kind":"url","url":"https://…"}`).
+The server stamps access policy; browser-supplied local paths are rejected.
+Operation progress distinguishes queued/running/completed/failed and interrupted
+work. Read-only GET requests never acquire sources or build an index.
+
+The host resolves `autoresearchLiterature` when injected, otherwise the core
+`@athena/autoresearch/literature` export's `LiteratureService`. All seven literature
+routes use `/api/autoresearch/literature`; `papers`, `search`, `source`, `span` and
+`operations` are reads, and `import`/`index` are JSON POST writes protected by the
+same loopback, same-origin and CSRF boundary as settings. Source PDF supports
+single byte ranges. Project roots always come from the server registry.
+
+Validation: build the core package first, then run `npm run build`, `npm test`
+and `npm run test:literature:browser` in this package. Browser verification uses
+a real headless Chromium/Edge (set `BROWSER_PATH` if needed), deterministic service
+fixtures and a real two-page PDF. The separate HTTP integration test uses the
+actual core catalog/import/index/retrieval implementation. These are functional
+checks, not retrieval benchmarks or provider quality evaluations.
+
 The package registers one `settings.section` entry and a loopback, same-origin
 API. It does not replace DSH Settings → Models: providers, CPA base URLs and
 credentials remain owned by the native Models page. The AutoResearch page shows

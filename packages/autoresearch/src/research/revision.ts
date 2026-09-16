@@ -21,15 +21,16 @@ export function createRevision(input: RevisionInput): ResearchSnapshot {
   if (candidate && action !== 'pause') {
     if (assessment.category === 'invalid_measurement' || assessment.category === 'execution_error') throw new Error('repair invalid evidence before scientific revision')
     if (!candidate.statement.trim() || candidate.statement.trim() === oldHypothesis.statement.trim()) throw new Error('unchanged revision candidate')
-    if (!candidate.evidence_ids.length || candidate.evidence_ids.some((id) => !parent.evidence.some((row) => row.id === id))) throw new Error('revision candidate must cite existing evidence')
+    if ((!candidate.evidence_ids.length && !candidate.source_span_refs?.length) || candidate.evidence_ids.some((id) => !parent.evidence.some((row) => row.id === id))) throw new Error('revision candidate must cite existing evidence')
+    if (candidate.source_span_refs?.some(ref => !ref.path || !ref.hash)) throw new Error('revision spans require captured provenance')
     if (!candidate.prediction.trim() || !candidate.falsification.trim() || !candidate.rationale.trim()) throw new Error('candidate must be falsifiable and justified')
     if (!nextProtocol || nextProtocol.content_hash === protocol.content_hash) throw new Error('revision requires a new protocol')
     verifyRecord(nextProtocol)
     const claimVersion = Math.max(...claims.filter((c) => c.id === oldClaim.id).map((c) => c.version)) + 1
     const hypothesisVersion = Math.max(...hypotheses.filter((h) => h.id === oldHypothesis.id).map((h) => h.version)) + 1
-    const source_refs = candidate.evidence_ids.map((id) => ({ id, hash: parent.evidence.find((row) => row.id === id)!.content_hash }))
+    const source_refs = [...candidate.evidence_ids.map((id) => ({ id, hash: parent.evidence.find((row) => row.id === id)!.content_hash })), ...(candidate.source_span_refs ?? [])]
     const claim: Claim = sealRecord({ ...oldClaim, version: claimVersion, created_at, source_refs, statement: candidate.statement, scope: candidate.scope, parents: [parent.active_claim], supporting_evidence_ids: [], opposing_evidence_ids: [], status: 'proposed', reason: candidate.rationale })
-    const hypothesis: Hypothesis = sealRecord({ ...oldHypothesis, version: hypothesisVersion, created_at, source_refs, statement: candidate.statement, claim: { id: claim.id, version: claim.version }, parents: [parent.active_hypothesis], mechanism: candidate.mechanism, alternatives: candidate.alternatives, prediction: candidate.prediction, falsification: candidate.falsification, measurement: candidate.measurement, decision_rule: candidate.decision_rule, scope: candidate.scope, mode: 'exploratory', status: 'proposed', discovery_source_ids: candidate.evidence_ids })
+    const hypothesis: Hypothesis = sealRecord({ ...oldHypothesis, version: hypothesisVersion, created_at, source_refs, statement: candidate.statement, claim: { id: claim.id, version: claim.version }, parents: [parent.active_hypothesis], mechanism: candidate.mechanism, alternatives: candidate.alternatives, prediction: candidate.prediction, falsification: candidate.falsification, measurement: candidate.measurement, decision_rule: candidate.decision_rule, scope: candidate.scope, mode: 'exploratory', status: 'proposed', discovery_source_ids: [...candidate.evidence_ids, ...(candidate.source_span_refs ?? []).map(ref => ref.id)] })
     if (nextProtocol.hypothesis.id !== hypothesis.id || nextProtocol.hypothesis.version !== hypothesis.version) throw new Error('next protocol must target the revised hypothesis version')
     claims.push(claim)
     hypotheses.push(hypothesis)

@@ -1,6 +1,20 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { migrateProjectSettings, validateProjectSettingsCandidate } from '../../dist/settings/migration.js'
+import { createPolicySnapshot, frozenLiteratureSettings } from '../../dist/policy/model-routing.js'
+
+test('literature defaults off, freezes in new policy, and enforces bounded lexical settings', () => {
+  assert.deepEqual(migrateProjectSettings({ version: 1 }).literature, { mode: 'off', maxResults: 8, maxContextChars: 12000 })
+  const settings = migrateProjectSettings({ version: 2, literature: { mode: 'lexical', maxResults: 10, maxContextChars: 2000 } })
+  assert.deepEqual(createPolicySnapshot(settings).literature, settings.literature)
+  assert.deepEqual(frozenLiteratureSettings(undefined), { mode: 'off', maxResults: 8, maxContextChars: 12000 })
+  assert.throws(() => frozenLiteratureSettings({ mode: 'hybrid', maxResults: 8, maxContextChars: 12000 }), /literature/)
+  for (const literature of [{ mode: 'hybrid' }, { maxResults: 0 }, { maxResults: 51 }, { maxResults: 1.5 }, { maxContextChars: 999 }, { maxContextChars: 100001 }]) {
+    assert.equal(validateProjectSettingsCandidate({ version: 2, literature }).valid, false)
+  }
+  assert.equal(validateProjectSettingsCandidate({ version: 2, literature: { mode: 'lexical', maxResults: 40, maxContextChars: 100000 } }).valid, true)
+  assert.equal(validateProjectSettingsCandidate({ version: 2, literature: { mode: 'lexical', maxResults: 41 } }).valid, false)
+})
 
 test('settings validation rejects invalid nested values instead of migrating them to defaults', () => {
   const result = validateProjectSettingsCandidate({ version: 2, workflow: { mode: 'typo', unexpected: true }, budget: { maxRoleCalls: 'abc', maxRunTokens: -1 } })

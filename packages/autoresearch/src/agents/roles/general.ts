@@ -14,6 +14,7 @@ export const generalRoleSpecs = {
       riskLevel: { type: 'string', enum: ['low', 'medium', 'high'] },
       hypothesis: { type: 'object', additionalProperties: true },
       protocol: { type: 'object', additionalProperties: true },
+      taskGraph: { type: 'object', additionalProperties: true },
     }),
   },
   'minimal-verifier': {

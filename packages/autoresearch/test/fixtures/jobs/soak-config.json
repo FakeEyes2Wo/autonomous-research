@@ -1,0 +1,24 @@
+{
+  "schema": "autoresearch/soak/v1",
+  "outputDir": ".runtime-soak",
+  "restartAfterMs": [30000, 90000, 150000],
+  "limits": { "maxConcurrentJobs": 1, "maxReservedWallMs": 90000000 },
+  "maxDiskBytes": 67108864,
+  "maxHarnessLogBytes": 8388608,
+  "jobs": [
+    {
+      "id": "minute", "attemptId": "minute-1", "taskId": "local-controlled-soak",
+      "inputHash": "soak-controlled-v1", "protocolHash": "soak-runtime-v1",
+      "executable": "$NODE", "args": ["$WORKLOAD"], "cwd": "$OUTPUT",
+      "env": { "JOB_DELAY": "60000", "LOG_BYTES": "8192" }, "checkpoint": null,
+      "budget": { "wallMs": 90000, "cpuSeconds": null, "gpuSeconds": null, "costMicros": null, "maxLogBytes": 4096, "maxArtifactBytes": 4096 }
+    },
+    {
+      "id": "two-minutes", "attemptId": "two-minutes-1", "taskId": "local-controlled-soak",
+      "inputHash": "soak-controlled-v1", "protocolHash": "soak-runtime-v1",
+      "executable": "$NODE", "args": ["$WORKLOAD"], "cwd": "$OUTPUT",
+      "env": { "JOB_DELAY": "120000", "LOG_BYTES": "8192" }, "checkpoint": null,
+      "budget": { "wallMs": 150000, "cpuSeconds": null, "gpuSeconds": null, "costMicros": null, "maxLogBytes": 4096, "maxArtifactBytes": 4096 }
+    }
+  ]
+}

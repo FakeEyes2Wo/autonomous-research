@@ -6,7 +6,9 @@ import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, Role
 import { resolveModelRoute, type ResolvedModelRoute } from '../policy/model-routing.js'
 import { resolveBudget } from '../policy/budget.js'
 import { clipContext } from '../policy/context.js'
-import { assembleResearchContext, type ResearchContextPackage } from '../research-context/index.js'
+import { assembleResearchContext, canonicalContextJson, type ResearchContextPackage } from '../research-context/index.js'
+import { researchContextForInput } from '../service/research-context.js'
+import { prepareLiteratureExposure, finishLiteratureExposure, promptContainsSpan, type RegisteredLiteratureSource } from '../literature/context-adapter.js'
 import { isBudgetExhaustedError } from '../policy/request-ledger.js'
 import { registerOwnedSession, withRequestBinding, type OwnedSessionBinding } from './request-accounting.js'
 import type { RequestLedger } from '../policy/request-ledger.js'
@@ -36,6 +38,7 @@ export interface SubagentProviderOptions {
 }
 
 interface PersistedTask {
+  literatureSources?: RegisteredLiteratureSource[]
   childId: SessionId
   fingerprint: string
   status: 'provisioning' | 'pending' | 'completed'
@@ -52,6 +55,28 @@ interface PersistedRegistry {
 const registryLocks = new Map<string, Promise<void>>()
 const taskLocks = new Map<string, Promise<void>>()
 const preparedResearchContexts = new WeakMap<RoleInput, ResearchContextPackage>()
+const exposedLiteratureSources = new WeakMap<RoleInput, RegisteredLiteratureSource[]>()
+
+async function transportWithExposure<T>(role: RoleName, input: RoleInput, prompt: string, transport: () => Promise<T>, repair = false): Promise<T> {
+  const binding = input.researchContext?.literature
+  const context = preparedResearchContexts.get(input)
+  if (!binding || !context) return transport()
+  // Repair receives previous output only; account for source text repeated by that output.
+  const actualContext = repair ? { ...context, selection: { ...context.selection, selected: context.selection.selected.filter(({ record }) => {
+    const evidenceText = (record.payload as { evidenceText?: string }).evidenceText
+    return record.source.recordType === 'literature-span' && typeof evidenceText === 'string' && promptContainsSpan(prompt, evidenceText)
+  }) } } : context
+  const exposure = await prepareLiteratureExposure({ runDir: input.runDir, binding, context: actualContext, prompt, role, repair })
+  if (!repair) exposedLiteratureSources.set(input, exposure.sources)
+  let result: T
+  try { result = await transport() }
+  catch (error) {
+    await finishLiteratureExposure(binding.root, exposure.prepared, 'unknown')
+    throw error
+  }
+  await finishLiteratureExposure(binding.root, exposure.prepared, 'sent')
+  return result
+}
 
 function withFeedback(prompt: string, feedback: string | undefined): string {
   return feedback ? `${prompt}\n\n## JSON Fix Required\n\n${feedback}` : prompt
@@ -205,7 +230,18 @@ function taskFingerprint(role: RoleName, input: RoleInput, context: RoleExecutio
     if (value !== undefined) result[String(field)] = value
     return result
   }, {})
-  const researchContextHash = preparedResearchContexts.get(input)?.manifest.renderedHash
+  const assembled = preparedResearchContexts.get(input)
+  // Retrieval receipts describe attempts, not new scientific inputs. Keep their IDs in the
+  // saved prompt/exposure while fingerprinting immutable source bytes and all other context.
+  const researchContextHash = input.researchContext?.literature && assembled ? createHash('sha256').update(canonicalContextJson({
+    scope: assembled.manifest.scope, snapshot: assembled.manifest.snapshot, protocolHash: assembled.manifest.protocolHash,
+    records: assembled.selection.selected.map(({ record }) => {
+      if (record.source.recordType !== 'literature-span') return record
+      const { contentHash: _hash, payload, ...body } = record
+      const { retrievalReceiptId: _receipt, ...source } = payload as Record<string, unknown>
+      return { ...body, payload: source }
+    }),
+  })).digest('hex') : assembled?.manifest.renderedHash
   return createHash('sha256').update(JSON.stringify({ role, taskId: input.taskId ?? role, cycle: input.cycle, fields, researchContextHash, policyVersion: context.policySnapshot?.version, routing: context.policySnapshot?.modelRouting })).digest('hex').slice(0, 24)
 }
 
@@ -372,6 +408,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     return withTaskLock(input.runDir, taskId, async () => {
       const logger = createLogger(input.runDir)
       const persisted = (await readRegistry(input.runDir)).tasks[taskId]
+      if (persisted?.literatureSources) exposedLiteratureSources.set(input, persisted.literatureSources)
       if (persisted && persisted.fingerprint !== fingerprint) throw new Error(`task registry conflict for ${taskId}: input revision changed`)
       if (persisted?.status === 'provisioning') throw new Error(`continuable task ${taskId} has an unresolved provisioning record; refusing replay`)
       if (persisted?.status === 'completed') {
@@ -399,7 +436,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
         releaseOwnership = registerChild(reservedChildId)
         let started
         try {
-          started = await this.runtime.startContinuable({
+          started = await transportWithExposure(role, input, promptWithFeedback, () => this.runtime.startContinuable!({
           provider: this.providerName,
           label: role,
           childId: reservedChildId,
@@ -409,7 +446,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
             ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
           },
           signal: context.signal,
-          })
+          }))
         } catch (error) {
           releaseOwnership?.()
           releaseOwnership = undefined
@@ -431,7 +468,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
         }
         childId = startedChildId
         try {
-          await updateRegistry(input.runDir, taskId, () => ({ childId: startedChildId, fingerprint, status: 'pending' }))
+          await updateRegistry(input.runDir, taskId, () => ({ childId: startedChildId, fingerprint, status: 'pending', literatureSources: exposedLiteratureSources.get(input) }))
         } catch (error) {
           try { this.runtime.interrupt?.(startedChildId, { kind: 'ancestor', agent: context.parent as Agent }) } catch { /* provisioning record remains fail-closed */ }
           throw error
@@ -449,7 +486,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
         const structured = parsed.ok ? parsed.value : undefined
         const output = { text, structured, stopReason: end.stopReason, childId: String(activeChildId) }
         if (parsed.ok) {
-          await updateRegistry(input.runDir, taskId, () => ({ childId: activeChildId, fingerprint, status: 'completed', stopReason: end.stopReason, text, structured }))
+          await updateRegistry(input.runDir, taskId, () => ({ childId: activeChildId, fingerprint, status: 'completed', stopReason: end.stopReason, text, structured, literatureSources: exposedLiteratureSources.get(input) }))
         }
         return output
       } finally {
@@ -537,7 +574,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
       ...(role === 'project-explorer' ? { toolFilter: { allow: [] } as ToolRestriction } : options.toolFilter ? { toolFilter: options.toolFilter } : {}),
     }
-    const start = () => this.runtime.start(this.providerName, startOptions)
+    const start = () => transportWithExposure(role, input, options.prompt, () => this.runtime.start(this.providerName, startOptions), options.kind === 'repair')
     const run = provisional ? await withRequestBinding(provisional, start) : await start()
     if (options.log === 'one-shot') logger.info(`[subagent:${role}] started id=${String(run.id ?? '')}`)
     const releaseOwnership = context.requestLedger
@@ -592,7 +629,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       const repairedValue = parsed.value
       {
         if (LONG_TASK_ROLES.has(role) && originalChildId) {
-          await updateRegistry(input.runDir, input.taskId ?? role, (current) => ({ childId: originalChildId as SessionId, fingerprint: current?.fingerprint ?? taskFingerprint(role, input, context), status: 'completed', stopReason: output.stopReason, text: output.text, structured: repairedValue }))
+          await updateRegistry(input.runDir, input.taskId ?? role, (current) => ({ childId: originalChildId as SessionId, fingerprint: current?.fingerprint ?? taskFingerprint(role, input, context), status: 'completed', stopReason: output.stopReason, text: output.text, structured: repairedValue, literatureSources: exposedLiteratureSources.get(input) ?? current?.literatureSources }))
           return { ...output, childId: originalChildId, structured: repairedValue }
         }
         return { ...output, structured: repairedValue }
@@ -610,6 +647,9 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
   }
 
   async run(role: RoleName, input: RoleInput, context: RoleExecutionContext): Promise<RoleOutput> {
+    if (!input.researchContext && context.policySnapshot?.literature?.mode === 'lexical') {
+      input = { ...input, researchContext: await researchContextForInput(role, input, context) }
+    }
     input = await prepareResearchContext(role, input, context)
     const ledger: RequestLedger | undefined = context.requestLedger
     const route = routeFor(input, role, context)
@@ -627,7 +667,8 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
         ? await this.runContinuableWithRetry(role, input, context)
         : await this.runOneShotWithRetry(role, input, context)
       if (ledger) await ledger.finishRole(roleStartId, 'completed')
-      return output
+      const literatureSources = exposedLiteratureSources.get(input)
+      return literatureSources ? { ...output, literatureSources } : output
     } catch (error) {
       if (ledger) {
         try { await ledger.finishRole(roleStartId, isBudgetExhaustedError(error) || (error as { code?: unknown })?.code === 'CONTEXT_INSUFFICIENT' || (error as { name?: unknown })?.name === 'AbortError' ? 'paused' : 'failed') } catch { /* preserve the operation error */ }

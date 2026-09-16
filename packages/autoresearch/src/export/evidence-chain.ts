@@ -4,6 +4,7 @@ import type { ResearchNode } from '../core/types.js'
 import { atomicWriteJson, nowIso, readJson, safeResolve } from '../core/utils.js'
 import { ResearchStore } from '../research/index.js'
 import type { Claim, Evidence } from '../research/contracts.js'
+import { listFrozenTaskGraphs, readExperimentGraphState } from '../experiment/runtime-adapter.js'
 
 export interface EvidenceChain {
   schema: 'autoresearch/evidence-chain/v1'
@@ -17,6 +18,7 @@ export interface EvidenceChain {
   protocol_hash?: string
   claims?: Claim[]
   scientific_evidence?: Evidence[]
+  durable_experiments?: { graph: import('../experiment/task-graph.js').FrozenTaskGraph; state: import('../experiment/runtime-adapter.js').ExperimentGraphResult }[]
 }
 
 export interface EvidenceChainResult {
@@ -33,10 +35,13 @@ export interface ExportEvidenceChainInput {
 async function writeEvidenceChain(runDir: string, runId: string, tree: ResearchTree): Promise<EvidenceChainResult> {
   const file = safeResolve(runDir, EVIDENCE_CHAIN_FILE)
   const snapshot = await new ResearchStore(runDir).loadCurrent()
+  const durable = []
+  for (const graph of await listFrozenTaskGraphs(runDir)) durable.push({ graph, state: await readExperimentGraphState(runDir, graph) })
   const chain: EvidenceChain = {
     schema: 'autoresearch/evidence-chain/v1',
     run_id: runId,
     generated_at: nowIso(),
+    ...(durable.length ? { durable_experiments: durable } : {}),
     hypotheses: tree.query({ kind: 'hypothesis' }),
     actions: tree.query({ kind: 'action' }),
     evidence: tree.query({ kind: 'evidence' }).map(node => snapshot && !node.id.startsWith('research:') ? { ...node, status: 'unknown' } : node),

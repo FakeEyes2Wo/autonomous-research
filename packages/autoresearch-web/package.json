@@ -45,10 +45,11 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test test/api.test.mjs test/core-integration.test.mjs test/factory.test.mjs test/native-host.test.mjs test/workbench.test.mjs test/assets.test.mjs test/workbench-sync.test.mjs",
+    "test": "node --test test/api.test.mjs test/core-integration.test.mjs test/factory.test.mjs test/native-host.test.mjs test/workbench.test.mjs test/assets.test.mjs test/workbench-sync.test.mjs test/literature.test.mjs",
     "test:native-host": "node --test test/native-host.test.mjs",
     "test:browser": "node test/browser-render.test.mjs",
-    "test:workbench:browser": "node test/workbench-browser.mjs"
+    "test:workbench:browser": "node test/workbench-browser.mjs",
+    "test:literature:browser": "node test/literature-browser.mjs"
   },
   "engines": {
     "node": ">=22.19.0",

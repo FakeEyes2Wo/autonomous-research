@@ -30,11 +30,13 @@ export interface Hypothesis extends VersionedRecord {
   scope: string
   mode: EvidenceMode
   status: ClaimStatus
-  /** Evidence-record IDs used to select this hypothesis, resolved through AssessmentInput.discoveryEvidence. */
+  /** Registered evidence or captured SourceRef IDs used to select this hypothesis. */
   discovery_source_ids?: string[]
 }
 export interface Fingerprints { code: string; data: string; treatment: string; model: string }
 export interface Protocol extends VersionedRecord {
+  /** Explicit immutable allowlist for actor literature; absent means no literature. */
+  allowed_literature_span_ids?: string[]
   hypothesis: VersionRef
   metric: string
   controls: string[]
@@ -111,6 +113,7 @@ export interface RevisionCandidate {
   decision_rule: string
   evidence_ids: string[]
   rationale: string
+  source_span_refs?: SourceRef[]
 }
 export interface RevisionDecision extends VersionedRecord {
   parent_snapshot_id: string
@@ -121,6 +124,7 @@ export interface RevisionDecision extends VersionedRecord {
   action: ResearchAction
   reason: string
   candidate?: RevisionCandidate
+  candidate_batch_id?: string
   next_protocol_hash?: string
   stop_conditions: string[]
 }
@@ -137,6 +141,8 @@ export interface ResearchSnapshot extends VersionedRecord {
   evidence: Evidence[]
   assessment?: ResearchAssessment
   decision?: RevisionDecision
+  /** Immutable proposal/selection history; tree nodes are only a projection. */
+  candidate_batches?: import('./candidate-batch.js').CandidateBatch[]
   budget: ResearchBudget
 }
 export interface AssessmentInput {
@@ -146,6 +152,8 @@ export interface AssessmentInput {
   evidence: Evidence[]
   /** Retained discovery records; not additional observations to assess. */
   discoveryEvidence?: Evidence[]
+  /** Captured literature provenance only; never counted as experimental observations. */
+  discoverySourceRefs?: SourceRef[]
   budgetExhausted?: boolean
   externalBlock?: string
   repairAttempts?: number

@@ -83,6 +83,7 @@ export interface BudgetSettings {
 }
 
 export interface ProjectSettings {
+  literature: { mode: 'off' | 'lexical'; maxResults: number; maxContextChars: number }
   version: 2
   revision?: string
   paperExploration: PaperExplorationSettings
@@ -109,6 +110,7 @@ export interface ValidationResult {
 const route = (provider: string, model: string): ModelRouteSettings => ({ provider, model })
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
+  literature: { mode: 'off', maxResults: 8, maxContextChars: 12000 },
   version: 2,
   revision: undefined,
   paperExploration: { maxPapers: 60, minSurveys: 3, minClusters: 5, latestWindowYears: 1, latestPerDirection: 5, maxSelectedDirections: 3 },

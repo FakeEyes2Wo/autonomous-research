@@ -28,7 +28,8 @@ function policy(overrides: Record<string, unknown> = {}) {
     },
     workflow: { mode: 'minimal' },
     budget: {
-      maxInputTokens: 2000,
+      // Enough for the real planner's scientific and durable execution contracts.
+      maxInputTokens: 4000,
       maxOutputTokens: 321,
       maxRunTokens: 10000,
       maxRoleCalls: 20,

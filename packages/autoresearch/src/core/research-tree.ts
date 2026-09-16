@@ -2,6 +2,7 @@ import { access } from 'node:fs/promises'
 import { join } from 'node:path'
 import { AutoResearchError, RESEARCH_TREE_FILE, atomicWriteJson, newId, readJson, safeResolve } from './utils.js'
 import type { ResearchNode, ResearchNodeKind, ResearchNodeStatus } from './types.js'
+import type { ResearchSnapshot } from '../research/contracts.js'
 
 export interface ResearchTreeQuery {
   id?: string
@@ -32,6 +33,19 @@ export class ResearchTree {
 
   async save(): Promise<void> {
     await atomicWriteJson(this.file, { schema: 'autoresearch/research-tree/v1', nodes: this.nodes })
+  }
+
+  projectCandidates(snapshot: ResearchSnapshot): void {
+    this.nodes = this.nodes.filter(node => !node.candidate)
+    for (const batch of snapshot.candidate_batches ?? []) for (const entry of batch.entries) {
+      const candidate = entry.candidate
+      const parent = `research:${candidate.parent.id}@${candidate.parent.version}`
+      this.nodes.push({ id: `research:${batch.id}:${candidate.id}`, kind: 'hypothesis', status: candidate.status,
+        ...(this.nodes.some(node => node.id === parent) ? { parent } : {}),
+        content: entry.revision?.statement ?? candidate.prediction ?? 'Rejected proposal',
+        artifacts: batch.source_refs.flatMap(ref => ref.path ? [ref.path] : []),
+        candidate: { id: candidate.id, batchId: batch.id, snapshotHash: batch.snapshotHash, parentVersion: candidate.parent.version, reasons: entry.reasons } })
+    }
   }
 
   add(kind: ResearchNodeKind, content: string, options: { id?: string; status?: ResearchNodeStatus; parent?: string; artifacts?: string[] } = {}): ResearchNode {

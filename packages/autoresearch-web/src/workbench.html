@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/autoresearch/workbench.css">
   <link rel="stylesheet" href="/autoresearch/workbench-layout.css">
   <link rel="stylesheet" href="/autoresearch/workbench-theme.css">
+  <link rel="stylesheet" href="/autoresearch/literature.css">
   <script type="module" src="/autoresearch/workbench-client.js"></script>
 </head>
 <body>
@@ -20,6 +21,7 @@
       <div class="project-control"><label for="project">当前项目</label><select id="project" disabled aria-label="当前项目"><option>正在加载…</option></select><span id="project-name" class="project-name" aria-live="polite">DSH 左侧工作区</span></div>
     </div>
     <div class="workspace-toolbar">
+      <button id="literature-open" class="button" disabled>文献目录</button>
       <div class="document-controls"><span class="file-icon" aria-hidden="true">T<span>E</span>X</span><select id="document" aria-label="论文文件" disabled><option>选择论文</option></select><button id="new-document" class="button quiet" disabled>＋ 新建论文</button></div>
       <div class="save-controls"><span id="save-state" class="status" role="status">正在连接</span><button id="reload" class="button quiet" disabled title="重新读取项目中的论文">重新加载</button><button id="save" class="button" disabled>保存</button><button id="compile" class="button primary" disabled><span aria-hidden="true">▶</span> 保存并编译</button></div>
     </div>
@@ -53,5 +55,17 @@
       </div>
     </section>
   </main>
+  <dialog id="literature-dialog" aria-labelledby="literature-heading">
+    <div class="literature-toolbar"><h2 id="literature-heading">文献目录与原文</h2><button id="literature-refresh">刷新目录</button><button id="literature-index">构建索引</button><button id="literature-close" aria-label="关闭文献目录">关闭</button></div>
+    <p id="literature-generation"></p>
+    <form id="literature-search" class="literature-toolbar"><label for="literature-query">检索原文</label><input id="literature-query" maxlength="2000" required placeholder="输入中文或英文问题"><button type="submit">检索</button></form>
+    <p id="literature-status" role="status" aria-live="polite"></p>
+    <details><summary>导入来源清单</summary><p>粘贴包含 works / documents 的 JSON 来源清单。来源支持文本或公开 URL；点击导入后才会获取与解析原文。</p><label for="literature-manifest">来源清单 JSON</label><textarea id="literature-manifest" spellcheck="false" placeholder='{"works": [], "documents": []}'></textarea><button id="literature-import">导入来源</button></details>
+    <p id="literature-operation" role="status" aria-live="polite"></p>
+    <div class="literature-columns">
+      <section aria-label="文献和检索结果"><div id="literature-list"></div><button id="literature-more" hidden>加载更多</button><div id="literature-results" aria-label="检索摘录"></div><label for="literature-citation">引用摘录（可复制）</label><textarea id="literature-citation" readonly></textarea></section>
+      <section id="literature-source" aria-label="文献原文"><p id="literature-source-caption" role="status"></p><blockquote id="literature-excerpt"></blockquote><pre id="literature-source-text"></pre><canvas id="literature-canvas" aria-label="文献 PDF 当前页" hidden></canvas><div id="literature-pdf-text" class="sr-only"></div><div id="literature-page-controls" hidden><label for="literature-page">页码</label><input id="literature-page" type="number" min="1" value="1"><span id="literature-pages"></span></div></section>
+    </div>
+  </dialog>
 </body>
 </html>

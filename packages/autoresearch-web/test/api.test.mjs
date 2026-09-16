@@ -126,7 +126,7 @@ test('API returns 503 when an isolated package has no core settings dependency',
   const root = await mkdtemp(join(tmpdir(), 'autoresearch-web-missing-core-')); await mkdir(join(root, 'project'));
   await mkdir(join(root, 'project', 'paper')); await writeFile(join(root, 'project', 'paper', 'main.tex'), '% isolated workbench\n', 'utf8');
   const isolated = await mkdtemp(join(tmpdir(), 'autoresearch-web-isolated-package-'));
-  for (const name of ['index.js', 'contract.js', 'core-bridge.js', 'workbench.js', 'workbench-assets.js', 'workspace-projects.js']) await copyFile(new URL(`../src/${name}`, import.meta.url), join(isolated, name));
+  for (const name of ['index.js', 'contract.js', 'core-bridge.js', 'workbench.js', 'workbench-assets.js', 'workspace-projects.js', 'literature.js']) await copyFile(new URL(`../src/${name}`, import.meta.url), join(isolated, name));
   const isolatedApply = (await import(pathToFileURL(join(isolated, 'index.js')).href)).apply;
   const server = fakeServer(); await isolatedApply({ webServer: server }, { standaloneProjects: true, projects: [{ id: 'demo', name: 'Demo', root: join(root, 'project') }] });
   const route = server.routes[0]; const projects = response(); await route.handler(req('GET', '/api/autoresearch/projects', undefined), projects);

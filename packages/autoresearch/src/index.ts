@@ -9,6 +9,9 @@ import type { Context } from '@deepseek-ai/cordis'
 import { installRequestAccounting } from './providers/request-accounting.js'
 import { bindToolWorkspacePaths } from './tools/workspace-paths.js'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
+import { createLocalExperimentRuntime, type LocalExperimentConfig } from './runtime/local-authority.js'
+
+export interface AutoResearchPluginConfig { localExperiments?: LocalExperimentConfig }
 
 export const name = 'autoresearch'
 export const inject = ['tools', 'subagents', 'commands', 'userQuestions', 'llm']
@@ -59,7 +62,7 @@ export function apply(ctx: {
   llm: unknown
   sessions?: Pick<SessionStore, 'get'>
   provide(name: string, service: unknown): unknown
-}): void {
+}, config: AutoResearchPluginConfig = {}): void {
   installRequestAccounting(ctx as unknown as Context)
   const provider = new SubagentRoleAgentProvider(ctx.subagents as never, {
     context: ctx as unknown as Pick<Context, 'on'>,
@@ -111,7 +114,9 @@ export function apply(ctx: {
     },
   }
 
-  const service = new AutoResearchService(provider, { reviewer })
+  const localGrant = config.localExperiments ? structuredClone(config.localExperiments) : undefined
+  const experimentRuntimeForProject = localGrant ? (projectDir: string) => createLocalExperimentRuntime(localGrant, projectDir) : undefined
+  const service = new AutoResearchService(provider, { reviewer, experimentRuntimeForProject })
   ctx.provide('autoresearch', service)
 
   ctx.commands.register({
@@ -180,7 +185,7 @@ export function apply(ctx: {
     researchActionFinish,
     researchEvidenceAdd,
     researchTreeQuery,
-    createExperimentRunTool(provider),
+    createExperimentRunTool(provider, experimentRuntimeForProject),
     projectSettingsGet,
     projectSettingsSave,
     figureApiTest,
@@ -197,6 +202,9 @@ export function apply(ctx: {
 export { AutoResearchService } from './service/autoresearch-service.js'
 export { ResearchRunner } from './service/runner.js'
 export { runExperimentTask } from './experiment/runner.js'
+export * from './experiment/task-graph.js'
+export * from './experiment/runtime-adapter.js'
+export * from './experiment/artifact-manifest.js'
 export type { ExperimentDependencies, ExperimentRunRequest, ExperimentRunResult } from './experiment/runner.js'
 export { ResearchTree } from './core/research-tree.js'
 export * from './settings/project-settings.js'
