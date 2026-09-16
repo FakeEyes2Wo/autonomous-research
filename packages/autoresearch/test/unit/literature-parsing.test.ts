@@ -10,6 +10,7 @@ import {
   TABLE_HTML,
   documentFixture,
   pdfFixture,
+  pdfLongRepeatedItemFixture,
   pdfWithBrokenSecondPageFixture,
   sourceBytes,
 } from '../fixtures/literature/sources.ts'
@@ -106,6 +107,27 @@ test('long HTML paragraphs are bounded and report parent and adjacent spans', as
   assert.equal(parsed.spanRelations?.[0]?.nextId, paragraphs[1]?.id)
   assert.equal(parsed.spanRelations?.[1]?.previousId, paragraphs[0]?.id)
   assert.equal(parsed.spanRelations?.[0]?.parentLocator?.kind, 'html')
+})
+
+test('repeated HTML chunks have unique IDs, a stable parent ID, and reciprocal non-self adjacency', async () => {
+  const bytes = sourceBytes(`<p>${'x'.repeat(4000)}</p>`)
+  const document = documentFixture('doc-repeated-html', 'text/html', bytes)
+
+  const parsed = await parseHtml({ document, bytes })
+  const reparsed = await parseHtml({ document, bytes })
+  const [first, second] = parsed.spans
+  const [firstRelation, secondRelation] = parsed.spanRelations ?? []
+
+  assert.equal(parsed.spans.length, 2)
+  assert.equal(new Set(parsed.spans.map((span) => span.id)).size, 2)
+  assert.ok(firstRelation?.parentId)
+  assert.equal(firstRelation?.parentId, secondRelation?.parentId)
+  assert.equal(firstRelation?.nextId, second?.id)
+  assert.equal(secondRelation?.previousId, first?.id)
+  assert.notEqual(firstRelation?.spanId, firstRelation?.nextId)
+  assert.notEqual(secondRelation?.spanId, secondRelation?.previousId)
+  assert.deepEqual(reparsed.spans.map((span) => span.id), parsed.spans.map((span) => span.id))
+  assert.deepEqual(reparsed.spanRelations?.map((relation) => relation.parentId), parsed.spanRelations?.map((relation) => relation.parentId))
 })
 
 test('plain text preserves CRLF UTF-16 offsets and marks an abstract as abstract', async () => {
@@ -210,6 +232,28 @@ test('dense PDF pages split into bounded locatable spans with adjacency', async 
   assert.equal(parsed.spanRelations?.length, parsed.spans.length)
   assert.equal(parsed.spanRelations?.[0]?.nextId, parsed.spans[1]?.id)
   assert.equal(parsed.spanRelations?.[0]?.parentLocator?.kind, 'pdf')
+})
+
+test('repeated chunks from one PDF text item have unique IDs, a stable parent ID, and reciprocal non-self adjacency', async () => {
+  const bytes = pdfLongRepeatedItemFixture()
+  const document = documentFixture('doc-repeated-pdf', 'application/pdf', bytes)
+
+  const parsed = await parsePdf({ document, bytes })
+  const reparsed = await parsePdf({ document, bytes })
+  const [first, second] = parsed.spans
+  const [firstRelation, secondRelation] = parsed.spanRelations ?? []
+
+  assert.equal(parsed.spans.length, 2)
+  assert.equal(new Set(parsed.spans.map((span) => span.id)).size, 2)
+  assert.ok(firstRelation?.parentId)
+  assert.equal(firstRelation?.parentId, secondRelation?.parentId)
+  assert.equal(firstRelation?.nextId, second?.id)
+  assert.equal(secondRelation?.previousId, first?.id)
+  assert.notEqual(firstRelation?.spanId, firstRelation?.nextId)
+  assert.notEqual(secondRelation?.spanId, secondRelation?.previousId)
+  assert.deepEqual(first?.locator, second?.locator)
+  assert.deepEqual(reparsed.spans.map((span) => span.id), parsed.spans.map((span) => span.id))
+  assert.deepEqual(reparsed.spanRelations?.map((relation) => relation.parentId), parsed.spanRelations?.map((relation) => relation.parentId))
 })
 
 test('a malformed later PDF page preserves already located earlier pages', async () => {

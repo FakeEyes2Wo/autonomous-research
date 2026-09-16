@@ -4,9 +4,17 @@ import { createRequire } from 'node:module'
 import { dirname } from 'node:path'
 import type { Locator, SourceSpan } from '../contracts.js'
 import type { ParseInput, ParseIssue, ParseResult } from '../parsing.js'
-import { makeParserFingerprint, makeSpan, makeSpanRelations, sourceMatches, splitTextByCodePoints } from '../spans.js'
+import {
+  makeParentSpanId,
+  makeParserFingerprint,
+  makeSpan,
+  makeSpanRelations,
+  sourceMatches,
+  splitTextByCodePoints,
+  type SpanRelationSource,
+} from '../spans.js'
 
-const FINGERPRINT = makeParserFingerprint('pdf-parser', 2)
+const FINGERPRINT = makeParserFingerprint('pdf-parser', 3)
 const MAX_CODE_POINTS = 2000
 const pdfJsEntry = createRequire(import.meta.url).resolve('pdfjs-dist/legacy/build/pdf.mjs')
 const pdfJsRoot = dirname(dirname(dirname(pdfJsEntry))).replaceAll('\\', '/')
@@ -22,6 +30,8 @@ interface PositionedItem {
 interface PdfChunk {
   text: string
   items: PositionedItem[]
+  withinSourceStart?: number
+  withinSourceEnd?: number
 }
 
 export async function parsePdf(input: ParseInput): Promise<ParseResult> {
@@ -39,7 +49,7 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
   let loadingTask: PDFDocumentLoadingTask | undefined
   let aborted = false
   const spans: SourceSpan[] = []
-  const parentLocators = new Map<string, Locator>()
+  const relationSources: SpanRelationSource[] = []
   const issues: ParseIssue[] = []
   const onAbort = () => {
     aborted = true
@@ -88,7 +98,13 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
         if (garbled) {
           issues.push({ code: 'PDF_TEXT_GARBLED', locator, message: `page ${pageNumber} contains unreliable decoded text` })
         }
-        for (const chunk of chunkPdfItems(items, MAX_CODE_POINTS)) {
+        const parentId = makeParentSpanId({
+          document: input.document,
+          parserFingerprint: FINGERPRINT,
+          kind: 'paragraph',
+          locator,
+        })
+        for (const [ordinal, chunk] of chunkPdfItems(items, MAX_CODE_POINTS).entries()) {
           const span = makeSpan({
             document: input.document,
             parserFingerprint: FINGERPRINT,
@@ -97,9 +113,15 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
             evidenceText: chunk.text,
             locator: pdfLocator(input, pageNumber, chunk.items),
             quality,
+            identity: {
+              parentId,
+              ordinal,
+              ...(chunk.withinSourceStart === undefined ? {} : { withinSourceStart: chunk.withinSourceStart }),
+              ...(chunk.withinSourceEnd === undefined ? {} : { withinSourceEnd: chunk.withinSourceEnd }),
+            },
           })
           spans.push(span)
-          parentLocators.set(span.id, locator)
+          relationSources.push({ span, parentId, parentLocator: locator })
         }
       } catch (error) {
         if (aborted || input.signal?.aborted) throw abortError()
@@ -117,7 +139,7 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
       parserFingerprint: FINGERPRINT,
       status: issues.length > 0 ? 'partial' : 'complete',
       issues,
-      spanRelations: makeSpanRelations(spans, parentLocators),
+      spanRelations: makeSpanRelations(relationSources),
     }
   } catch (error) {
     if (aborted || input.signal?.aborted) throw abortError()
@@ -128,7 +150,7 @@ export async function parsePdf(input: ParseInput): Promise<ParseResult> {
         parserFingerprint: FINGERPRINT,
         status: 'partial',
         issues,
-        spanRelations: makeSpanRelations(spans, parentLocators),
+        spanRelations: makeSpanRelations(relationSources),
       }
     }
     return {
@@ -163,7 +185,14 @@ function chunkPdfItems(items: PositionedItem[], maxCodePoints: number): PdfChunk
     const itemChunks = splitTextByCodePoints(itemText, maxCodePoints)
     if (itemChunks.length > 1) {
       flush()
-      for (const chunk of itemChunks) chunks.push({ text: chunk.text, items: [positioned] })
+      for (const chunk of itemChunks) {
+        chunks.push({
+          text: chunk.text,
+          items: [positioned],
+          withinSourceStart: chunk.start,
+          withinSourceEnd: chunk.end,
+        })
+      }
       continue
     }
     const candidate = currentText ? `${currentText} ${itemText}` : itemText

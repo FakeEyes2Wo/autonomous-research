@@ -16,6 +16,7 @@ export interface SpanRelation {
   spanId: string
   previousId: string | null
   nextId: string | null
+  parentId: Hash
   parentLocator: Locator | null
 }
 

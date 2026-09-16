@@ -1,8 +1,16 @@
 import type { Locator, SourceSpan } from '../contracts.js'
 import type { ParseInput, ParseResult } from '../parsing.js'
-import { makeParserFingerprint, makeSpan, makeSpanRelations, sourceMatches, splitTextByCodePoints } from '../spans.js'
+import {
+  makeParentSpanId,
+  makeParserFingerprint,
+  makeSpan,
+  makeSpanRelations,
+  sourceMatches,
+  splitTextByCodePoints,
+  type SpanRelationSource,
+} from '../spans.js'
 
-const FINGERPRINT = makeParserFingerprint('text-parser', 2)
+const FINGERPRINT = makeParserFingerprint('text-parser', 3)
 const MAX_CODE_POINTS = 2000
 
 export async function parseText(input: ParseInput): Promise<ParseResult> {
@@ -19,7 +27,7 @@ export async function parseText(input: ParseInput): Promise<ParseResult> {
 
   const text = new TextDecoder('utf-8', { fatal: false }).decode(input.bytes)
   const spans: SourceSpan[] = []
-  const parentLocators = new Map<string, Locator>()
+  const relationSources: SpanRelationSource[] = []
   const sections: string[] = []
   const paragraphPattern = /(?:^|(?:\r?\n){2,})([\s\S]*?)(?=(?:\r?\n){2,}|$)/gu
   let match: RegExpExecArray | null
@@ -43,7 +51,13 @@ export async function parseText(input: ParseInput): Promise<ParseResult> {
       unit: 'utf16',
       sourceHash: input.document.rawHash,
     }
-    for (const chunk of splitTextByCodePoints(paragraph, MAX_CODE_POINTS)) {
+    const parentId = makeParentSpanId({
+      document: input.document,
+      parserFingerprint: FINGERPRINT,
+      kind: 'paragraph',
+      locator: parentLocator,
+    })
+    for (const [ordinal, chunk] of splitTextByCodePoints(paragraph, MAX_CODE_POINTS).entries()) {
       const locator: Locator = {
         kind: 'text',
         start: range.start + chunk.start,
@@ -58,9 +72,15 @@ export async function parseText(input: ParseInput): Promise<ParseResult> {
         sectionPath: sections.filter(Boolean),
         evidenceText: chunk.text,
         locator,
+        identity: {
+          parentId,
+          ordinal,
+          withinSourceStart: chunk.start,
+          withinSourceEnd: chunk.end,
+        },
       })
       spans.push(span)
-      parentLocators.set(span.id, parentLocator)
+      relationSources.push({ span, parentId, parentLocator })
     }
   }
 
@@ -72,7 +92,7 @@ export async function parseText(input: ParseInput): Promise<ParseResult> {
     issues: hasReplacement
       ? [{ code: 'TEXT_DECODE_REPLACEMENT', locator: null, message: 'invalid UTF-8 bytes were replaced during decoding' }]
       : [],
-    spanRelations: makeSpanRelations(spans, parentLocators),
+    spanRelations: makeSpanRelations(relationSources),
   }
 }
 

@@ -75,6 +75,17 @@ export function pdfFixture(lines: { x: number; y: number; text: string }[]): Uin
   return buildPdf(objects)
 }
 
+export function pdfLongRepeatedItemFixture(): Uint8Array {
+  const operations = `BT /F1 1 Tf 40 740 Td (${'x'.repeat(4000)}) Tj ET`
+  return buildPdf([
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10000 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${Buffer.byteLength(operations, 'latin1')} >>\nstream\n${operations}\nendstream`,
+  ])
+}
+
 export function pdfWithBrokenSecondPageFixture(): Uint8Array {
   const operations = 'BT /F1 12 Tf 40 740 Td (Readable first page) Tj ET'
   return buildPdf([

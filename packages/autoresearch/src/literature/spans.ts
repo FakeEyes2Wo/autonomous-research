@@ -8,6 +8,19 @@ export interface TextChunk {
   end: number
 }
 
+export interface SpanRelationSource {
+  span: SourceSpan
+  parentId: Hash
+  parentLocator: Locator | null
+}
+
+export interface SpanIdentity {
+  parentId: Hash
+  ordinal: number
+  withinSourceStart?: number
+  withinSourceEnd?: number
+}
+
 export function sha256(bytes: Uint8Array | string): Hash {
   return createHash('sha256').update(bytes).digest('hex')
 }
@@ -46,14 +59,31 @@ export function splitTextByCodePoints(text: string, maxCodePoints = 2000): TextC
 }
 
 export function makeSpanRelations(
-  spans: SourceSpan[],
-  parentLocators: ReadonlyMap<string, Locator> = new Map(),
+  sources: SpanRelationSource[],
 ): SpanRelation[] {
-  return spans.map((span, index) => ({
+  const ids = new Set(sources.map(({ span }) => span.id))
+  if (ids.size !== sources.length) throw new Error('span relations require unique span IDs')
+  return sources.map(({ span, parentId, parentLocator }, index) => ({
     spanId: span.id,
-    previousId: spans[index - 1]?.id ?? null,
-    nextId: spans[index + 1]?.id ?? null,
-    parentLocator: parentLocators.get(span.id) ?? null,
+    previousId: sources[index - 1]?.span.id ?? null,
+    nextId: sources[index + 1]?.span.id ?? null,
+    parentId,
+    parentLocator,
+  }))
+}
+
+export function makeParentSpanId(input: {
+  document: DocumentVersion
+  parserFingerprint: Hash
+  kind: 'paragraph' | 'table'
+  locator: Locator
+}): Hash {
+  return sha256(JSON.stringify({
+    documentId: input.document.id,
+    parserFingerprint: input.parserFingerprint,
+    kind: input.kind,
+    locator: input.locator,
+    role: 'parent',
   }))
 }
 
@@ -66,6 +96,7 @@ export function makeSpan(input: {
   locator: Locator
   quality?: 'accepted' | 'needs_review'
   table?: SourceSpan['table']
+  identity?: SpanIdentity
 }): SourceSpan {
   const retrievalText = normalizeRetrievalText(input.evidenceText)
   const contentHash = sha256(input.evidenceText)
@@ -75,6 +106,7 @@ export function makeSpan(input: {
     kind: input.kind,
     locator: input.locator,
     contentHash,
+    identity: input.identity ?? null,
   }))
   return {
     id,

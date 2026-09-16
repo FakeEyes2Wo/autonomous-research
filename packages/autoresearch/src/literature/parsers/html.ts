@@ -1,9 +1,17 @@
 import { parse } from 'parse5'
 import type { Locator, SourceSpan } from '../contracts.js'
 import type { ParseInput, ParseResult } from '../parsing.js'
-import { makeParserFingerprint, makeSpan, makeSpanRelations, sourceMatches, splitTextByCodePoints } from '../spans.js'
+import {
+  makeParentSpanId,
+  makeParserFingerprint,
+  makeSpan,
+  makeSpanRelations,
+  sourceMatches,
+  splitTextByCodePoints,
+  type SpanRelationSource,
+} from '../spans.js'
 
-const FINGERPRINT = makeParserFingerprint('html-parser', 2)
+const FINGERPRINT = makeParserFingerprint('html-parser', 3)
 const IGNORED = new Set(['script', 'style', 'nav'])
 const PARAGRAPH_TAGS = new Set(['p', 'li', 'blockquote', 'pre'])
 const MAX_CODE_POINTS = 2000
@@ -44,7 +52,7 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
   const html = new TextDecoder('utf-8', { fatal: false }).decode(input.bytes)
   const document = parse(html, { sourceCodeLocationInfo: true }) as unknown as HtmlNode
   const spans: SourceSpan[] = []
-  const parentLocators = new Map<string, Locator>()
+  const relationSources: SpanRelationSource[] = []
   const sections: string[] = []
 
   walk(document, (node) => {
@@ -66,7 +74,13 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
           end: node.sourceCodeLocation.endOffset,
           sourceHash: input.document.rawHash,
         }
-        for (const chunk of splitTextByCodePoints(evidenceText, MAX_CODE_POINTS)) {
+        const parentId = makeParentSpanId({
+          document: input.document,
+          parserFingerprint: FINGERPRINT,
+          kind: 'paragraph',
+          locator,
+        })
+        for (const [ordinal, chunk] of splitTextByCodePoints(evidenceText, MAX_CODE_POINTS).entries()) {
           const span = makeSpan({
             document: input.document,
             parserFingerprint: FINGERPRINT,
@@ -74,9 +88,15 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
             sectionPath: sections.filter(Boolean),
             evidenceText: chunk.text,
             locator,
+            identity: {
+              parentId,
+              ordinal,
+              withinSourceStart: chunk.start,
+              withinSourceEnd: chunk.end,
+            },
           })
           spans.push(span)
-          parentLocators.set(span.id, locator)
+          relationSources.push({ span, parentId, parentLocator: locator })
         }
       }
       return false
@@ -90,7 +110,13 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
       end: node.sourceCodeLocation.endOffset,
       sourceHash: input.document.rawHash,
     }
-    for (const table of splitTable(extractTable(node), MAX_CODE_POINTS)) {
+    const parentId = makeParentSpanId({
+      document: input.document,
+      parserFingerprint: FINGERPRINT,
+      kind: 'table',
+      locator,
+    })
+    for (const [ordinal, table] of splitTable(extractTable(node), MAX_CODE_POINTS).entries()) {
       const evidenceText = tableText(table)
       if (!evidenceText) continue
       const span = makeSpan({
@@ -101,9 +127,10 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
         evidenceText,
         locator,
         table,
+        identity: { parentId, ordinal },
       })
       spans.push(span)
-      parentLocators.set(span.id, locator)
+      relationSources.push({ span, parentId, parentLocator: locator })
     }
     return false
   })
@@ -113,7 +140,7 @@ export async function parseHtml(input: ParseInput): Promise<ParseResult> {
     parserFingerprint: FINGERPRINT,
     status: 'complete',
     issues: [],
-    spanRelations: makeSpanRelations(spans, parentLocators),
+    spanRelations: makeSpanRelations(relationSources),
   }
 }
 
