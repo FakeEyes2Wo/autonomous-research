@@ -1,6 +1,6 @@
 import { AutoResearchService } from './service/autoresearch-service.js'
 import { SubagentRoleAgentProvider } from './providers/subagent-provider.js'
-import { createExperimentRunTool, createPaperPipelineResumeTool, createResearchRunTool, figureApiTest, paperPipelineLastRun, paperPipelineStatus, projectSettingsGet, projectSettingsSave, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
+import { createExperimentRunTool, createPaperPipelineResumeTool, createResearchRunTool, createProjectPaperRunTool, figureApiTest, paperPipelineLastRun, paperPipelineStatus, projectSettingsGet, projectSettingsSave, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
 import { loadState } from './core/state.js'
 import { loadProjectSecrets, loadProjectSettings } from './settings/project-settings.js'
 import type { HumanOpenRequest, HumanReviewAnswer, HumanReviewer, HumanReviewRequest } from './core/human-review.js'
@@ -188,6 +188,7 @@ export function apply(ctx: {
     paperPipelineLastRun,
     createPaperPipelineResumeTool(service),
     createResearchRunTool(service),
+    createProjectPaperRunTool(service),
   ]) {
     ctx.tools.register(bindToolWorkspacePaths(tool, (agentId) => ctx.sessions?.get(agentId)?.header.cwd))
   }

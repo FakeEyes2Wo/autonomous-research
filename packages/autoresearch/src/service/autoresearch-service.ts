@@ -20,6 +20,8 @@ import { openRequestLedger } from '../policy/request-ledger.js'
 import { isExperimentPauseError } from '../experiment/errors.js'
 import { assertFailureImportTarget, importResearchFailure, type FailureReportImport } from './failure-import.js'
 import { bindResearchOutputs } from './research-outputs.js'
+import { bindRunProject } from './project-paper.js'
+import { discoverProject, validateCompletedDiscovery } from '../project/discovery.js'
 
 export interface ResearchRunOptions {
   failureReport?: FailureReportImport
@@ -118,19 +120,33 @@ export class AutoResearchService {
   }
 
   async run(options: ResearchRunOptions, context: ResearchRunContext): Promise<RunState> {
+    return this.runInternal(options, context)
+  }
+
+  async runProjectPaper(options: ResearchRunOptions & { projectDir: string }, context: ResearchRunContext): Promise<RunState> {
+    if (!options.projectDir?.trim()) throw new TypeError('projectDir is required for project-paper discovery')
+    if (options.candidatePath || options.failureReport) throw new TypeError('project-paper discovery requires its own source-grounded candidate')
+    return this.runInternal(options, context, 'project-paper')
+  }
+
+  private async runInternal(options: ResearchRunOptions, context: ResearchRunContext, requestedWorkflow?: 'project-paper'): Promise<RunState> {
     const runDir = options.runDir
     await assertFailureImportTarget(runDir, options.failureReport)
     if (options.maxCycles !== undefined && (!Number.isSafeInteger(options.maxCycles) || options.maxCycles < 1)) throw new TypeError('maxCycles must be a positive finite integer')
     const logger = createLogger(runDir)
     logger.info(`AutoResearchService.run start runDir=${runDir}`)
     await ensureDir(runDir)
+    const existing = await loadState(runDir)
+    const identity = await bindRunProject(options, requestedWorkflow, existing !== undefined)
+    const projectPaper = identity.workflow === 'project-paper'
+    if (projectPaper && (options.candidatePath || options.failureReport)) throw new Error('project discovery candidate cannot be replaced on resume')
     if (options.candidatePath) {
       await copyExternalIdea(runDir, options.candidatePath)
     }
-    const existing = await loadState(runDir)
     const state = existing ?? await createInitialState(runDir)
     await importResearchFailure(runDir, state.runId, options.failureReport)
     if (state.status === 'COMPLETED' || state.status === 'FAILED') {
+      if (projectPaper) await validateCompletedDiscovery(runDir, identity.projectDir)
       logger.info(`run already terminal status=${state.status}`)
       return state
     }
@@ -138,9 +154,14 @@ export class AutoResearchService {
     await saveState(runDir, state)
     try {
       const tree = await ResearchTree.load(runDir)
-      const projectDir = options.projectDir ?? runDir
+      const projectDir = identity.projectDir
       const projectSettings = await loadProjectSettings(projectDir)
-      const policySnapshot = await loadFrozenPolicy(runDir, projectSettings, existing !== undefined)
+      if (projectPaper) {
+        projectSettings.workflow.paper = 'enabled'
+        projectSettings.workflow.brainstorm = 'never'
+      }
+      const policySnapshot = await loadFrozenPolicy(runDir, projectSettings, existing !== undefined && !projectPaper)
+      if (projectPaper && (policySnapshot.workflow.paper !== 'enabled' || policySnapshot.workflow.brainstorm !== 'never')) throw new Error('project-paper frozen policy conflicts with workflow intent')
       const requestLedger = context.requestLedger ?? await openRequestLedger({
       runDir,
       runId: state.runId,
@@ -156,6 +177,7 @@ export class AutoResearchService {
       await requestLedger.recoverPending('interrupted')
       const projectSecrets = await loadProjectSecrets(projectDir)
       const paperOptions: PaperOptions = {
+      ...(projectPaper ? identity.options.paper : {}),
       ...(options.paper ?? {}),
       ...(projectSettings.model.supportsImageInput !== undefined
         ? { supportsImageInput: projectSettings.model.supportsImageInput }
@@ -171,12 +193,12 @@ export class AutoResearchService {
       }
       const runner = new ResearchRunner({
       provider: this.deps.provider,
-      maxCycles: options.maxCycles ?? DEFAULT_MAX_CYCLES,
+      maxCycles: options.maxCycles ?? (projectPaper ? identity.options.maxCycles : undefined) ?? DEFAULT_MAX_CYCLES,
       paperOptions,
       reviewer: this.deps.options.reviewer,
       reviewGates: this.deps.options.reviewGates,
       humanReviewOverride: options.humanReview,
-      brainstorm: options.brainstorm,
+      brainstorm: projectPaper ? 'off' : options.brainstorm,
       projectSettings,
       policySnapshot,
       })
@@ -187,6 +209,7 @@ export class AutoResearchService {
       policySnapshot,
       requestLedger,
       }
+      if (projectPaper) await discoverProject(this.deps.provider, runDir, projectDir, runContext)
       const result = await runner.run(runDir, state, tree, runContext)
       await bindResearchOutputs(runDir, state.runId)
       await writeLastRun(runDir)

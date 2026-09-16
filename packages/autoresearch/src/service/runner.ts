@@ -46,6 +46,16 @@ export class ResearchRunner {
     const ctx = createRunContext(this.deps, runDir, state, tree, context)
     ctx.logger.info(`run started runDir=${runDir} runId=${state.runId} status=${state.status} cycle=${state.cycle}`)
 
+    // A paper checkpoint owns the remaining work. Prelude roles are paid work
+    // and must not be dispatched again when resuming either workflow mode.
+    if (state.phase === 'paper') {
+      ctx.logger.info(`resuming at paper phase cycle=${state.cycle}`)
+      await runPaper(ctx)
+      state.status = 'COMPLETED'
+      await saveState(runDir, state)
+      return state
+    }
+
     // Minimal mode is an intentionally small path.  Keep it before the
     // legacy brainstorm/deep-dive gates so optional roles cannot leak into a
     // run whose settings explicitly disabled them.
@@ -99,16 +109,6 @@ export class ResearchRunner {
     const candidate = await readCandidate(runDir)
     const profile = await this.readProfile(runDir)
     ctx.logger.info(`intake done direction=${candidate.direction.slice(0, 80)}`)
-
-    if (state.phase === 'paper') {
-      ctx.logger.info(`resuming at paper phase cycle=${state.cycle}`)
-      await runPaper(ctx)
-      state.status = 'COMPLETED'
-      state.phase = 'paper'
-      await saveState(runDir, state)
-      ctx.logger.info('run completed (resumed from paper phase)')
-      return state
-    }
 
     let deepDive = { relatedPapers: '', baselines: '' }
     if (!shouldBrainstorm && this.deps.deepDiveEnabled !== false) {

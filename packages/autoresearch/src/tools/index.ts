@@ -468,3 +468,19 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
     },
   }
 }
+
+export function createProjectPaperRunTool(service: AutoResearchService): ToolDefinitionLike {
+  const research = createResearchRunTool(service)
+  const { candidatePath: _candidate, failureReport: _failure, brainstorm: _brainstorm, ...properties } = research.parameters.properties as Record<string, unknown>
+  return {
+    ...research,
+    name: 'project_paper_run',
+    description: 'Explore an existing project using a bounded read-only source snapshot, select a source-grounded research candidate, validate it within the run budget, and enter the normal paper pipeline after its evidence gate. Historical results remain unverified.',
+    parameters: { ...research.parameters, properties, required: ['runDir', 'projectDir'] },
+    async execute(args, exec) {
+      if (!exec.agent || typeof exec.agent.id !== 'string') throw new TypeError('project_paper_run requires a calling DSH agent')
+      const runDir = requireRunDir(args), projectDir = requireProjectDir(args)
+      return service.runProjectPaper({ ...toResearchRunOptions(args), runDir, projectDir }, { parent: exec.agent as never, signal: exec.signal })
+    },
+  }
+}

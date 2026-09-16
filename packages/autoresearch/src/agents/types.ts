@@ -23,6 +23,7 @@ export interface RoleExecutionContext {
  * Fields shared by every role/domain.
  */
 export interface CommonRoleInput {
+  readonly projectInventory?: string
   readonly researchContext?: ResearchContextRequest
   readonly runDir: string
   readonly projectDir?: string

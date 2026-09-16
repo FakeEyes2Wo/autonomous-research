@@ -535,7 +535,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       signal: context.signal,
       ...(options.schema !== undefined ? { outputSchema: options.schema } : {}),
       ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
-      ...(options.toolFilter ? { toolFilter: options.toolFilter } : {}),
+      ...(role === 'project-explorer' ? { toolFilter: { allow: [] } as ToolRestriction } : options.toolFilter ? { toolFilter: options.toolFilter } : {}),
     }
     const start = () => this.runtime.start(this.providerName, startOptions)
     const run = provisional ? await withRequestBinding(provisional, start) : await start()
