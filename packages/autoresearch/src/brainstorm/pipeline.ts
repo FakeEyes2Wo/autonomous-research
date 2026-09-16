@@ -41,6 +41,7 @@ import {
 } from './knowledge-graph.js'
 import { renderPaperWiki } from './wiki-render.js'
 import { selectCuratedPapers, writeCuratedPapers } from './curated-papers.js'
+import { importPaperRecords } from '../literature/import.js'
 
 const DEFAULTS = {
   surveyMinSurveys: 3,
@@ -54,6 +55,8 @@ const DEFAULTS = {
 }
 
 export interface BrainstormOptions {
+  /** Explicitly enabled project literature root; absent keeps legacy behavior. */
+  literatureRoot?: string
   ranking?: RankingStrategy
   // Two-stage survey options
   surveyMinSurveys?: number
@@ -181,7 +184,12 @@ export async function runBrainstorm(
     ? frontierRaw
     : { ...frontierRaw, papers: (frontierRaw.papers ?? []).slice(0, frontierLimit) }
   const frontierPapers = normalizeFrontierPapers(boundedFrontierRaw)
-  const records = mergePaperRecords(surveyPapers, frontierPapers).slice(0, paperCap ?? Number.POSITIVE_INFINITY)
+  let records = mergePaperRecords(surveyPapers, frontierPapers).slice(0, paperCap ?? Number.POSITIVE_INFINITY)
+  if (deps.options.literatureRoot) {
+    const imported = await importPaperRecords(deps.options.literatureRoot, runDir, records)
+    records = imported.records
+    await atomicWriteJson(safeResolve(runDir, 'brainstorm', 'literature_mapping.json'), imported.result)
+  }
   state = { ...state, frontierRaw, frontierPapers, records }
 
   await atomicWriteJson(frontierPoolPath(runDir), boundedFrontierRaw)
@@ -198,7 +206,7 @@ export async function runBrainstorm(
     })
   }
 
-  await writeWikis(state, frontierPapers)
+  await writeWikis(state, deps.options.literatureRoot ? records : frontierPapers)
   await writeDirectionsOverview(state, directions)
 
   const mergedIndex = renderUnifiedWikiIndex(records)

@@ -20,6 +20,9 @@ export type FrontierRole = 'A' | 'B' | 'C'
 /** Bibliographic metadata shared by every paper. */
 export interface PaperMeta {
   id: string
+  workId?: string
+  documentVersionId?: string
+  sourceStatus?: 'legacy_unverified' | 'located' | 'reviewed'
   title: string
   arxivId?: string
   doi?: string
