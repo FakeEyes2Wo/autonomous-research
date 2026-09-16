@@ -1,0 +1,31 @@
+{
+  "schema": "autoresearch/hypothesis-pool/v1",
+  "entries": [
+    {
+      "id": "hyp_09ee9f7a",
+      "statement": "Reformed research direction",
+      "status": "SUPPORTED",
+      "origin_candidate_id": "ar_c99ee26e",
+      "evidence_ids": [
+        "evi_5fcac6bc",
+        "evi_c9d802a0"
+      ],
+      "created_at": "2026-08-27T14:40:25.286Z",
+      "updated_at": "2026-08-27T16:27:58.458Z"
+    },
+    {
+      "id": "hyp_6a1a0c1b",
+      "statement": "Under a shared confidence gate, a depth-adaptive/early-exit decoder (trained per-layer heads, frozen base) allocates different effective depth and residual error across fair groups (pronoun gender he/she), and this per-group gap WIDENS on real stereotype-violating (anti/conflictive) WinoBias instances vs stereotype-consistent (pro/clean) ones; root cause is group-dependent miscalibration of the exit-confidence signal (per-group temperature scaling collapses the gap), not a fixed group quality ceiling. Tested first on Qwen2.5-0.5B-Instruct, WinoBias type1, clean->unseen-conflict by occupation.",
+      "status": "SUPPORTED",
+      "origin_candidate_id": "ar_c99ee26e",
+      "evidence_ids": [
+        "evi_40a5df08",
+        "evi_57d6f33c",
+        "evi_1912c42b",
+        "evi_e71d11c5"
+      ],
+      "created_at": "2026-08-27T16:05:46.242Z",
+      "updated_at": "2026-08-27T16:27:58.458Z"
+    }
+  ]
+}

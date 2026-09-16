@@ -1,4 +1,3 @@
-import { join } from 'node:path'
 import { newId, readOptionalText } from '../../core/utils.js'
 import { recordResult, transition } from '../../core/state.js'
 import type { FalsifiabilityReport, IdeaDraft, IdeaPackage, SkepticReport, ValidationPlan } from '../../domain/idea.js'
@@ -36,7 +35,7 @@ export async function ensureRubric(ctx: RunContext, { idea, profile, feedback }:
     {
       reflexion: (rubric, round) =>
         `Self-reflexion round ${round}: review the current rubric below. Identify weaknesses and rewrite an improved rubric.\n\nCurrent rubric:\n${rubric}`,
-      buildInput: (current, round, reflexion) => ({
+      buildInput: (current, _round, reflexion) => ({
         runDir: ctx.runDir,
         idea,
         profile,
@@ -157,7 +156,7 @@ async function runIdeaReflexion(ctx: RunContext, pkg: IdeaPackage): Promise<Idea
   return runReflexion<IdeaReflexionState>(call, 'idea-reflexion', {
     reflexion: (state, round) =>
       `Self-reflexion round ${round}: check falsifiability, unobservable variables, risks, and fatal flaws. Return an improved hypothesis if needed.\n\nCurrent hypothesis:\n${JSON.stringify(state.pkg, null, 2)}`,
-    buildInput: (current, round, reflexion) => ({
+    buildInput: (current, _round, reflexion) => ({
       runDir: ctx.runDir,
       ideaPackage: JSON.stringify(current?.pkg ?? pkg, null, 2),
       ...(current ? { plan: reflexion, revisedIdeaPackage: JSON.stringify(current.pkg, null, 2) } : {}),

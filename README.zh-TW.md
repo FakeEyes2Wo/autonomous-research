@@ -8,12 +8,12 @@ Autonomous Research System：從 candidate / 實驗紀錄到可追溯論文包�
 
 | 文件 | 內容 |
 |---|---|
-| [2026-08-20-autoresearch-ml-control-plane-design.md](2026-08-20-autoresearch-ml-control-plane-design.md) | **唯一實作基線**：AutoResearchService + 最小狀態 + 動態 rubric + 自主迭代 + Domain Profile（ML v1） |
-| [2026-08-16-candidate-to-paper-design.md](2026-08-16-candidate-to-paper-design.md) | candidate → paper 全流程（預設入口） |
-| [2026-08-16-records-to-paper-design.md](2026-08-16-records-to-paper-design.md) | 既有實驗紀錄 → paper（第二入口） |
-| [2026-08-16-idea-generation-design.md](2026-08-16-idea-generation-design.md) | brainstorm + 候選生成 + 閘門 |
-| [2026-08-15-hypothesis-local-pool-design.md](2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool 生命週期索引 |
-| [2026-08-15-autoresearch-figures-and-experiment-design.md](2026-08-15-autoresearch-figures-and-experiment-design.md) | 論文圖、可信實驗、消融規則 |
+| [2026-08-20-autoresearch-ml-control-plane-design.md](docs/archive/designs/2026-08-20-autoresearch-ml-control-plane-design.md) | **唯一實作基線**：AutoResearchService + 最小狀態 + 動態 rubric + 自主迭代 + Domain Profile（ML v1） |
+| [2026-08-16-candidate-to-paper-design.md](docs/archive/designs/2026-08-16-candidate-to-paper-design.md) | candidate → paper 全流程（預設入口） |
+| [2026-08-16-records-to-paper-design.md](docs/archive/designs/2026-08-16-records-to-paper-design.md) | 既有實驗紀錄 → paper（第二入口） |
+| [2026-08-16-idea-generation-design.md](docs/archive/designs/2026-08-16-idea-generation-design.md) | brainstorm + 候選生成 + 閘門 |
+| [2026-08-15-hypothesis-local-pool-design.md](docs/archive/designs/2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool 生命週期索引 |
+| [2026-08-15-autoresearch-figures-and-experiment-design.md](docs/archive/designs/2026-08-15-autoresearch-figures-and-experiment-design.md) | 論文圖、可信實驗、消融規則 |
 
 ## 程式碼實作
 
@@ -24,9 +24,9 @@ Autonomous Research System：從 candidate / 實驗紀錄到可追溯論文包�
 
 | 群組 | 檔案 |
 |---|---|
-| candidate→paper | [candidate-to-paper-handoff/](candidate-to-paper-handoff/)：00 總控 + 01–10 各階段 |
-| records→paper | [records-paper-handoff/](records-paper-handoff/)：00 總控 + 01、02、04、05（含資料契約；寫作沿用 candidate 08） |
-| 最小驗證 | [verify_exp/](verify_exp/)：圖管線、drawio MCP、pure LLM / drawio 結果 |
+| candidate→paper | [candidate-to-paper-handoff/](docs/workflows/candidate-to-paper-handoff/)：00 總控 + 01–10 各階段 |
+| records→paper | [records-paper-handoff/](docs/workflows/records-paper-handoff/)：00 總控 + 01、02、04、05（含資料契約；寫作沿用 candidate 08） |
+| 最小驗證 | [figure-validation/](experiments/figure-validation/)：圖管線、drawio MCP、pure LLM / drawio 結果 |
 
 ## 歷史 / 延期參考（非實作基線）
 

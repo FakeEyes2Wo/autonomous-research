@@ -27,7 +27,8 @@ const ROUTE_RE = /^[a-z][a-z0-9-]{0,63}$/
 const ENV_RE = /^[A-Z][A-Z0-9_]{0,127}$/
 const MODALITIES = new Set(['text', 'image'])
 const REASONING = new Set(['off', 'minimal', 'low', 'medium', 'high', 'max'])
-const ROUTE_KEYS = new Set(['id', 'displayName', 'api', 'baseURL', 'credentialRef', 'models', 'reasoning', 'retryPolicy', 'timeoutMs', 'streamIdleTimeoutMs', 'defaultContextWindow', 'defaultMaxTokens', 'defaultInput'])
+const ROUTE_OPTION_KEYS = ['reasoning', 'retryPolicy', 'timeoutMs', 'streamIdleTimeoutMs', 'defaultContextWindow', 'defaultMaxTokens', 'defaultInput']
+const ROUTE_KEYS = new Set(['id', 'displayName', 'api', 'baseURL', 'credentialRef', 'models', ...ROUTE_OPTION_KEYS])
 const MODEL_KEYS = new Set(['id', 'name', 'contextWindow', 'maxTokens', 'input', 'reasoningEfforts', 'compat'])
 const SENSITIVE_KEYS = /(?:key|token|secret|password|authorization|cookie|header)/i
 
@@ -176,7 +177,7 @@ export function validateConfig(input) {
     if (api === 'openai-responses' && raw.compat !== undefined) errors.push(issue(path + '.compat', 'protocol_field', 'route compat is only supported for openai-completions'))
     const route = { id, displayName: typeof raw.displayName === 'string' && raw.displayName.trim() ? raw.displayName.trim() : id, api, baseURL, models }
     if (credentialRef !== undefined) route.credentialRef = credentialRef.trim()
-    for (const key of ['reasoning', 'retryPolicy', 'timeoutMs', 'streamIdleTimeoutMs', 'defaultContextWindow', 'defaultMaxTokens', 'defaultInput']) if (raw[key] !== undefined) route[key] = clone(raw[key])
+    for (const key of ROUTE_OPTION_KEYS) if (raw[key] !== undefined) route[key] = clone(raw[key])
     normalized.routes.push(route)
   }
   return { ok: errors.length === 0, errors, config: normalized }
@@ -196,7 +197,7 @@ export function assertValidConfig(input) {
 export function routeToDshProfile(route) {
   const provider = { displayName: route.displayName, api: route.api, baseURL: route.baseURL, models: route.models }
   if (route.credentialRef) provider.apiKeyEnv = route.credentialRef
-  for (const key of ['reasoning', 'retryPolicy', 'timeoutMs', 'streamIdleTimeoutMs', 'defaultContextWindow', 'defaultMaxTokens', 'defaultInput']) if (route[key] !== undefined) provider[key] = clone(route[key])
+  for (const key of ROUTE_OPTION_KEYS) if (route[key] !== undefined) provider[key] = clone(route[key])
   return provider
 }
 

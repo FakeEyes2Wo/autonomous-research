@@ -6,7 +6,7 @@ import { ResearchTree } from '../core/research-tree.js'
 import { createInitialState, loadState, recordResult, saveState, transition } from '../core/state.js'
 import type { RunState } from '../core/types.js'
 import { atomicWriteJson, AutoResearchError, ensureDir, readJson, readOptionalText, safeResolve, writeText } from '../core/utils.js'
-import { freezeRubric, writeFailureReport, writePlan, writeRubric } from '../domain/files.js'
+import { freezeRubric, writeFailureReport, writePlan } from '../domain/files.js'
 import { exportEvidenceChain } from '../export/evidence-chain.js'
 import { createRunContext, reloadTree } from '../service/context.js'
 import type { ResearchRunnerOptions } from '../service/types.js'
@@ -136,6 +136,71 @@ async function assertExperimentIdentity(runDir: string, task: string, profile: s
 
 function isBudgetPause(error: unknown): boolean {
   return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'BUDGET_EXHAUSTED')
+}
+
+type ExperimentContext = ReturnType<typeof createRunContext>
+
+async function persistTerminalExperiment(
+  ctx: ExperimentContext,
+  task: string,
+  profile: string,
+  reportPath: string,
+  cycles: number,
+  status: 'failed' | 'paused',
+  reason: string,
+  phase?: 'failed',
+  failureReport?: string,
+): Promise<ExperimentRunResult> {
+  ctx.state.status = status === 'failed' ? 'FAILED' : 'PAUSED'
+  if (phase) ctx.state.phase = phase
+  ctx.state.lastError = reason
+  await saveState(ctx.runDir, ctx.state)
+  if (failureReport !== undefined) await writeFailureReport(ctx.runDir, failureReport)
+  await writeText(reportPath, buildExperimentReport(task, profile, cycles, reason, ctx.state.evidencePath, status, false))
+  return {
+    runDir: ctx.runDir,
+    status,
+    reportPath,
+    evidencePath: ctx.state.evidencePath,
+    cycles,
+    reason,
+  }
+}
+
+type CompletionOptions = { finished: boolean; lastError?: string; updateLastError: boolean; logCompletion: boolean; includeReason: boolean }
+
+async function completeExperiment(
+  ctx: ExperimentContext,
+  task: string,
+  profile: string,
+  reportPath: string,
+  cycles: number,
+  options: CompletionOptions,
+): Promise<ExperimentRunResult> {
+  await reloadTree(ctx)
+  let evidencePath: string | undefined
+  try {
+    evidencePath = await exportEvidenceChain(ctx.runDir, ctx.state.runId, ctx.tree)
+    ctx.state.evidencePath = evidencePath
+  } catch (error) {
+    ctx.logger.warn(`experiment evidence export failed: ${String(error)}`)
+  }
+  ctx.state.status = 'COMPLETED'
+  ctx.state.phase = 'work'
+  if (options.updateLastError) ctx.state.lastError = options.lastError
+  await saveState(ctx.runDir, ctx.state)
+  await writeText(reportPath, buildExperimentReport(task, profile, cycles, options.lastError, evidencePath, 'completed', options.finished))
+  if (options.logCompletion) {
+    ctx.logger.info(`experiment task completed runDir=${ctx.runDir} cycles=${cycles} evidence=${evidencePath ?? 'none'}`)
+  }
+  return {
+    runDir: ctx.runDir,
+    status: 'completed',
+    reportPath,
+    evidencePath,
+    cycles,
+    ...(options.includeReason ? { reason: options.lastError } : {}),
+  }
 }
 
 export const DEFAULT_EXPERIMENT_MAX_ROUNDS = 1
@@ -281,19 +346,16 @@ export async function runExperimentTask(
     await reloadTree(ctx)
 
     const failureDirections = await runResultReflexion(ctx, { planText, experimentDesign })
-    const insight = await runInsightAbstractor(ctx, { planText, experimentDesign, failureDirections })
+    await runInsightAbstractor(ctx, { planText, experimentDesign, failureDirections })
     const decision = (await readStage<{ action: string; reason: string }>(stageFile(runDir, cycle, 'decision'))) ?? await runSupervisor(ctx, { planText })
     if (!(await readStage(stageFile(runDir, cycle, 'decision')))) await writeStage(runDir, cycle, 'decision', decision)
     ctx.logger.info(`experiment supervisor decision=${decision.action}: ${decision.reason}`)
     if (decision.action === 'fail') {
       lastReason = decision.reason
-      state.status = 'FAILED'
-      state.phase = 'failed'
-      state.lastError = decision.reason
-      await saveState(runDir, state)
-      await writeFailureReport(runDir, `# FAILURE_REPORT\n\n${decision.reason}\n`)
-      await writeText(reportPath, buildExperimentReport(task, profile, cycle, decision.reason, undefined, 'failed', false))
-      return { runDir, status: 'failed', reportPath, cycles, reason: decision.reason }
+      return persistTerminalExperiment(
+        ctx, task, profile, reportPath, cycles, 'failed', decision.reason, 'failed',
+        `# FAILURE_REPORT\n\n${decision.reason}\n`,
+      )
     }
     if (decision.action === 'finish') {
       finished = true
@@ -307,46 +369,15 @@ export async function runExperimentTask(
   } catch (error) {
     if (!isBudgetPause(error) && !isExperimentPauseError(error)) throw error
     const reason = error instanceof Error ? error.message : String(error)
-    state.status = 'PAUSED'
-    state.lastError = reason
-    await saveState(runDir, state)
-    await writeFailureReport(runDir, `# PAUSED\n\n${reason}\n`)
-    await writeText(reportPath, buildExperimentReport(task, profile, cycles, reason, state.evidencePath, 'paused', false))
-    return { runDir, status: 'paused', reportPath, evidencePath: state.evidencePath, cycles, reason }
+    return persistTerminalExperiment(ctx, task, profile, reportPath, cycles, 'paused', reason, undefined, `# PAUSED\n\n${reason}\n`)
   }
 
   if (!finished) {
     const reason = `experiment did not finish within maxRounds=${maxRounds}`
-    state.status = 'PAUSED'
-    state.lastError = reason
-    await saveState(runDir, state)
-    await writeText(reportPath, buildExperimentReport(task, profile, cycles, reason, state.evidencePath, 'paused', false))
-    return { runDir, status: 'paused', reportPath, evidencePath: state.evidencePath, cycles, reason }
+    return persistTerminalExperiment(ctx, task, profile, reportPath, cycles, 'paused', reason)
   }
 
-  await reloadTree(ctx)
-  let evidencePath: string | undefined
-  try {
-    evidencePath = await exportEvidenceChain(runDir, state.runId, ctx.tree)
-    state.evidencePath = evidencePath
-  } catch (error) {
-    ctx.logger.warn(`experiment evidence export failed: ${String(error)}`)
-  }
-  state.status = 'COMPLETED'
-  state.phase = 'work'
-  state.lastError = lastReason
-  await saveState(runDir, state)
-  await writeText(reportPath, buildExperimentReport(task, profile, cycles, lastReason, evidencePath, 'completed', finished))
-  ctx.logger.info(`experiment task completed runDir=${runDir} cycles=${cycles} evidence=${evidencePath ?? 'none'}`)
-
-  return {
-    runDir,
-    status: 'completed',
-    reportPath,
-    evidencePath,
-    cycles,
-    reason: lastReason,
-  }
+  return completeExperiment(ctx, task, profile, reportPath, cycles, { finished, lastError: lastReason, updateLastError: true, logCompletion: true, includeReason: true })
 }
 
 /**
@@ -408,13 +439,10 @@ async function runMinimalExperiment(
         return value
       })()
       if (decision.action === 'fail') {
-        ctx.state.status = 'FAILED'
-        ctx.state.phase = 'failed'
-        ctx.state.lastError = decision.reason
-        await saveState(ctx.runDir, ctx.state)
-        await writeFailureReport(ctx.runDir, `# FAILURE_REPORT\n\n${decision.reason}\n`)
-        await writeText(reportPath, buildExperimentReport(task, profile, cycle, decision.reason, undefined, 'failed', false))
-        return { runDir: ctx.runDir, status: 'failed', reportPath, cycles, reason: decision.reason }
+        return persistTerminalExperiment(
+          ctx, task, profile, reportPath, cycles, 'failed', decision.reason, 'failed',
+          `# FAILURE_REPORT\n\n${decision.reason}\n`,
+        )
       }
       if (decision.action === 'finish') {
         finished = true
@@ -425,34 +453,13 @@ async function runMinimalExperiment(
   } catch (error) {
     if (!isBudgetPause(error) && !isExperimentPauseError(error)) throw error
     const reason = error instanceof Error ? error.message : String(error)
-    ctx.state.status = 'PAUSED'
-    ctx.state.lastError = reason
-    await saveState(ctx.runDir, ctx.state)
-    await writeFailureReport(ctx.runDir, `# PAUSED\n\n${reason}\n`)
-    await writeText(reportPath, buildExperimentReport(task, profile, cycles, reason, ctx.state.evidencePath, 'paused', false))
-    return { runDir: ctx.runDir, status: 'paused', reportPath, evidencePath: ctx.state.evidencePath, cycles, reason }
+    return persistTerminalExperiment(ctx, task, profile, reportPath, cycles, 'paused', reason, undefined, `# PAUSED\n\n${reason}\n`)
   }
   if (!finished) {
     const reason = `experiment did not finish within maxRounds=${maxRounds}`
-    ctx.state.status = 'PAUSED'
-    ctx.state.lastError = reason
-    await saveState(ctx.runDir, ctx.state)
-    await writeText(reportPath, buildExperimentReport(task, profile, cycles, reason, ctx.state.evidencePath, 'paused', false))
-    return { runDir: ctx.runDir, status: 'paused', reportPath, evidencePath: ctx.state.evidencePath, cycles, reason }
+    return persistTerminalExperiment(ctx, task, profile, reportPath, cycles, 'paused', reason)
   }
-  await reloadTree(ctx)
-  let evidencePath: string | undefined
-  try {
-    evidencePath = await exportEvidenceChain(ctx.runDir, ctx.state.runId, ctx.tree)
-    ctx.state.evidencePath = evidencePath
-  } catch (error) {
-    ctx.logger.warn(`experiment evidence export failed: ${String(error)}`)
-  }
-  ctx.state.status = 'COMPLETED'
-  ctx.state.phase = 'work'
-  await saveState(ctx.runDir, ctx.state)
-  await writeText(reportPath, buildExperimentReport(task, profile, cycles, undefined, evidencePath, 'completed', true))
-  return { runDir: ctx.runDir, status: 'completed', reportPath, evidencePath, cycles }
+  return completeExperiment(ctx, task, profile, reportPath, cycles, { finished: true, updateLastError: false, logCompletion: false, includeReason: false })
 }
 
 async function writeIfMissing(file: string, content: string): Promise<void> {

@@ -212,10 +212,7 @@ export class RequestLedger {
       const entry = state.requests[requestId]
       if (!entry) throw new LedgerError('REQUEST_CONFLICT', `unknown request ${requestId}`)
       if (entry.status === 'settled' && entry.usage) return entry.usage
-      const usage = this.makeUsage(state, entry, settlement)
-      const charged = settlement.usageSource === 'unknown' || usage.totalTokens === undefined ? entry.reservation.totalTokens : usage.totalTokens
-      state.totals.reservedTokens -= entry.reservation.totalTokens; state.totals.committedTokens += charged; entry.chargedTokens = charged; entry.status = 'settled'; entry.usage = usage
-      return usage
+      return this.settleEntry(state, entry, settlement)
     })
   }
 

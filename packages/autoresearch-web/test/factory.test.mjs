@@ -6,6 +6,61 @@ import { SlotCore } from '@deepseek-ai/dsh-client-ui-slots';
 import { Context } from '../../autoresearch/node_modules/@deepseek-ai/cordis/lib/index.js';
 import { inject } from '../dist/index.js';
 
+function listedSessions(opened, ...ids) {
+  const byId = Object.fromEntries(ids.map((id) => [id, { sessionId: id }]));
+  return { list: { getSnapshot: () => ({ byId }) }, refresh: async () => {}, open(id) { assert.ok(byId[id], 'unknown session'); opened.push(id); } };
+}
+
+function nativeComponentHarness(remoteCreate) {
+  const state = [], refs = [], callbacks = [], effects = [], listeners = { workspaces: new Set(), sessions: new Set() }, byId = { ordinary: { agentPreset: 'general' } }, opened = [];
+  let Component, stateIndex, refIndex, callbackIndex, effectIndex;
+  const same = (left, right) => left?.length === right?.length && left.every((value, index) => Object.is(value, right[index]));
+  const workspaces = { list: { getSnapshot: () => ({ phase: 'ready', items: [{ workspaceId: 'ws-a', sessionIds: ['ordinary'] }] }), subscribe(listener) { listeners.workspaces.add(listener); return () => listeners.workspaces.delete(listener); } } };
+  const sessions = { list: { getSnapshot: () => ({ phase: 'ready', current: 'ordinary', byId }), subscribe(listener) { listeners.sessions.add(listener); return () => listeners.sessions.delete(listener); } }, refresh: async () => {}, open(id) { opened.push(id); } };
+  const React = {
+    createElement: (...args) => args,
+    useState(initial) { const index = stateIndex++; if (!(index in state)) state[index] = typeof initial === 'function' ? initial() : initial; return [state[index], (value) => { state[index] = typeof value === 'function' ? value(state[index]) : value; }]; },
+    useRef(initial) { const index = refIndex++; return refs[index] ||= { current: initial }; },
+    useCallback(callback, deps) { const index = callbackIndex++; if (!callbacks[index] || !same(callbacks[index].deps, deps)) callbacks[index] = { callback, deps }; return callbacks[index].callback; },
+    useEffect(callback, deps) { const index = effectIndex++; const effect = effects[index] ||= {}; if (!same(effect.deps, deps)) effect.next = { callback, deps }; },
+  };
+  const render = () => { stateIndex = refIndex = callbackIndex = effectIndex = 0; Component(); };
+  const applyEffects = (indices) => { for (const index of indices) { const effect = effects[index]; if (!effect?.next) continue; effect.cleanup?.(); const next = effect.next; delete effect.next; effect.deps = next.deps; effect.cleanup = next.callback(); } };
+  const uiWorkspace = { startSession() {} };
+  const ctx = { get(name) { return ({ workspaces, sessions, uiWorkspace, 'remote.session': { create: remoteCreate } })[name]; }, slots: { inject(_name, callback) { return callback(); }, register(_options, component) { Component = component; return () => {}; } }, effect() {} };
+  const win = { innerHeight: 800, localStorage: { getItem() { return null; }, setItem() {} }, location: { search: '?autoresearch=1', origin: 'http://localhost' }, document: { createElement() { return { remove() {} }; }, head: { appendChild() {} }, querySelector() { return null; }, body: { classList: { add() {}, remove() {} } } }, addEventListener() {}, removeEventListener() {}, getComputedStyle() { return { getPropertyValue() { return ''; }, colorScheme: 'light' }; }, ResizeObserver: class { observe() {} disconnect() {} } };
+  return {
+    async mount() { const { installNativeWorkbench } = await import('../src/native-workbench-client.js'); installNativeWorkbench(ctx, React, win); state[3] = new Map([['ws-a', 'project-a']]); render(); applyEffects([1, 4]); },
+    render, applyEffects, state, refs, listeners, byId, opened, uiWorkspace,
+    async flush() { await new Promise((resolve) => setImmediate(resolve)); },
+  };
+}
+
+test('an unchanged native selection preserves a fresh-session error status', async () => {
+  const harness = nativeComponentHarness(async () => ({ ok: false, error: { message: 'missing workflow package' } }));
+  await harness.mount();
+  harness.uiWorkspace.startSession('ws-a');
+  await harness.flush();
+  assert.equal(harness.state[5], 'missing workflow package');
+  for (const listener of [...harness.listeners.workspaces, ...harness.listeners.sessions]) listener();
+  assert.equal(harness.state[5], 'missing workflow package');
+});
+
+test('an unrelated project map update does not cancel an in-flight A session creation', async () => {
+  let resolveCreate;
+  const harness = nativeComponentHarness(() => new Promise((resolve) => { resolveCreate = resolve; }));
+  await harness.mount();
+  harness.uiWorkspace.startSession('ws-a');
+  await harness.flush();
+  harness.state[3] = new Map([['ws-a', 'project-a'], ['ws-b', 'project-b']]);
+  harness.render(); harness.applyEffects([4]);
+  harness.byId.created = { agentPreset: 'auto-research' };
+  resolveCreate({ ok: true, value: { sessionId: 'created' } });
+  await harness.flush();
+  assert.deepEqual(harness.opened, ['created']);
+  assert.deepEqual(harness.refs[2].current, { workspaceId: 'ws-a', projectId: 'project-a', sessionId: null, sessionKind: 'ordinary', grouped: true, selectionId: '1' });
+});
+
 test('a project switch cancels a pending session before the next target lookup completes', async () => {
   const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
   let resolve; const opened = [];
@@ -90,7 +145,7 @@ test('native bridge binds a workspace target and stores its session by workspace
   const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
   const values = new Map(); const requests = []; const opened = [];
   const ctx = { get(name) {
-    if (name === 'sessions') return { open(id) { opened.push(id); } };
+    if (name === 'sessions') return listedSessions(opened, 'session-1');
     if (name === 'remote.session') return { async create(request) { requests.push(request); return { ok: true, value: { sessionId: 'session-1' } }; } };
   } };
   const win = { localStorage: { getItem(key) { return values.get(key) ?? null; }, setItem(key, value) { values.set(key, value); } } };
@@ -105,7 +160,7 @@ test('native bridge creates fresh research sessions without reading or writing r
   const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
   const requests = []; const opened = []; let storageReads = 0; let storageWrites = 0;
   const ctx = { get(name) {
-    if (name === 'sessions') return { open(id) { opened.push(id); } };
+    if (name === 'sessions') return listedSessions(opened, 'fresh-1');
     if (name === 'remote.session') return { async create(request) { requests.push(request); return { ok: true, value: { sessionId: 'fresh-1' } }; } };
   } };
   const bridge = createNativeSessionBridge(ctx, { localStorage: { getItem() { storageReads += 1; return JSON.stringify({ 'ws-test': 'old' }); }, setItem() { storageWrites += 1; } } });
@@ -113,6 +168,260 @@ test('native bridge creates fresh research sessions without reading or writing r
   assert.deepEqual(requests, [{ workspaceId: 'ws-test', agentPreset: 'auto-research' }]);
   assert.deepEqual(opened, ['fresh-1']);
   assert.equal(storageReads, 0); assert.equal(storageWrites, 0);
+});
+
+test('native workspace resolution uses DSH recent workspace only after both stores are ready', async () => {
+  const { resolveNativeWorkspace } = await import('../src/native-workbench-client.js');
+  const workspaces = { list: { getSnapshot: () => ({ phase: 'ready', items: [
+    { workspaceId: 'older', createdAt: '2026-01-01T00:00:00.000Z', sessionIds: ['old-session'] },
+    { workspaceId: 'recent', createdAt: '2026-01-02T00:00:00.000Z', sessionIds: ['recent-session'] },
+  ] }) } };
+  const sessions = { list: { getSnapshot: () => ({ phase: 'ready', byId: { 'old-session': { updatedAt: 10 }, 'recent-session': { updatedAt: 20 } } }) } };
+  assert.equal(resolveNativeWorkspace(workspaces, sessions).workspaceId, 'recent');
+  assert.equal(resolveNativeWorkspace({ list: { getSnapshot: () => ({ phase: 'pending', items: workspaces.list.getSnapshot().items }) } }, sessions), undefined);
+});
+
+test('native bridge refreshes the local session list before opening a newly-created session', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  const byId = {}; const opened = []; const subscribers = new Set(); let refreshes = 0;
+  const notify = () => { for (const subscriber of subscribers) subscriber(); };
+  const sessions = {
+    list: {
+      getSnapshot: () => ({ byId }),
+      subscribe(subscriber) { subscribers.add(subscriber); return () => subscribers.delete(subscriber); },
+    },
+    refresh: async () => { refreshes += 1; byId.created = { sessionId: 'created' }; notify(); },
+    open(id) { assert.ok(byId[id], 'unknown session'); opened.push(id); },
+  };
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return sessions;
+    if (name === 'remote.session') return { async create() { return { ok: true, value: { sessionId: 'created' } }; } };
+  } }, {});
+  assert.equal(await bridge.createFresh('ws-a'), 'created');
+  assert.deepEqual(opened, ['created']);
+  assert.equal(refreshes, 1);
+  assert.equal(subscribers.size, 0);
+});
+
+test('native bridge cancellation while waiting for local publication neither opens nor leaves a subscription', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  const byId = {}; const opened = []; const subscribers = new Set(); let resolveRefresh, refreshes = 0;
+  const sessions = {
+    list: {
+      getSnapshot: () => ({ byId }),
+      subscribe(subscriber) { subscribers.add(subscriber); return () => subscribers.delete(subscriber); },
+    },
+    refresh: () => { refreshes += 1; return new Promise((resolve) => { resolveRefresh = resolve; }); },
+    open(id) { assert.ok(byId[id], 'unknown session'); opened.push(id); },
+  };
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return sessions;
+    if (name === 'remote.session') return { async create() { return { ok: true, value: { sessionId: 'late' } }; } };
+  } }, {});
+  const pending = bridge.createFresh('ws-a');
+  await new Promise((resolve) => setImmediate(resolve));
+  bridge.cancel(); resolveRefresh();
+  assert.equal(await pending, null);
+  assert.deepEqual(opened, []);
+  assert.equal(subscribers.size, 0);
+  assert.equal(refreshes, 1);
+});
+
+test('native bridge removes a subscription that publishes synchronously during subscribe', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  const byId = {}; const subscribers = new Set();
+  const sessions = {
+    list: {
+      getSnapshot: () => ({ byId }),
+      subscribe(listener) { subscribers.add(listener); byId.created = { sessionId: 'created' }; listener(); return () => subscribers.delete(listener); },
+    },
+    refresh: async () => { throw new Error('refresh should not run after synchronous publication'); },
+    open(id) { assert.ok(byId[id], 'unknown session'); },
+  };
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return sessions;
+    if (name === 'remote.session') return { async create() { return { ok: true, value: { sessionId: 'created' } }; } };
+  } }, {});
+  assert.equal(await bridge.createFresh('ws-a'), 'created');
+  assert.equal(subscribers.size, 0);
+});
+
+test('native bridge cancellation during saved-session fallback suppresses its late rejection', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  let rejectFallback; const requests = [];
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return listedSessions([], 'unused');
+    if (name === 'remote.session') return { create(request) {
+      requests.push(request);
+      if (requests.length === 1) return Promise.reject(Object.assign(new Error('conflict'), { code: 'conflict' }));
+      return new Promise((_, reject) => { rejectFallback = reject; });
+    } };
+  } }, { localStorage: { getItem: () => JSON.stringify({ 'project-a': 'saved' }), setItem() {} } });
+  const pending = bridge.bind('project-a', '/a');
+  await new Promise((resolve) => setImmediate(resolve));
+  bridge.cancel(); rejectFallback(new Error('network'));
+  assert.equal(await pending, null);
+  assert.equal(requests.length, 2);
+});
+
+test('native bridge retries one completed stale refresh before reporting visibility failure', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  const byId = {}; const subscribers = new Set(); let refreshes = 0;
+  const notify = () => { for (const listener of subscribers) listener(); };
+  const sessions = {
+    list: { getSnapshot: () => ({ byId }), subscribe(listener) { subscribers.add(listener); return () => subscribers.delete(listener); } },
+    refresh: async () => { refreshes += 1; if (refreshes === 2) { byId.created = { sessionId: 'created' }; notify(); } },
+    open(id) { assert.ok(byId[id], 'unknown session'); },
+  };
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return sessions;
+    if (name === 'remote.session') return { async create() { return { ok: true, value: { sessionId: 'created' } }; } };
+  } }, {});
+  assert.equal(await bridge.createFresh('ws-a'), 'created');
+  assert.equal(refreshes, 2);
+  assert.equal(subscribers.size, 0);
+});
+
+test('native bridge reports visibility timeout and cleans its subscription', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  const byId = {}; const subscribers = new Set();
+  const sessions = {
+    list: { getSnapshot: () => ({ byId }), subscribe(listener) { subscribers.add(listener); return () => subscribers.delete(listener); } },
+    refresh: async () => {}, open() { throw new Error('must not open an unseen session'); },
+  };
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return sessions;
+    if (name === 'remote.session') return { async create() { return { ok: true, value: { sessionId: 'missing' } }; } };
+  } }, {});
+  await assert.rejects(bridge.createFresh('ws-a'), /未及时出现在本地列表/);
+  assert.equal(subscribers.size, 0);
+});
+
+test('native bridge surfaces a thrown list subscription without scheduling a session open', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  const sessions = { list: { getSnapshot: () => ({ byId: {} }), subscribe() { throw new Error('subscribe unavailable'); } }, refresh: async () => {}, open() { throw new Error('must not open'); } };
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return sessions;
+    if (name === 'remote.session') return { async create() { return { ok: true, value: { sessionId: 'missing' } }; } };
+  } }, {});
+  await assert.rejects(bridge.createFresh('ws-a'), /subscribe unavailable/);
+});
+
+test('native project mapping accepts a workspace that appears after an initially empty map and rejects bad responses', async () => {
+  const { selectNativeWorkspace, readNativeProjectMap } = await import('../src/native-workbench-client.js');
+  const workspaces = { list: { getSnapshot: () => ({ items: [{ workspaceId: 'ws-a', sessionIds: ['ordinary'] }] }) } };
+  const sessions = { list: { getSnapshot: () => ({ current: 'ordinary', byId: { ordinary: { agentPreset: 'general' } } }) } };
+  assert.equal(selectNativeWorkspace(workspaces, sessions, new Map()).projectId, null);
+  const projects = await readNativeProjectMap({ ok: true, json: async () => ({ projects: [{ id: 'project-a', workspaceId: 'ws-a' }] }) });
+  assert.equal(selectNativeWorkspace(workspaces, sessions, projects).projectId, 'project-a');
+  await assert.rejects(readNativeProjectMap({ ok: false, json: async () => ({}) }), /项目映射请求失败/);
+  await assert.rejects(readNativeProjectMap({ ok: true, json: async () => ({ projects: null }) }), /项目映射无效/);
+});
+
+test('workspace membership refreshes an initially empty project map and ignores a response after disposal', async () => {
+  const { installNativeProjectMapRefresh } = await import('../src/native-workbench-client.js');
+  const subscribers = new Set(); const maps = []; let resolveLate;
+  const workspaces = { list: { subscribe(listener) { subscribers.add(listener); return () => subscribers.delete(listener); } } };
+  const responses = [
+    Promise.resolve({ ok: true, json: async () => ({ projects: [] }) }),
+    Promise.resolve({ ok: true, json: async () => ({ projects: [{ id: 'project-a', workspaceId: 'ws-a' }] }) }),
+    new Promise((resolve) => { resolveLate = resolve; }),
+  ];
+  const stop = installNativeProjectMapRefresh({ get(name) { return name === 'workspaces' ? workspaces : undefined; } }, () => responses.shift(), (map) => maps.push(map), () => {});
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(maps.length, 1); assert.equal(maps[0].size, 0);
+  [...subscribers][0]();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(maps.length, 2); assert.equal(maps[1].get('ws-a'), 'project-a');
+  [...subscribers][0](); stop();
+  resolveLate({ ok: true, json: async () => ({ projects: [{ id: 'stale', workspaceId: 'ws-stale' }] }) });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(maps.length, 2);
+  assert.equal(subscribers.size, 0);
+});
+
+test('injected workspace hook replaces and restores each late uiWorkspace service', async () => {
+  const { installInjectedNativeResearchSessionHook } = await import('../src/native-workbench-client.js');
+  const first = { startSession() {} }, second = { startSession() {} }; const originalFirst = first.startSession, originalSecond = second.startSession;
+  let callback, cleanup; let disposed = 0;
+  const ctx = { inject(deps, next) { assert.deepEqual(deps, ['uiWorkspace']); callback = next; return { dispose() { disposed += 1; cleanup?.(); } }; } };
+  const stop = installInjectedNativeResearchSessionHook(ctx, { async createFresh() { return null; } }, () => 'ws-a', () => {});
+  cleanup = callback({ get(name) { return name === 'uiWorkspace' ? first : undefined; } });
+  assert.notEqual(first.startSession, originalFirst);
+  cleanup(); assert.equal(first.startSession, originalFirst);
+  cleanup = callback({ get(name) { return name === 'uiWorkspace' ? second : undefined; } });
+  assert.notEqual(second.startSession, originalSecond);
+  stop();
+  assert.equal(second.startSession, originalSecond);
+  assert.equal(disposed, 1);
+});
+
+test('injected workspace hook waits for a late Cordis uiWorkspace service and restores it on disposal', async () => {
+  const { installInjectedNativeResearchSessionHook } = await import('../src/native-workbench-client.js');
+  const ctx = new Context(); const uiWorkspace = { startSession() {} }; const original = uiWorkspace.startSession; const created = [];
+  const stop = installInjectedNativeResearchSessionHook(ctx, { async createFresh(workspaceId) { created.push(workspaceId); return null; } }, () => 'ws-a', () => {});
+  const services = ctx.plugin((scope) => scope.provide('uiWorkspace', uiWorkspace));
+  try {
+    await services;
+    assert.notEqual(uiWorkspace.startSession, original);
+    uiWorkspace.startSession();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(created, ['ws-a']);
+    stop();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(uiWorkspace.startSession, original);
+  } finally {
+    stop();
+    await services.dispose();
+  }
+});
+
+test('native bridge binds only after delayed list publication and reports refresh failure without leaks', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  const byId = {}; const opened = []; const subscribers = new Set(); let failRefresh = false;
+  const notify = () => { for (const listener of subscribers) listener(); };
+  const sessions = {
+    list: { getSnapshot: () => ({ byId }), subscribe(listener) { subscribers.add(listener); return () => subscribers.delete(listener); } },
+    refresh: async () => {
+      if (failRefresh) throw new Error('refresh unavailable');
+      byId.bound = { sessionId: 'bound' }; notify();
+    },
+    open(id) { assert.ok(byId[id], 'unknown session'); opened.push(id); },
+  };
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return sessions;
+    if (name === 'remote.session') return { async create() { return { ok: true, value: { sessionId: failRefresh ? 'missing' : 'bound' } }; } };
+  } }, { localStorage: { getItem: () => null, setItem() {} } });
+  assert.equal(await bridge.bind('project-a', '/a'), 'bound');
+  assert.deepEqual(opened, ['bound']); assert.equal(subscribers.size, 0);
+  failRefresh = true;
+  await assert.rejects(bridge.createFresh('ws-a'), /refresh unavailable/);
+  assert.equal(subscribers.size, 0);
+});
+
+test('canceling a saved-session conflict prevents its fallback creation request', async () => {
+  const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
+  let rejectFirst; const requests = [];
+  const bridge = createNativeSessionBridge({ get(name) {
+    if (name === 'sessions') return listedSessions([], 'unused');
+    if (name === 'remote.session') return { create(request) { requests.push(request); return new Promise((_, reject) => { rejectFirst = reject; }); } };
+  } }, { localStorage: { getItem: () => JSON.stringify({ 'project-a': 'saved' }), setItem() {} } });
+  const pending = bridge.bind('project-a', '/a');
+  bridge.cancel(); rejectFirst(Object.assign(new Error('conflict'), { code: 'conflict' }));
+  assert.equal(await pending, null);
+  assert.deepEqual(requests, [{ cwd: '/a', agentPreset: 'auto-research', sessionId: 'saved' }]);
+});
+
+test('a stale session-target response after a workspace switch never begins a bridge bind', async () => {
+  const { bindNativeSessionTarget } = await import('../src/native-workbench-client.js');
+  let resolveResponse; const bound = [];
+  const response = new Promise((resolve) => { resolveResponse = resolve; });
+  let current = true;
+  const pending = bindNativeSessionTarget(() => response, { bind(target) { bound.push(target); } }, { projectId: 'project-a', workspaceId: 'ws-a' }, () => current);
+  current = false;
+  resolveResponse({ ok: true, json: async () => ({ projectId: 'project-a', workspaceId: 'ws-a', cwd: 'C:\\Projects\\a' }) });
+  assert.equal(await pending, null);
+  assert.deepEqual(bound, []);
 });
 
 test('native research session hook scopes folder and global new-session actions and restores the service', async () => {
@@ -144,7 +453,7 @@ test('fresh research session creation opens only the newest parallel result and 
   const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
   const pending = []; const opened = [];
   const ctx = { get(name) {
-    if (name === 'sessions') return { open(id) { opened.push(id); } };
+    if (name === 'sessions') return listedSessions(opened, 'stale', 'current');
     return { create(request) { return new Promise((resolve) => pending.push({ request, resolve })); } };
   } };
   const bridge = createNativeSessionBridge(ctx, {});
@@ -166,7 +475,7 @@ test('native bridge preserves the legacy standalone cwd binding shape', async ()
   const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
   const requests = [];
   const ctx = { get(name) {
-    if (name === 'sessions') return { open() {} };
+    if (name === 'sessions') return listedSessions([], 'legacy-session');
     return { async create(request) { requests.push(request); return { sessionId: 'legacy-session' }; } };
   } };
   const bridge = createNativeSessionBridge(ctx, { localStorage: { getItem() { return null; }, setItem() {} } });
@@ -213,7 +522,7 @@ test('native bridge reuses a saved session id for the same project', async () =>
   const { createNativeSessionBridge } = await import('../src/native-workbench-client.js');
   const values = new Map(); const created = []; const opened = [];
   const services = {
-    sessions: { open(id) { opened.push(id); } },
+    sessions: listedSessions(opened, 'session-1', 'session-2'),
     'remote.session': { async create(request) { created.push(request); return { ok: true, value: { sessionId: 'session-' + created.length } }; } }
   };
   const win = { localStorage: { getItem(key) { return values.get(key) ?? null; }, setItem(key, value) { values.set(key, value); } } };
@@ -231,7 +540,7 @@ test('native bridge drops an old parallel bind result without opening it', async
   const pending = []; const opened = [];
   const ctx = { get(name) {
     return name === 'sessions'
-      ? { open(id) { opened.push(id); } }
+      ? listedSessions(opened, 'stale', 'current')
       : { create(request) { return new Promise((resolve) => pending.push({ request, resolve })); } };
   } };
   const bridge = createNativeSessionBridge(ctx, { localStorage: { getItem() { return null; }, setItem() {} } });

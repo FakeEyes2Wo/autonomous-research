@@ -1,0 +1,45 @@
+[
+  {
+    "id": "d1",
+    "name": "Fairness of Depth-Adaptive Early-Exit Inference",
+    "statement": "Do depth-adaptive / early-exit LLM inference strategies, which allocate compute per token/instance, systematically under-serve specific demographic groups — i.e., do groups exhibit different exit-depth distributions, different accuracy-vs-depth curves, and resulting per-group quality gaps under a fixed exit threshold?",
+    "evidence": [
+      "p1 PABEE (early exit by consistency/training)",
+      "p3 FastBERT (self-distilling adaptive inference)",
+      "p4 CALM (confidence-gated early exit)",
+      "p26/p30/p31 (demographic-annotated fairness benchmarks)",
+      "S1, S2 (early-exit surveys, C1)",
+      "S7, S8 (fairness surveys, C4); KG cluster C1 open problems"
+    ],
+    "cheapTest": "Run a simple threshold-based early-exit (PABEE/FastBERT-style) on a demographic-annotated benchmark (e.g., StereoSet, CrowS-Pairs, BOLD) and measure per-group accuracy, mean exit depth, and the accuracy-vs-depth curve under one fixed threshold; test whether a reliable per-group gap exists.",
+    "risk": "Early-exit may turn out largely fairness-neutral in practice (small measured effect); per-group quality for open-ended generation is hard to define; confound between group labels and text difficulty could dominate the signal."
+  },
+  {
+    "id": "d2",
+    "name": "Group-wise Calibration of the Confidence/Entropy Signal Driving Adaptive Exit",
+    "statement": "Is the confidence/uncertainty signal (entropy, logit margin) that gates early exit calibrated equally across demographic groups, so a shared threshold exits at the same true-error level for every group — and can per-group calibration (temperature scaling / abstention / selective prediction) make exit decisions group-fair?",
+    "evidence": [
+      "p4 CALM (entropy-gated exit)",
+      "p52, p53, p56, p57 (uncertainty/confidence estimation, C6)",
+      "p51, p54, p61 (temperature scaling / universal calibration)",
+      "p58 (selective prediction / abstention)",
+      "S11 (calibration survey, C6); KG cluster C6 open problems"
+    ],
+    "cheapTest": "Compute group-wise ECE/Brier of the exit-confidence signal (output-distribution entropy) across demographic groups on a generation task, then test whether a per-group temperature/calibration mapping reduces the group gap while preserving overall calibration.",
+    "risk": "Group-wise ECE for open-ended generation is ill-defined and group-specific calibration needs enough per-group data to be stable; risk of over-fitting calibration to small groups or benchmark idiosyncrasies producing a false mitigation."
+  },
+  {
+    "id": "d3",
+    "name": "Do Compression and Depth-Budgeting Redistribute Error Onto Minority Groups Through a Shared Mechanism?",
+    "statement": "Does the mechanism by which model compression (quantization, pruning, distillation) redistributes error onto minority groups transfer to, and help explain, depth-budgeted (early-exit / adaptive-depth) inference — and is there a principled accuracy/efficiency/fairness trade-off curve that exposes it?",
+    "evidence": [
+      "p38 Pruning has a disparate impact on model accuracy",
+      "p44, p45 (quantization-induced bias)",
+      "p46 Fair-GPTQ (bias-aware quantization)",
+      "p48, p49 (fairness in knowledge distillation)",
+      "S7, S8 (fairness surveys); KG cluster C5 open problems"
+    ],
+    "cheapTest": "On a demographic-annotated dataset, apply one representative pruning method and one quantization method plus an early-exit depth budget; compare per-group accuracy gaps of each against an uncompressed reference to see whether the harmed groups track the same minority groups.",
+    "risk": "'Shared mechanism' is a strong causal claim hard to establish cleanly; comparing methods with different compute budgets needs careful Pareto measurement; bias may be dataset-specific and not transfer across compression modes."
+  }
+]

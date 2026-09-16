@@ -132,7 +132,7 @@ function asFrontierRole(value: unknown): FrontierRole {
   return 'B'
 }
 
-function surveyInsight(paper: RawSurveyPaper): PaperInsight {
+function toInsight(paper: Partial<PaperMeta & PaperInsight>): PaperInsight {
   return {
     oneLiner: cleanString(paper.oneLiner) ?? cleanString(paper.abstract) ?? '',
     keyFinding: cleanString(paper.keyFinding) ?? cleanString(paper.abstract) ?? '',
@@ -163,7 +163,7 @@ export function normalizeSurveyPapers(survey: RawSurvey, clusters: RawCluster[] 
     const clusterIds = cleanStringArray(raw.clusterIds) ?? (raw.clusterId ? [raw.clusterId] : undefined)
     return {
       ...meta,
-      ...surveyInsight(raw),
+      ...toInsight(raw),
       stage: 'survey',
       role,
       clusterId: cleanString(raw.clusterId),
@@ -232,18 +232,7 @@ export function normalizeFrontierPapers(frontier: RawFrontier): FrontierPaper[] 
     const meta = toMeta(raw, `l${String(index + 1).padStart(3, '0')}`)
     return {
       ...meta,
-      oneLiner: cleanString(raw.oneLiner) ?? cleanString(raw.abstract) ?? '',
-      keyFinding: cleanString(raw.keyFinding) ?? cleanString(raw.abstract) ?? '',
-      weakness: cleanString(raw.weakness) ?? '',
-      implication: cleanString(raw.implication) ?? '',
-      contributions: cleanStringArray(raw.contributions) ?? [],
-      methods: cleanStringArray(raw.methods) ?? [],
-      experiments: cleanStringArray(raw.experiments) ?? [],
-      results: cleanStringArray(raw.results) ?? [],
-      limitations: cleanStringArray(raw.limitations) ?? [],
-      futureDirections: cleanStringArray(raw.futureDirections) ?? [],
-      insights: cleanStringArray(raw.insights) ?? [],
-      relevance: cleanString(raw.relevance) ?? '',
+      ...toInsight(raw),
       stage: 'latest',
       role: asFrontierRole(raw.role),
       directionId: cleanString(raw.directionId) ?? 'd1',

@@ -4,7 +4,7 @@ import { lstat, open, readFile, realpath, rename, unlink, writeFile } from 'node
 import { parse, stringify } from 'yaml'
 import { ensureDir } from '../core/utils.js'
 import { projectSettingsPath } from './project-settings.js'
-import { migrateProjectSettings, validateProjectSettingsCandidate } from './migration.js'
+import { validateProjectSettingsCandidate } from './migration.js'
 import { DEFAULT_PROJECT_SETTINGS, type ProjectSettings, type ValidationError, type ValidationWarning } from './schema.js'
 
 export type SettingsSource = 'missing' | 'v1' | 'v2'
@@ -38,12 +38,7 @@ export async function saveProjectSettingsDocument(projectDir: string, settings: 
   return withLock(path, async () => {
     const current = await readProjectSettingsDocument(projectDir)
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw revisionConflict(current)
-    const result = validateProjectSettingsCandidate({ ...settings, version: 2 })
-    if (!result.valid || !result.settings) throw settingsError(current.path, result.errors)
-    const text = `${stringify(result.settings)}\n`
-    if (current.source !== 'missing') await assertUnchanged(current.path, current.revision)
-    await atomicWrite(current.path, text)
-    return { path: current.path, source: 'v2', revision: hash(text), settings: result.settings, warnings: result.warnings }
+    return commitSettings(current, { ...settings, version: 2 })
   })
 }
 
@@ -57,14 +52,17 @@ export async function patchProjectSettingsDocument(projectDir: string, request: 
     if (current.revision !== request.expectedRevision) throw revisionConflict(current)
     const candidate = structuredClone(current.settings) as unknown as Record<string, unknown>
     for (const op of request.ops) applyOperation(candidate, op)
-    const result = validateProjectSettingsCandidate({ ...candidate, version: 2 })
-    if (!result.valid || !result.settings) throw settingsError(current.path, result.errors)
-    const settings = result.settings
-    const text = `${stringify(settings)}\n`
-    if (current.source !== 'missing') await assertUnchanged(current.path, current.revision)
-    await atomicWrite(current.path, text)
-    return { path: current.path, source: 'v2', revision: hash(text), settings, warnings: result.warnings }
+    return commitSettings(current, { ...candidate, version: 2 })
   })
+}
+
+async function commitSettings(current: ProjectSettingsDocument, candidate: unknown): Promise<ProjectSettingsDocument> {
+  const result = validateProjectSettingsCandidate(candidate)
+  if (!result.valid || !result.settings) throw settingsError(current.path, result.errors)
+  const text = `${stringify(result.settings)}\n`
+  if (current.source !== 'missing') await assertUnchanged(current.path, current.revision)
+  await atomicWrite(current.path, text)
+  return { path: current.path, source: 'v2', revision: hash(text), settings: result.settings, warnings: result.warnings }
 }
 
 function applyOperation(root: Record<string, unknown>, op: SettingsPatchOperation): void {

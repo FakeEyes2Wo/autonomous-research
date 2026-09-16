@@ -1,0 +1,1000 @@
+# Research Idea
+
+# Fast but Unfair?
+## Demographic Fairness Analysis of Early-Exit Large Language Models
+
+---
+
+# 1. Overview
+
+## Research Topic
+
+Large Language Model (LLM) inference acceleration through adaptive computation.
+
+## Core Question
+
+Early-exit mechanisms reduce inference cost by dynamically allocating different computation depths to different inputs.
+
+However:
+
+> Does adaptive computation introduce demographic fairness issues by assigning unequal computation resources to different user groups?
+
+This project studies whether early-exit LLMs produce unfair outcomes and investigates the underlying mechanisms.
+
+---
+
+# 2. Motivation
+
+## 2.1 Background
+
+Large Language Models have achieved strong performance but suffer from expensive inference costs.
+
+Current LLM acceleration methods include:
+
+- quantization
+- pruning
+- speculative decoding
+- layer skipping
+- early exit
+- dynamic inference
+
+Among them, early exit is attractive because it dynamically decides how much computation each input requires.
+
+The intuition:
+
+- easy samples terminate early;
+- difficult samples receive deeper computation.
+
+Therefore, the model can reduce average latency while preserving accuracy.
+
+---
+
+## 2.2 Research Gap
+
+Existing fairness studies mainly focus on:
+
+- model training;
+- data imbalance;
+- compression;
+- privacy mechanisms;
+- robustness methods.
+
+Typical questions:
+
+- Does pruning hurt minority groups?
+- Does quantization amplify accuracy disparity?
+- Does differential privacy introduce unfairness?
+
+However, adaptive inference introduces a new type of transformation:
+
+> The model no longer applies the same computation process to all inputs.
+
+Instead:
+
+\[
+Input \rightarrow Dynamic Computation Path
+\]
+
+Different samples may receive different numbers of Transformer layers.
+
+This creates a new fairness dimension:
+
+## Computational Allocation Fairness
+
+Do different demographic groups receive equal inference computation?
+
+---
+
+# 3. Research Hypothesis
+
+## H1: Early Exit Creates Computation Disparity
+
+Different demographic groups may have different exit-depth distributions.
+
+For group \(a\):
+
+\[
+C(a)=E[T|A=a]
+\]
+
+where:
+
+- \(T\): selected exit layer.
+
+If:
+
+\[
+C(a)\neq C(b)
+\]
+
+then different groups receive different computational budgets.
+
+---
+
+## H2: Early Exit Creates Quality Disparity
+
+Early exits rely on intermediate representations.
+
+However, different groups may have different:
+
+- representation maturity;
+- confidence calibration;
+- reasoning complexity;
+- semantic ambiguity.
+
+Therefore:
+
+The same exit threshold may not provide equal prediction quality.
+
+---
+
+## H3: Fairness Degradation Has Two Sources
+
+The overall fairness gap is caused by:
+
+
+### Factor 1
+
+Exit distribution disparity:
+
+\[
+P(T=k|A=a)
+\]
+
+
+Different groups exit at different layers.
+
+
+### Factor 2
+
+Layer-wise capability disparity:
+
+\[
+R_k(a)
+\]
+
+
+Different groups have different performance at the same layer.
+
+---
+
+# 4. Early Exit LLM Background
+
+## 4.1 Standard LLM Inference
+
+A normal Transformer:
+
+```
+Input Tokens
+
+      |
+      v
+
+Transformer Layer 1
+
+      |
+      v
+
+...
+
+      |
+      v
+
+Transformer Layer L
+
+      |
+      v
+
+LM Head
+
+      |
+      v
+
+Output Token
+```
+
+
+Every token uses the full depth.
+
+---
+
+## 4.2 Early Exit LLM
+
+Intermediate hidden states can directly use the LM head:
+
+```
+Layer 8 hidden state
+
+        |
+        v
+
+      LM Head
+
+        |
+        v
+
+   Token Prediction
+
+        |
+        v
+
+Exit if confident
+```
+
+
+Otherwise:
+
+```
+Layer 8
+
+   |
+
+Layer 16
+
+   |
+
+Layer 32
+
+   |
+
+Final Prediction
+```
+
+
+The computation depth becomes input-dependent.
+
+---
+
+# 5. Research Questions
+
+## RQ1
+
+Does early-exit inference introduce demographic fairness disparities?
+
+---
+
+## RQ2
+
+What factors cause fairness degradation?
+
+Possible factors:
+
+- exit depth disparity;
+- confidence calibration disparity;
+- layer-wise representation quality;
+- reasoning difficulty disparity.
+
+---
+
+## RQ3
+
+Can fairness-aware early exit maintain efficiency while reducing disparity?
+
+---
+
+# 6. Formal Problem Definition
+
+
+Assume an LLM has \(K\) possible exits.
+
+For input:
+
+\[
+x
+\]
+
+
+The exit layer is:
+
+\[
+T(x)
+\]
+
+
+The early-exit prediction:
+
+\[
+f^{EE}(x)=f_{T(x)}(x)
+\]
+
+
+where:
+
+- \(f_k\): prediction using layer \(k\).
+
+
+---
+
+# 7. Fairness Formulation
+
+
+For demographic group \(a\):
+
+
+## Early Exit Risk
+
+\[
+R^{EE}(a)
+=
+E_{(x,y)\sim D_a}
+[
+\ell(f^{EE}(x),y)
+]
+\]
+
+
+---
+
+## Full Model Risk
+
+
+\[
+R^{Full}(a)
+=
+E[
+\ell(f_K(x),y)
+]
+\]
+
+
+---
+
+## Excessive Loss
+
+
+The performance degradation caused by early exit:
+
+
+\[
+E(a)
+=
+R^{EE}(a)-R^{Full}(a)
+\]
+
+
+---
+
+## Fairness Gap
+
+
+\[
+\Phi
+=
+\max_{a,b}
+|
+E(a)-E(b)
+|
+\]
+
+
+A larger value indicates stronger unfairness.
+
+---
+
+# 8. Theoretical Framework
+
+
+## 8.1 Exit Distribution Decomposition
+
+
+Because different samples may exit at different layers:
+
+
+\[
+R^{EE}(a)
+=
+\sum_{k=1}^{K}
+p_k(a)R_k(a)
+\]
+
+
+where:
+
+
+\[
+p_k(a)=P(T=k|A=a)
+\]
+
+
+Exit probability.
+
+
+and:
+
+
+\[
+R_k(a)
+=
+E[
+\ell(f_k(x),y)
+|
+T=k,A=a
+]
+\]
+
+
+Conditional risk.
+
+
+---
+
+# 8.2 Fairness Bound
+
+
+For two demographic groups \(a,b\):
+
+
+\[
+|E(a)-E(b)|
+\]
+
+
+is controlled by:
+
+
+## Exit Probability Difference
+
+\[
+|p_k(a)-p_k(b)|
+\]
+
+
+and:
+
+
+## Layer-wise Risk Difference
+
+
+\[
+|R_k(a)-R_k(b)|
+\]
+
+
+Therefore:
+
+
+\[
+Fairness
+Gap
+\leq
+Exit\ Disparity
++
+Layer-wise\ Capability\ Disparity
+\]
+
+
+---
+
+# 9. Candidate Mechanism Analysis
+
+
+# 9.1 Confidence Calibration
+
+
+Most early-exit methods use confidence threshold:
+
+
+\[
+max(P(y|x))>\tau
+\]
+
+
+Study:
+
+
+\[
+P(confidence>\tau|A=a)
+\]
+
+
+Questions:
+
+- Are confidence scores equally reliable?
+- Are some groups more likely to exit prematurely?
+
+
+Metrics:
+
+- ECE
+- Brier Score
+- Reliability Diagram
+
+
+---
+
+# 9.2 Representation Maturity
+
+
+Analyze intermediate representations:
+
+
+\[
+h_k(x)
+\]
+
+
+Possible metrics:
+
+- representation separability;
+- clustering quality;
+- linear probing accuracy;
+- embedding distance.
+
+
+Research question:
+
+
+Do different demographic groups become separable at different depths?
+
+---
+
+# 9.3 Reasoning Depth Disparity
+
+
+LLM-specific analysis.
+
+Measure whether early exit harms:
+
+- mathematical reasoning;
+- long-context understanding;
+- factual reasoning.
+
+
+Possible benchmarks:
+
+- GSM8K
+- MATH
+- MMLU
+- ARC
+
+
+---
+
+# 10. Experimental Design
+
+
+# 10.1 Models
+
+
+## Small Models
+
+For extensive experiments:
+
+
+- Qwen2.5-0.5B
+- Qwen3-0.6B
+- Llama-3.2-1B
+
+
+## Medium Models
+
+
+Validation experiments:
+
+
+- Qwen2.5-7B
+- Llama-3.1-8B
+
+
+---
+
+# 10.2 Early Exit Implementation
+
+
+## Method 1: LayerSkip-style Early Exit
+
+
+Characteristics:
+
+- shared LM head;
+- intermediate layer prediction;
+- self-speculative decoding.
+
+
+---
+
+## Method 2: Confidence-based Exit
+
+
+Exit rule:
+
+
+\[
+max(P(token))>\tau
+\]
+
+
+---
+
+## Method 3: Entropy-based Exit
+
+
+Exit when:
+
+
+\[
+H(P)<\tau
+\]
+
+
+---
+
+## Method 4: Learned Exit Policy
+
+
+Train a lightweight router:
+
+
+Input:
+
+\[
+h_k
+\]
+
+
+Output:
+
+\[
+exit / continue
+\]
+
+
+---
+
+# 11. Dataset Design
+
+
+## 11.1 Demographic Bias Benchmarks
+
+
+## BBQ
+
+Attributes:
+
+- gender
+- race
+- religion
+- age
+
+
+Metrics:
+
+- bias score
+- accuracy gap
+
+
+---
+
+## BOLD
+
+Domains:
+
+- profession
+- gender
+- race
+
+
+Metrics:
+
+- generation bias
+
+
+---
+
+## WinoBias
+
+
+Focus:
+
+- gender stereotype
+- coreference resolution
+
+
+---
+
+## RealToxicityPrompts
+
+
+Metrics:
+
+- toxicity disparity
+
+
+---
+
+# 11.2 General Capability Evaluation
+
+
+Reasoning:
+
+- GSM8K
+- MATH
+
+
+Knowledge:
+
+- MMLU
+
+
+Safety:
+
+- HarmBench
+- AdvBench
+
+
+---
+
+# 12. Evaluation Metrics
+
+
+## 12.1 Prediction Fairness
+
+
+Metrics:
+
+- accuracy gap;
+- worst-group accuracy;
+- bias score gap;
+- toxicity gap;
+- refusal-rate gap.
+
+
+---
+
+## 12.2 Calibration Fairness
+
+
+Metrics:
+
+- ECE gap;
+- confidence-error correlation.
+
+
+---
+
+## 12.3 Computation Fairness
+
+
+Define:
+
+
+\[
+C(a)=E[T|A=a]
+\]
+
+
+Measure:
+
+
+\[
+|C(a)-C(b)|
+\]
+
+
+Meaning:
+
+Different groups receive different inference budgets.
+
+
+---
+
+# 13. Ablation Studies
+
+
+## Exit Threshold
+
+
+Change:
+
+
+\[
+\tau
+\]
+
+
+Analyze:
+
+- efficiency;
+- fairness.
+
+
+---
+
+## Exit Location
+
+
+Compare:
+
+- early exits;
+- middle exits;
+- late exits.
+
+
+---
+
+## Model Size
+
+
+Compare:
+
+- 0.6B
+- 1.5B
+- 7B
+
+
+---
+
+## Exit Criterion
+
+
+Compare:
+
+- confidence;
+- entropy;
+- margin;
+- learned router.
+
+
+---
+
+# 14. Mitigation
+
+
+## Method 1: Fair Threshold Calibration
+
+
+Instead of:
+
+
+\[
+\tau
+\]
+
+
+Use group-aware:
+
+
+\[
+\tau_a
+\]
+
+
+Goal:
+
+Equalize exit behavior.
+
+
+---
+
+## Method 2: Fair Exit Regularization
+
+
+Training objective:
+
+
+\[
+L
+=
+L_{task}
++
+\lambda L_{fair}
+\]
+
+
+where:
+
+
+\[
+L_{fair}
+=
+|P(T=k|a)-P(T=k|b)|
+\]
+
+
+---
+
+## Method 3: Calibration-aware Early Exit
+
+
+Before exit:
+
+- temperature scaling;
+- uncertainty calibration;
+- confidence correction.
+
+
+---
+
+# 15. Expected Contributions
+
+
+## Contribution 1
+
+First systematic study of demographic fairness in early-exit LLM inference.
+
+
+---
+
+## Contribution 2
+
+Introduce computation allocation fairness as a new perspective.
+
+
+---
+
+## Contribution 3
+
+Provide theoretical decomposition:
+
+\[
+Fairness\ Gap
+=
+Exit\ Disparity
++
+Layer-wise\ Capability\ Disparity
+\]
+
+
+---
+
+## Contribution 4
+
+Develop fairness-aware adaptive inference methods.
+
+---
+
+# 16. Research Risks
+
+
+## Risk 1
+
+Early exit does not significantly affect demographic fairness.
+
+Backup:
+
+Study:
+
+- computation fairness;
+- calibration fairness;
+- safety disparity.
+
+
+---
+
+## Risk 2
+
+Early-exit implementations are limited.
+
+Backup:
+
+Implement LayerSkip-style early exit.
+
+
+---
+
+## Risk 3
+
+Fairness benchmark uncertainty.
+
+Backup:
+
+Evaluate multiple dimensions:
+
+- demographic bias;
+- safety;
+- reasoning;
+- calibration.
+
+
+---
+
+# 17. Final Research Statement
+
+
+Current LLM acceleration methods assume that reducing computation affects all users equally.
+
+This project challenges this assumption:
+
+> Adaptive computation may create unequal inference pathways, causing demographic fairness and safety disparities in large language models.
+
+The goal is to understand, quantify, and mitigate fairness risks introduced by early-exit LLM inference.

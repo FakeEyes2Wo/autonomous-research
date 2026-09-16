@@ -1,6 +1,6 @@
 # 研究流程与模型策略草稿
 
-更新日期：2026-09-09。状态：minimal 流程、配置 schema 与请求账本基础已实施；运行时硬预算和真实模型联调仍有限。连接和模块边界见[CPA 接入草稿](cpa-integration.md)，总体验收见[当前状态](current-status.md)。
+更新日期：2026-09-09。状态：minimal 流程、配置 schema 与请求账本基础已实施；运行时硬预算和真实模型联调仍有限。连接和模块边界见[CPA 接入草稿](cpa-integration.md)，总体验收见[当前状态](../verification/current-status.md)。
 
 ## Upstream experiment validation addendum (2026-09-10)
 

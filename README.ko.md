@@ -8,12 +8,12 @@ Autonomous Research System: candidate / 실험 기록에서 추적 가능한 논
 
 | 문서 | 내용 |
 |---|---|
-| [2026-08-20-autoresearch-ml-control-plane-design.md](2026-08-20-autoresearch-ml-control-plane-design.md) | **유일한 구현 기준선**: AutoResearchService + 최소 상태 + 동적 rubric + 자율 반복 + Domain Profile (ML v1) |
-| [2026-08-16-candidate-to-paper-design.md](2026-08-16-candidate-to-paper-design.md) | candidate → paper 전체 흐름 (기본 진입점) |
-| [2026-08-16-records-to-paper-design.md](2026-08-16-records-to-paper-design.md) | 기존 실험 기록 → paper (두 번째 진입점) |
-| [2026-08-16-idea-generation-design.md](2026-08-16-idea-generation-design.md) | 브레인스토밍 + 후보 생성 + 게이트 |
-| [2026-08-15-hypothesis-local-pool-design.md](2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool 생명주기 인덱스 |
-| [2026-08-15-autoresearch-figures-and-experiment-design.md](2026-08-15-autoresearch-figures-and-experiment-design.md) | 논문 그림, 신뢰할 수 있는 실험, 애블레이션 규칙 |
+| [2026-08-20-autoresearch-ml-control-plane-design.md](docs/archive/designs/2026-08-20-autoresearch-ml-control-plane-design.md) | **유일한 구현 기준선**: AutoResearchService + 최소 상태 + 동적 rubric + 자율 반복 + Domain Profile (ML v1) |
+| [2026-08-16-candidate-to-paper-design.md](docs/archive/designs/2026-08-16-candidate-to-paper-design.md) | candidate → paper 전체 흐름 (기본 진입점) |
+| [2026-08-16-records-to-paper-design.md](docs/archive/designs/2026-08-16-records-to-paper-design.md) | 기존 실험 기록 → paper (두 번째 진입점) |
+| [2026-08-16-idea-generation-design.md](docs/archive/designs/2026-08-16-idea-generation-design.md) | 브레인스토밍 + 후보 생성 + 게이트 |
+| [2026-08-15-hypothesis-local-pool-design.md](docs/archive/designs/2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool 생명주기 인덱스 |
+| [2026-08-15-autoresearch-figures-and-experiment-design.md](docs/archive/designs/2026-08-15-autoresearch-figures-and-experiment-design.md) | 논문 그림, 신뢰할 수 있는 실험, 애블레이션 규칙 |
 
 ## 코드 구현
 
@@ -24,9 +24,9 @@ Autonomous Research System: candidate / 실험 기록에서 추적 가능한 논
 
 | 그룹 | 파일 |
 |---|---|
-| candidate→paper | [candidate-to-paper-handoff/](candidate-to-paper-handoff/): 00 총괄 + 01–10 각 단계 |
-| records→paper | [records-paper-handoff/](records-paper-handoff/): 00 총괄 + 01, 02, 04, 05 (데이터 계약 포함, 작성은 candidate 08을 재사용) |
-| 최소 검증 | [verify_exp/](verify_exp/): 그림 파이프라인, drawio MCP, pure LLM / drawio 결과 |
+| candidate→paper | [candidate-to-paper-handoff/](docs/workflows/candidate-to-paper-handoff/): 00 총괄 + 01–10 각 단계 |
+| records→paper | [records-paper-handoff/](docs/workflows/records-paper-handoff/): 00 총괄 + 01, 02, 04, 05 (데이터 계약 포함, 작성은 candidate 08을 재사용) |
+| 최소 검증 | [figure-validation/](experiments/figure-validation/): 그림 파이프라인, drawio MCP, pure LLM / drawio 결과 |
 
 ## 이력 / 보류 참고 자료 (구현 기준선 아님)
 

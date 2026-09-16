@@ -1,6 +1,5 @@
 import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js'
 import { atomicWriteJson, safeResolve, writeText } from '../core/utils.js'
-import type { PaperRecord } from './paper-record.js'
 import { mergePaperRecords, normalizeFrontierPapers, normalizeSurveyPapers, type RawFrontier, type RawSurvey } from './normalize.js'
 import { paperWikiPath } from './handoff.js'
 import { renderPaperWiki } from './wiki-render.js'

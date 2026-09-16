@@ -13,6 +13,29 @@ dist/
 *.toc
 *.pdf
 
+# Preserve the twenty PDFs that were already tracked under verify_exp before
+# the figure-validation directory move; future PDFs remain ignored.
+!experiments/figure-validation/codex_gen/outputs/01-candidate-to-paper-pipeline.pdf
+!experiments/figure-validation/codex_gen/outputs/02-rag-system.pdf
+!experiments/figure-validation/codex_gen/outputs/03-rlhf-pipeline.pdf
+!experiments/figure-validation/codex_gen/outputs/04-diffusion-llm-training.pdf
+!experiments/figure-validation/codex_gen/outputs/05-multiturn-eval-harness.pdf
+!experiments/figure-validation/codex_gen/outputs/06-model-editing-framework.pdf
+!experiments/figure-validation/codex_gen/outputs/07-evidential-multiview-learning.pdf
+!experiments/figure-validation/codex_gen/outputs/08-transformer-succinctness.pdf
+!experiments/figure-validation/codex_gen/outputs/09-finetuning-influence-flow.pdf
+!experiments/figure-validation/codex_gen/outputs/10-agent-reflection-loop.pdf
+!experiments/figure-validation/drawio_mcp/01-candidate-to-paper-pipeline.pdf
+!experiments/figure-validation/drawio_mcp/02-rag-system.pdf
+!experiments/figure-validation/drawio_mcp/03-rlhf-pipeline.pdf
+!experiments/figure-validation/drawio_mcp/04-diffusion-llm-training.pdf
+!experiments/figure-validation/drawio_mcp/05-multiturn-eval-harness.pdf
+!experiments/figure-validation/drawio_mcp/06-model-editing-framework.pdf
+!experiments/figure-validation/drawio_mcp/07-evidential-multiview-learning.pdf
+!experiments/figure-validation/drawio_mcp/08-transformer-succinctness.pdf
+!experiments/figure-validation/drawio_mcp/09-finetuning-influence-flow.pdf
+!experiments/figure-validation/drawio_mcp/10-agent-reflection-loop.pdf
+
 # Generated citation PDF evidence
 evidence/
 

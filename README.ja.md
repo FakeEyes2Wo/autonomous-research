@@ -8,12 +8,12 @@ Autonomous Research System：candidate / 実験記録からトレーサブルな
 
 | ドキュメント | 内容 |
 |---|---|
-| [2026-08-20-autoresearch-ml-control-plane-design.md](2026-08-20-autoresearch-ml-control-plane-design.md) | **唯一の実装ベースライン**：AutoResearchService + 最小状態 + 動的 rubric + 自律イテレーション + Domain Profile（ML v1） |
-| [2026-08-16-candidate-to-paper-design.md](2026-08-16-candidate-to-paper-design.md) | candidate → paper の全工程（デフォルトの入口） |
-| [2026-08-16-records-to-paper-design.md](2026-08-16-records-to-paper-design.md) | 既存の実験記録 → paper（第二の入口） |
-| [2026-08-16-idea-generation-design.md](2026-08-16-idea-generation-design.md) | brainstorm + 候補生成 + ゲート |
-| [2026-08-15-hypothesis-local-pool-design.md](2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool のライフサイクル索引 |
-| [2026-08-15-autoresearch-figures-and-experiment-design.md](2026-08-15-autoresearch-figures-and-experiment-design.md) | 論文図、信頼できる実験、アブレーションのルール |
+| [2026-08-20-autoresearch-ml-control-plane-design.md](docs/archive/designs/2026-08-20-autoresearch-ml-control-plane-design.md) | **唯一の実装ベースライン**：AutoResearchService + 最小状態 + 動的 rubric + 自律イテレーション + Domain Profile（ML v1） |
+| [2026-08-16-candidate-to-paper-design.md](docs/archive/designs/2026-08-16-candidate-to-paper-design.md) | candidate → paper の全工程（デフォルトの入口） |
+| [2026-08-16-records-to-paper-design.md](docs/archive/designs/2026-08-16-records-to-paper-design.md) | 既存の実験記録 → paper（第二の入口） |
+| [2026-08-16-idea-generation-design.md](docs/archive/designs/2026-08-16-idea-generation-design.md) | brainstorm + 候補生成 + ゲート |
+| [2026-08-15-hypothesis-local-pool-design.md](docs/archive/designs/2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool のライフサイクル索引 |
+| [2026-08-15-autoresearch-figures-and-experiment-design.md](docs/archive/designs/2026-08-15-autoresearch-figures-and-experiment-design.md) | 論文図、信頼できる実験、アブレーションのルール |
 
 ## コード実装
 
@@ -24,9 +24,9 @@ Autonomous Research System：candidate / 実験記録からトレーサブルな
 
 | グループ | ファイル |
 |---|---|
-| candidate→paper | [candidate-to-paper-handoff/](candidate-to-paper-handoff/)：00 総括 + 01–10 の各フェーズ |
-| records→paper | [records-paper-handoff/](records-paper-handoff/)：00 総括 + 01、02、04、05（データ契約を含む。執筆は candidate 08 を再利用） |
-| 最小検証 | [verify_exp/](verify_exp/)：図パイプライン、drawio MCP、pure LLM / drawio の結果 |
+| candidate→paper | [candidate-to-paper-handoff/](docs/workflows/candidate-to-paper-handoff/)：00 総括 + 01–10 の各フェーズ |
+| records→paper | [records-paper-handoff/](docs/workflows/records-paper-handoff/)：00 総括 + 01、02、04、05（データ契約を含む。執筆は candidate 08 を再利用） |
+| 最小検証 | [figure-validation/](experiments/figure-validation/)：図パイプライン、drawio MCP、pure LLM / drawio の結果 |
 
 ## 履歴 / 保留中の参考資料（実装ベースラインではない）
 

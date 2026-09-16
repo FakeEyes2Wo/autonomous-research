@@ -2,7 +2,7 @@
 
 日期：2026-09-09。状态：核心 schema、minimal workflow、CPA 配置/安全安装器本地契约与 Web S1/S7 已实施；真实 CPA 端点、Claude/PDF 仍为后续验收项。本文保留未完成项，不代表已接通真实模型。
 
-本轮并行复核与本地回归已完成：核心 116 项、Web 13 项及浏览器、CPA 13 项均通过，独立安装与最终 tarball 也已验证。修复范围与执行证据见[本地复核记录](2026-09-09-verification.md)。
+本轮并行复核与本地回归已完成：核心 116 项、Web 13 项及浏览器、CPA 13 项均通过，独立安装与最终 tarball 也已验证。修复范围与执行证据见[本地复核记录](../verification/2026-09-09-verification.md)。
 
 配套：[接入设计](cpa-integration.md)、[研究策略](research-runtime.md)、[页面与接口设计](dsh-settings-ui.md)、[可交互页面原型](ui/dsh-settings-prototype.html)。
 

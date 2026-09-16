@@ -379,6 +379,49 @@ test('one-shot binds a synchronous initial llm stream before native start resolv
   assert.equal((await ledger.snapshot()).totals.committedTokens, 3)
 })
 
+test('unidentified initial streams retain role and repair provisional ownership ids', async (t) => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-unidentified-stream-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  const ledger = await openRequestLedger({
+    runDir,
+    runId: 'run-unidentified-stream',
+    config: { maxInputTokens: 1000, maxOutputTokens: 1000, maxRunTokens: 10000, maxRoleCalls: 5, maxRetriesPerCall: 0, maxUpgradesPerTask: 0 },
+  })
+  let streamListener: ((options: never, next: (options?: never) => AsyncIterable<never>) => AsyncIterable<never>) | undefined
+  const eventContext = {
+    on(event: string, listener: typeof streamListener) {
+      if (event === 'llm/stream') streamListener = listener
+      return () => undefined
+    },
+  }
+  installRequestAccounting(eventContext as never)
+  let calls = 0
+  const runtime = {
+    async start(_provider: string, _value: Record<string, unknown>) {
+      calls += 1
+      const stream = streamListener!({ provider: 'standard-provider', model: 'standard-model', messages: [], maxTokens: 3 } as never, async function* () {
+        yield { type: 'usage', usage: { inputTokens: 2, outputTokens: 1, totalTokens: 3 } } as never
+        yield { type: 'finish', reason: 'completed' } as never
+      })
+      for await (const _chunk of stream) { /* consume the request without a native session id */ }
+      const text = calls === 1 ? 'invalid' : '{"plan":"fixed"}'
+      return { id: SessionId('unidentified-child-' + calls), result: Promise.resolve({ output: [{ type: 'text', text }], stopReason: 'completed' }), async dispose() {} }
+    },
+  }
+  const result = await new SubagentRoleAgentProvider(runtime as never, { context: eventContext as never }).run(
+    'planner',
+    { runDir, taskId: 'unidentified-stream' },
+    { ...context(runDir), runId: 'run-unidentified-stream', requestLedger: ledger },
+  )
+  assert.deepEqual(result.structured, { plan: 'fixed' })
+  const requests = Object.values((await ledger.snapshot()).requests)
+  assert.equal(requests.length, 2)
+  const roleRequest = requests.find((entry) => entry.descriptor.kind === 'role')
+  const repairRequest = requests.find((entry) => entry.descriptor.kind === 'repair')
+  assert.match(roleRequest?.descriptor.childId ?? '', /^pending-[0-9a-f-]+$/)
+  assert.match(repairRequest?.descriptor.childId ?? '', /^pending-repair-[0-9a-f-]+$/)
+})
+
 test('native error normalization retains a typed budget rejection', async (t) => {
   const runDir = await mkdtemp(join(tmpdir(), 'ar-provider-budget-normalized-'))
   t.after(() => rm(runDir, { recursive: true, force: true }))

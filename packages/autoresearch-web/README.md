@@ -11,7 +11,7 @@ conversation, and uses DSH theme tokens. The conversation has a small
 outer margin and can be resized or collapsed. Research shortcuts populate the
 native draft for the user to send; generated papers and external edits are
 discovered without overwriting unsaved source drafts. See the
-[conversation and portability guide](../../docs/drafts/2026-09-10-conversational-workbench-guide.md).
+[conversation and portability guide](../../docs/guides/2026-09-10-conversational-workbench-guide.md).
 
 Clicking a workspace name only expands or collapses its session list. To move
 the workbench to another research directory, open one of that workspace's

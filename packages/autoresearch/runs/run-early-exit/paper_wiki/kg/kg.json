@@ -1,0 +1,5004 @@
+{
+  "schema": "autoresearch/paper-kg/v1",
+  "nodes": [
+    {
+      "id": "cluster:C1",
+      "type": "Cluster",
+      "label": "Early-Exit & Adaptive-Depth Computation in LLMs",
+      "properties": {
+        "type": "Cluster",
+        "label": "Early-Exit & Adaptive-Depth Computation in LLMs",
+        "summary": "The core method cluster: multi-exit transformers that stop computation after a chosen layer per input/example, using confidence, entropy, patience, hash-based, or learned-router exit criteria. This is the mechanism the research examines for unequal compute/quality allocation across demographic groups. Anchored by the early-exit surveys (S1-S3).",
+        "sourceSurveyIds": [
+          "S1",
+          "S2",
+          "S3"
+        ],
+        "openQuestions": [
+          "Do different demographic groups exit at systematically different depths (exit-distribution disparity)?",
+          "Is the confidence/entropy that drives exit equally reliable across groups? (calibration disparity)",
+          "Are accuracy-vs-depth curves different across groups, so a fixed threshold yields unequal quality? (layer-wise capability disparity)",
+          "Can a learned exit router be trained to be group-fair?"
+        ],
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0.012998375203099611
+      }
+    },
+    {
+      "id": "cluster:C2",
+      "type": "Cluster",
+      "label": "Speculative & Self-Speculative Decoding",
+      "properties": {
+        "type": "Cluster",
+        "label": "Speculative & Self-Speculative Decoding",
+        "summary": "Acceleration via draft-then-verify: an external draft model or an internal early-exit draft proposes tokens the full model verifies. Self-speculative variants (LayerSkip, Draft&Verify, Kangaroo) reuse the model's own early exit as the draft, making the early-exit quality and acceptance rate a direct, measurable driver of both speed and per-input compute. Anchored by S6.",
+        "sourceSurveyIds": [
+          "S6"
+        ],
+        "openQuestions": [
+          "Does the draft acceptance rate (and hence per-token compute saved) differ across demographic groups?",
+          "Does lossless verification preserve the exact output distribution for all groups, or only in aggregate?",
+          "Can self-speculative drafting be calibrated to be group-fair?"
+        ],
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0.003937007874015748
+      }
+    },
+    {
+      "id": "cluster:C3",
+      "type": "Cluster",
+      "label": "LLM Inference Acceleration: Quantization, Pruning, KV-Cache & Attention",
+      "properties": {
+        "type": "Cluster",
+        "label": "LLM Inference Acceleration: Quantization, Pruning, KV-Cache & Attention",
+        "summary": "The efficiency field that early-exit sits within (and is compared against): post-training quantization, structural/unstructured pruning, KV-cache compression, attention kernel / IO optimization, and depth-layer dropping. These provide the baseline transforms and the 'computation budget' framing for auditing equal allocation. Anchored by S4, S5.",
+        "sourceSurveyIds": [
+          "S4",
+          "S5"
+        ],
+        "openQuestions": [
+          "Which efficiency transform most changes per-group output quality?",
+          "Is dropping layers (a depth-budgeting primitive) fairness-neutral or does it hurt specific groups?",
+          "How do KV-cache eviction and quantization interact with adaptive depth fairness?"
+        ],
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0.007499062617172853
+      }
+    },
+    {
+      "id": "cluster:C4",
+      "type": "Cluster",
+      "label": "Demographic Fairness & Bias in LLMs (Definitions, Metrics, Benchmarks)",
+      "properties": {
+        "type": "Cluster",
+        "label": "Demographic Fairness & Bias in LLMs (Definitions, Metrics, Benchmarks)",
+        "summary": "The fairness vocabulary and instrumentation the research will reuse: bias benchmarks (BBQ, BOLD, WinoBias, StereoSet, CrowS-Pairs, RealToxicityPrompts), fairness metrics (parity, accuracy gap, bias score, stereotype preference, toxicity), and group-disparity evaluation lenses. Anchored by S7-S10.",
+        "sourceSurveyIds": [
+          "S7",
+          "S8",
+          "S9",
+          "S10"
+        ],
+        "openQuestions": [
+          "Which fairness notion (parity, counterfactual, accuracy gap) best captures adaptive-inference harm?",
+          "How to measure per-group accuracy/quality gaps when computation is budgeted?",
+          "Do the standard benchmarks have enough coverage to detect early-exit- induced disparity?",
+          "How to aggregate accuracy and bias (the 'bias score' tension) in a fair-decision-aware way?"
+        ],
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0.01899762529683789
+      }
+    },
+    {
+      "id": "cluster:C5",
+      "type": "Cluster",
+      "label": "Fairness of Model Compression (Quantization, Pruning, Distillation)",
+      "properties": {
+        "type": "Cluster",
+        "label": "Fairness of Model Compression (Quantization, Pruning, Distillation)",
+        "summary": "The closest existing analogue to the proposed research: systems and studies showing that a compression/efficiency transform which preserves average accuracy can still disproportionately degrade underrepresented groups, plus fairness-aware compression objectives. Supplied directly by primary papers (no dedicated survey found; noted).",
+        "sourceSurveyIds": [],
+        "openQuestions": [
+          "What is the general mechanism by which compression redistributes error onto minority groups, and does it transfer to depth-budgeted (early-exit) inference?",
+          "Can a fairness penalty be added to the compression/exit objective without hurting efficiency?",
+          "Is there a principled accuracy/efficiency/fairness trade-off curve, and how should it be exposed?"
+        ],
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0.007499062617172853
+      }
+    },
+    {
+      "id": "cluster:C6",
+      "type": "Cluster",
+      "label": "Confidence Calibration & Uncertainty for LLMs",
+      "properties": {
+        "type": "Cluster",
+        "label": "Confidence Calibration & Uncertainty for LLMs",
+        "summary": "Because most early-exit methods use a confidence/entropy threshold as the exit criterion, calibration quality across groups is a primary mechanism for the fairness analysis. Covers calibration metrics (ECE, Brier), post-hoc methods (temperature scaling), LLM-specific confidence elicitation, and semantic/selective uncertainty. Anchored by S11.",
+        "sourceSurveyIds": [
+          "S11"
+        ],
+        "openQuestions": [
+          "Is confidence calibrated differently across demographic groups, so a shared threshold exits at different true-error levels?",
+          "How to measure group-wise ECE for exit decisions?",
+          "Do selective-prediction / abstention methods perform differently per group?",
+          "Can temperature scaling or calibration be applied per-group before exiting?"
+        ],
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0.01124859392575928
+      }
+    },
+    {
+      "id": "cluster:C7",
+      "type": "Cluster",
+      "label": "Layer-wise Representation Maturity & Interpretability",
+      "properties": {
+        "type": "Cluster",
+        "label": "Layer-wise Representation Maturity & Interpretability",
+        "summary": "Provides the mechanism for hypothesis H2 (quality disparity): probing/interpreting how representations evolve across depth, whether demographic attributes become separable at specific depths, and whether layer importance is heterogeneous. Directly supports 'representation maturity' as the quantity to compare across groups. Anchor supplied by primary probing papers.",
+        "sourceSurveyIds": [],
+        "openQuestions": [
+          "Do demographic attributes (gender, race, etc.) become linearly separable at different depths for different groups?",
+          "Is layer importance/contribution heterogeneous such that a fixed exit depth preserves different information for different groups?",
+          "How to operationalize 'representation maturity' (linear-separable / probe accuracy) as a per-group, per-layer metric?"
+        ],
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0.007499062617172853
+      }
+    },
+    {
+      "id": "direction:d1",
+      "type": "Direction",
+      "label": "Fairness of Depth-Adaptive Early-Exit Inference",
+      "properties": {
+        "type": "Direction",
+        "label": "Fairness of Depth-Adaptive Early-Exit Inference",
+        "statement": "Do depth-adaptive / early-exit LLM inference strategies, which allocate compute per token/instance, systematically under-serve specific demographic groups — i.e., do groups exhibit different exit-depth distributions, different accuracy-vs-depth curves, and resulting per-group quality gaps under a fixed exit threshold?",
+        "evidence": [
+          "p1 PABEE (early exit by consistency/training)",
+          "p3 FastBERT (self-distilling adaptive inference)",
+          "p4 CALM (confidence-gated early exit)",
+          "p26/p30/p31 (demographic-annotated fairness benchmarks)",
+          "S1, S2 (early-exit surveys, C1)",
+          "S7, S8 (fairness surveys, C4); KG cluster C1 open problems"
+        ],
+        "cheapTest": "Run a simple threshold-based early-exit (PABEE/FastBERT-style) on a demographic-annotated benchmark (e.g., StereoSet, CrowS-Pairs, BOLD) and measure per-group accuracy, mean exit depth, and the accuracy-vs-depth curve under one fixed threshold; test whether a reliable per-group gap exists.",
+        "risk": "Early-exit may turn out largely fairness-neutral in practice (small measured effect); per-group quality for open-ended generation is hard to define; confound between group labels and text difficulty could dominate the signal.",
+        "x": null,
+        "y": null,
+        "community": 7,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "direction:d2",
+      "type": "Direction",
+      "label": "Group-wise Calibration of the Confidence/Entropy Signal Driving Adaptive Exit",
+      "properties": {
+        "type": "Direction",
+        "label": "Group-wise Calibration of the Confidence/Entropy Signal Driving Adaptive Exit",
+        "statement": "Is the confidence/uncertainty signal (entropy, logit margin) that gates early exit calibrated equally across demographic groups, so a shared threshold exits at the same true-error level for every group — and can per-group calibration (temperature scaling / abstention / selective prediction) make exit decisions group-fair?",
+        "evidence": [
+          "p4 CALM (entropy-gated exit)",
+          "p52, p53, p56, p57 (uncertainty/confidence estimation, C6)",
+          "p51, p54, p61 (temperature scaling / universal calibration)",
+          "p58 (selective prediction / abstention)",
+          "S11 (calibration survey, C6); KG cluster C6 open problems"
+        ],
+        "cheapTest": "Compute group-wise ECE/Brier of the exit-confidence signal (output-distribution entropy) across demographic groups on a generation task, then test whether a per-group temperature/calibration mapping reduces the group gap while preserving overall calibration.",
+        "risk": "Group-wise ECE for open-ended generation is ill-defined and group-specific calibration needs enough per-group data to be stable; risk of over-fitting calibration to small groups or benchmark idiosyncrasies producing a false mitigation.",
+        "x": null,
+        "y": null,
+        "community": 8,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "direction:d3",
+      "type": "Direction",
+      "label": "Do Compression and Depth-Budgeting Redistribute Error Onto Minority Groups Through a Shared Mechanism?",
+      "properties": {
+        "type": "Direction",
+        "label": "Do Compression and Depth-Budgeting Redistribute Error Onto Minority Groups Through a Shared Mechanism?",
+        "statement": "Does the mechanism by which model compression (quantization, pruning, distillation) redistributes error onto minority groups transfer to, and help explain, depth-budgeted (early-exit / adaptive-depth) inference — and is there a principled accuracy/efficiency/fairness trade-off curve that exposes it?",
+        "evidence": [
+          "p38 Pruning has a disparate impact on model accuracy",
+          "p44, p45 (quantization-induced bias)",
+          "p46 Fair-GPTQ (bias-aware quantization)",
+          "p48, p49 (fairness in knowledge distillation)",
+          "S7, S8 (fairness surveys); KG cluster C5 open problems"
+        ],
+        "cheapTest": "On a demographic-annotated dataset, apply one representative pruning method and one quantization method plus an early-exit depth budget; compare per-group accuracy gaps of each against an uncompressed reference to see whether the harmed groups track the same minority groups.",
+        "risk": "'Shared mechanism' is a strong causal claim hard to establish cleanly; comparing methods with different compute budgets needs careful Pareto measurement; bias may be dataset-specific and not transfer across compression modes.",
+        "x": null,
+        "y": null,
+        "community": 9,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p1",
+      "type": "Paper",
+      "label": "BERT Loses Patience: Fast and Robust Inference with Early Exit (PABEE)",
+      "properties": {
+        "type": "Paper",
+        "label": "BERT Loses Patience: Fast and Robust Inference with Early Exit (PABEE)",
+        "id": "p1",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "AAAI 2021",
+        "url": "https://arxiv.org/abs/2006.04152",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "Patience-based early exit for encoder transformers that waits for k agreeing predictions before stopping.",
+        "keyFinding": "Patience-based exits remain robust to noisy intermediate predictions, saving significant FLOPs with minimal accuracy loss and beating confidence-only early exits.",
+        "weakness": "Encoder-only and classification-centric; not designed for decoder-only, long-context generative LLMs or token-level decoding.",
+        "implication": "The exit decision is input-dependent, so per-input compute is unequal (a seed of the fairness concern).",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p2",
+      "type": "Paper",
+      "label": "DeeBERT: Dynamic Early Exiting for Accelerating BERT Inference",
+      "properties": {
+        "type": "Paper",
+        "label": "DeeBERT: Dynamic Early Exiting for Accelerating BERT Inference",
+        "id": "p2",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "ACL 2020",
+        "url": "https://arxiv.org/abs/2004.12993",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "Confidence-threshold early exit via intermediate output heads.",
+        "keyFinding": "Early exits cut computation substantially with a small accuracy drop, but only after fine-tuning the internal classifiers and tuning a global threshold.",
+        "weakness": "Requires fine-tuning (not plug-in); hard global threshold; classification only.",
+        "implication": "The threshold that decides compute spend is tuned globally on aggregate accuracy, so any group with lower confidence is handled differently.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p3",
+      "type": "Paper",
+      "label": "FastBERT: A Self-distilling BERT with Adaptive Inference Time",
+      "properties": {
+        "type": "Paper",
+        "label": "FastBERT: A Self-distilling BERT with Adaptive Inference Time",
+        "id": "p3",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "ACL 2020",
+        "url": "https://arxiv.org/abs/2004.02178",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "Sample-adaptive inference where each layer has a classifier branch and samples exit at different depths.",
+        "keyFinding": "Self-distillation makes intermediate predictions informative enough for early exits to mirror final-layer behavior, enabling large speedups with minimal loss.",
+        "weakness": "Encoder-only/classification; branch confidence can be mis-calibrated; no generation.",
+        "implication": "Because compute is input-dependent and driven by self-distilled confidence, any confidence bias transfers into compute-allocation bias.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p4",
+      "type": "Paper",
+      "label": "Confident Adaptive Language Modeling (CALM)",
+      "properties": {
+        "type": "Paper",
+        "label": "Confident Adaptive Language Modeling (CALM)",
+        "id": "p4",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "NeurIPS 2022",
+        "url": "https://arxiv.org/abs/2207.07061",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "Per-token adaptive depth for generative LLMs, exiting when the current layer's softmax confidence is high enough.",
+        "keyFinding": "CALM terminates most tokens after a few layers while matching full-depth quality, using a risk-controlling threshold with statistical guarantees.",
+        "weakness": "Threshold tuning on English corpora; per-token exits complicate KV-cache and batch GPU utilization; no group-wise analysis.",
+        "implication": "Every token's compute depends on the model's self-reported confidence, directly redistributing work per token.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p5",
+      "type": "Paper",
+      "label": "A Simple Hash-Based Early Exiting Approach For Language Understanding and Generation",
+      "properties": {
+        "type": "Paper",
+        "label": "A Simple Hash-Based Early Exiting Approach For Language Understanding and Generation",
+        "id": "p5",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "ACL 2022",
+        "url": "https://arxiv.org/abs/2203.01670",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "A training-free, hash-based early-exit controller keyed on the token itself rather than learned confidence.",
+        "keyFinding": "A simple token hash is surprisingly competitive, showing much of the speedup comes from skipping layers on predictable tokens rather than sophisticated confidence estimators.",
+        "weakness": "Coarse, uncertainty-agnostic signal; brittle across domains; no subgroup evaluation.",
+        "implication": "The exit signal being a function of token identity means compute allocation is purely a function of surface token, independent of model confidence.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p6",
+      "type": "Paper",
+      "label": "SkipDecode: Autoregressive Skip Decoding with Batching and Caching for Efficient LLM Inference",
+      "properties": {
+        "type": "Paper",
+        "label": "SkipDecode: Autoregressive Skip Decoding with Batching and Caching for Efficient LLM Inference",
+        "id": "p6",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2307.02628",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "A system-oriented early-exit method that makes layer skipping practical in batched, KV-cached LLM inference.",
+        "keyFinding": "Layer skipping can be made batching- and caching-friendly, unlocking real wall-clock decode speedups in a serving stack, not just FLOPs savings.",
+        "weakness": "Heuristic/confidence per-token skip decisions; quality can degrade on hard tokens; gains depend on batch composition.",
+        "implication": "In batched serving, per-token skip decisions determine per-token GPU work, and batch composition shapes achievable speedup.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p7",
+      "type": "Paper",
+      "label": "Mixture-of-Depths: Dynamically allocating compute in transformer-based language models",
+      "properties": {
+        "type": "Paper",
+        "label": "Mixture-of-Depths: Dynamically allocating compute in transformer-based language models",
+        "id": "p7",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint (Google DeepMind)",
+        "url": "https://arxiv.org/abs/2404.02258",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "A routing-based scheme where each layer processes only a top-k subset of tokens, dynamically allocating compute per token.",
+        "keyFinding": "Models can learn which tokens deserve more compute; capacity-based MoD matches or beats dense quality while using much fewer FLOPs per token.",
+        "weakness": "Routing is by capacity/FLOPs not correctness on hard samples; optimizer-sensitive; not a decode-time confidence exit.",
+        "implication": "Token-level routing is learned, so which tokens receive more compute is an emergent, trainable property, potentially correlated with token frequency/domain.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d1_06",
+      "type": "Paper",
+      "label": "Mixture-of-Recursions: Learning Dynamic Recursive Depths for Adaptive Token-Level Computation",
+      "properties": {
+        "type": "Paper",
+        "label": "Mixture-of-Recursions: Learning Dynamic Recursive Depths for Adaptive Token-Level Computation",
+        "id": "d1_06",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL/cs.LG), NeurIPS 2025",
+        "url": "https://arxiv.org/abs/2507.10524",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d1",
+        "oneLiner": "Per-token depth routing boosts efficiency and quality but is trained without any group-fairness awareness.",
+        "keyFinding": "MoR sets a new Pareto frontier at 135M-1.7B scale: lower perplexity and better few-shot accuracy at equal FLOPs with higher throughput.",
+        "weakness": "Purely efficiency/quality; no fairness dimension, no demographic analysis, no per-group allocation audit; routers trained on loss, not equity.",
+        "implication": "The mechanism that d1 must scrutinize — per-token/instance compute allocation — is now a trained router, so any group-correlation in that allocation is learned and thus auditable.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 10,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p9",
+      "type": "Paper",
+      "label": "Dynamic layer selection in decoder-only transformers",
+      "properties": {
+        "type": "Paper",
+        "label": "Dynamic layer selection in decoder-only transformers",
+        "id": "p9",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2410.20022",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "Learned per-input routing over decoder layers, activating a different subset per sample.",
+        "keyFinding": "A small learned router can predict which layers an input needs without retraining the backbone, yielding compute savings with limited quality loss.",
+        "weakness": "Router trained per task/domain; coarse layer selection; no subpopulation analysis.",
+        "implication": "Which layers run is a learned function of the input, making compute budget a learned, input-dependent quantity.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p10",
+      "type": "Paper",
+      "label": "Depth-Adaptive Transformer",
+      "properties": {
+        "type": "Paper",
+        "label": "Depth-Adaptive Transformer",
+        "id": "p10",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "ICLR 2020",
+        "url": "https://arxiv.org/abs/1910.10073",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "Per-example depth-adaptive inference: each input exits at its own best depth.",
+        "keyFinding": "Combining per-example halting/classifiers with layer-specific classifiers lets models stop early on easy inputs while preserving quality on hard ones.",
+        "weakness": "Efficiency-focused; fairness across groups not analyzed.",
+        "implication": "Because exit depth is chosen per example, if accuracy-vs-depth curves differ across groups, exiting is not fairness-neutral.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p11",
+      "type": "Paper",
+      "label": "The Right Tool for the Job: Matching Model and Instance Complexities",
+      "properties": {
+        "type": "Paper",
+        "label": "The Right Tool for the Job: Matching Model and Instance Complexities",
+        "id": "p11",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "ACL 2020",
+        "url": "https://arxiv.org/abs/2004.07453",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C1",
+        "directionId": "",
+        "oneLiner": "Different examples need different compute, so adaptive depth beats one fixed model.",
+        "keyFinding": "A complexity estimator/router sends light outputs for easy instances and deep computation for hard ones, improving the efficiency-accuracy frontier.",
+        "weakness": "No demographic-fairness analysis; relies on complexity measures that may correlate with group.",
+        "implication": "If complexity (and hence chosen depth) correlates with a demographic group, early-exit routing produces group-skewed accuracy.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p12",
+      "type": "Paper",
+      "label": "Fast Inference from Transformers via Speculative Decoding",
+      "properties": {
+        "type": "Paper",
+        "label": "Fast Inference from Transformers via Speculative Decoding",
+        "id": "p12",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "ICML 2023",
+        "url": "https://arxiv.org/abs/2211.17192",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C2",
+        "directionId": "",
+        "oneLiner": "Use a small draft model to guess tokens, then verify them in parallel with the big model for exact-distribution speedups.",
+        "keyFinding": "Speculative decoding achieves 2-3x faster decoding while provably producing the identical output distribution as the target model.",
+        "weakness": "Requires a matching draft model plus extra memory; speedup collapses when draft and target distributions diverge.",
+        "implication": "Because sampling quality is preserved exactly, this form of acceleration does not itself alter model behavior.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p13",
+      "type": "Paper",
+      "label": "Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads",
+      "properties": {
+        "type": "Paper",
+        "label": "Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads",
+        "id": "p13",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "ICML 2024",
+        "url": "https://arxiv.org/abs/2401.10774",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C2",
+        "directionId": "",
+        "oneLiner": "Add parallel prediction heads to the base model so several tokens are guessed and verified in one step.",
+        "keyFinding": "Medusa delivers ~2.2x decoding speedup on Vicuna-7B/33B and 2.3x on MT-Bench while preserving quality, with no extra draft model.",
+        "weakness": "Requires training/alignment of heads; speedup bounded by acceptance rates.",
+        "implication": "A model can predict its own future tokens with auxiliary heads, avoiding the extra-draft-model cost.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p14",
+      "type": "Paper",
+      "label": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty",
+      "properties": {
+        "type": "Paper",
+        "label": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty",
+        "id": "p14",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "ICML 2024",
+        "url": "https://arxiv.org/abs/2401.15077",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C2",
+        "directionId": "",
+        "oneLiner": "Draft in the hidden-feature space instead of token space to make draft predictions far more accurate.",
+        "keyFinding": "Feature-level drafting sharply raises acceptance rates, giving ~2-3x latency reduction (up to 5x in some settings) while strictly preserving the output distribution.",
+        "weakness": "Draft header must be retrained per base model; adds memory/complexity.",
+        "implication": "The space in which you draft (features vs tokens) is a dominant factor in speculative-decoding efficiency.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p15",
+      "type": "Paper",
+      "label": "LayerSkip: Enabling Early Exit Inference and Self-Speculative Decoding",
+      "properties": {
+        "type": "Paper",
+        "label": "LayerSkip: Enabling Early Exit Inference and Self-Speculative Decoding",
+        "id": "p15",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint (Meta)",
+        "url": "https://arxiv.org/abs/2404.16710",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C2",
+        "directionId": "",
+        "oneLiner": "Jointly optimizes LLMs to (1) exit early and (2) feed an early-exit draft to the full model for lossless self-speculative decoding.",
+        "keyFinding": "Combining layer dropout with early-exit self-distillation lets a single model both accelerate via early exit and accelerate losslessly via self-speculation.",
+        "weakness": "Requires a customized training recipe; early-exit and draft quality both depend on training; decoder-only; exit adds serving complexity.",
+        "implication": "The early-exit head is both a quality-critical decision point and the draft source, so its confidence behavior drives both speed and correctness.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p16",
+      "type": "Paper",
+      "label": "Draft & Verify: Lossless Large Language Model Acceleration via Self-Speculative Decoding",
+      "properties": {
+        "type": "Paper",
+        "label": "Draft & Verify: Lossless Large Language Model Acceleration via Self-Speculative Decoding",
+        "id": "p16",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "ACL 2024",
+        "url": "https://arxiv.org/abs/2309.08168",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C2",
+        "directionId": "",
+        "oneLiner": "Lossless self-speculative decoding where an early exit acts as the draft model and the full model verifies.",
+        "keyFinding": "An early-exit draft from the same model can be verified by the full model to give exact match with baseline output while speeding up decoding.",
+        "weakness": "Draft quality and speedup depend on early-exit accuracy; draft-verify complicates serving; speedup varies by input; no fairness analysis.",
+        "implication": "Decode speed and correctness hinge on the early-exit draft, so tokens drafted/accepted differently across groups affect both cost and quality.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p17",
+      "type": "Paper",
+      "label": "Kangaroo: Lossless Self-Speculative Decoding via Double Early Exiting",
+      "properties": {
+        "type": "Paper",
+        "label": "Kangaroo: Lossless Self-Speculative Decoding via Double Early Exiting",
+        "id": "p17",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "AAAI 2025",
+        "url": "https://arxiv.org/abs/2404.18911",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C2",
+        "directionId": "",
+        "oneLiner": "Double early exiting within one model to draft and verify tokens losslessly for faster decoding.",
+        "keyFinding": "Combining a cheap early-exit draft with a second, more reliable intermediate verification improves acceptance rate and speedup while keeping output lossless.",
+        "weakness": "Adds architectural complexity (multiple exits); requires intermediate-state access; no fairness/group analysis of accept rate or latency.",
+        "implication": "The double-exit design allocates compute across two decision points per token, again making compute a token-level predicted quantity.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p18",
+      "type": "Paper",
+      "label": "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers",
+      "properties": {
+        "type": "Paper",
+        "label": "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers",
+        "id": "p18",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "ICLR 2023",
+        "url": "https://arxiv.org/abs/2210.17323",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C3",
+        "directionId": "",
+        "oneLiner": "Compress LLM weights to 3-4 bits with a Hessian-based method that keeps accuracy nearly intact.",
+        "keyFinding": "GPTQ compresses LLMs to 3-4 bits per weight with only a small perplexity increase, giving 2-3x faster inference.",
+        "weakness": "Upfront second-order computation is costly; weight-only (activations stay high precision); results depend on calibration data.",
+        "implication": "Post-training quantization can be near-lossless for LLMs without retraining.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p19",
+      "type": "Paper",
+      "label": "AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration",
+      "properties": {
+        "type": "Paper",
+        "label": "AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration",
+        "id": "p19",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "MLSys 2024",
+        "url": "https://arxiv.org/abs/2306.00978",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C3",
+        "directionId": "",
+        "oneLiner": "Guard a few important weight channels, found by activation magnitude, to get high-quality low-bit quantization.",
+        "keyFinding": "AWQ quantizes to 4-bit with much better accuracy than prior methods and enables on-device Llama serving with 3x+ speedups and large memory savings.",
+        "weakness": "Requires validation-set activation statistics; saliency is per-model; overhead to find salient channels.",
+        "implication": "Activation statistics, not raw weight magnitudes, determine which weights need protecting in quantization.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p20",
+      "type": "Paper",
+      "label": "SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot",
+      "properties": {
+        "type": "Paper",
+        "label": "SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot",
+        "id": "p20",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "ICML 2023",
+        "url": "https://arxiv.org/abs/2301.00774",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C3",
+        "directionId": "",
+        "oneLiner": "Prune giant LLMs down to half their weights in one shot using a scalable sparse-regression method.",
+        "keyFinding": "SparseGPT removes 50-60% of weights from models up to 175B in one shot with near-zero accuracy loss, without retraining.",
+        "weakness": "Mostly unstructured sparsity needing specialized hardware for speed; Hessian cost high; accuracy drops at very high sparsity.",
+        "implication": "Post-training pruning can yield large weight reduction without retraining, but real speed requires hardware support.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p21",
+      "type": "Paper",
+      "label": "LLM-Pruner: On the Structural Pruning of Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "LLM-Pruner: On the Structural Pruning of Large Language Models",
+        "id": "p21",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "NeurIPS 2023",
+        "url": "https://arxiv.org/abs/2305.11627",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C3",
+        "directionId": "",
+        "oneLiner": "Prune whole structures such as heads and channels using gradient importance, then recover with light fine-tuning.",
+        "keyFinding": "Structural pruning reduces LLaMA-7B to ~2.7B-equivalent FLOPs with only modest loss in zero-shot accuracy.",
+        "weakness": "Requires fine-tuning recovery; instruction-following degrades; quality loss not zero.",
+        "implication": "Real hardware speed/memory gains require structural (not just unstructured) pruning, which costs some accuracy.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p22",
+      "type": "Paper",
+      "label": "H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models",
+        "id": "p22",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "NeurIPS 2023",
+        "url": "https://arxiv.org/abs/2306.14048",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C3",
+        "directionId": "",
+        "oneLiner": "Keep only the frequently-attended 'heavy-hitter' tokens plus recent ones to shrink the KV cache dramatically.",
+        "keyFinding": "H2O cuts KV-cache memory by up to 20x and boosts throughput while keeping or improving generation quality.",
+        "weakness": "Heuristic importance measure; may drop tokens critical for long-context reasoning, so quality can degrade on some tasks.",
+        "implication": "Not all past tokens matter equally; attention-based selection can greatly reduce memory without much accuracy loss.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p23",
+      "type": "Paper",
+      "label": "Efficient Streaming Language Models with Attention Sinks",
+      "properties": {
+        "type": "Paper",
+        "label": "Efficient Streaming Language Models with Attention Sinks",
+        "id": "p23",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "ICLR 2024",
+        "url": "https://arxiv.org/abs/2309.17453",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C3",
+        "directionId": "",
+        "oneLiner": "Keep a few initial 'sink' tokens in the KV cache so attention stays stable over millions of generated tokens.",
+        "keyFinding": "Attention sinks plus a local sliding window let LLMs stream over more than 4M tokens with constant memory and no quality collapse.",
+        "weakness": "Performance depends on sink curation; limited to very long streaming contexts.",
+        "implication": "KV-cache memory can be made constant even for unbounded generation by retaining a minimal set of sink tokens.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p24",
+      "type": "Paper",
+      "label": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+      "properties": {
+        "type": "Paper",
+        "label": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+        "id": "p24",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "NeurIPS 2022",
+        "url": "https://arxiv.org/abs/2205.14135",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C3",
+        "directionId": "",
+        "oneLiner": "Compute exact attention in tiles, never writing the full attention matrix to HBM, so it is faster and far more memory-efficient.",
+        "keyFinding": "FlashAttention delivers 2-4x wall-clock speedup and large memory savings, enabling much longer sequence lengths (refined in FlashAttention-2).",
+        "weakness": "Optimized for GPU HBM/BF16; gains hardware-specific; an implementation improvement, not a change to attention math.",
+        "implication": "A large part of achievable attention speedup is an I/O and memory-efficiency problem rather than an algorithmic one.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p25",
+      "type": "Paper",
+      "label": "The Unreasonable Ineffectiveness of the Deeper Layers",
+      "properties": {
+        "type": "Paper",
+        "label": "The Unreasonable Ineffectiveness of the Deeper Layers",
+        "id": "p25",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2403.17887",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C3",
+        "directionId": "",
+        "oneLiner": "Many of an LLM's deepest layers hardly matter, so you can drop them at inference for a nearly-free speedup.",
+        "keyFinding": "Dropping roughly half the deepest layers of a 70B model gives ~1.5x speedup on a consumer GPU with minimal performance loss; some tasks like MMLU improve.",
+        "weakness": "Task-dependent; can hurt reasoning/math; simple heuristic selection not always optimal.",
+        "implication": "Depth-wise redundancy can be exploited for inference-time early exit at nearly zero cost.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p26",
+      "type": "Paper",
+      "label": "BBQ: A Hand-Built Bias Benchmark for Question Answering",
+      "properties": {
+        "type": "Paper",
+        "label": "BBQ: A Hand-Built Bias Benchmark for Question Answering",
+        "id": "p26",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "NeurIPS 2022 (D&B Track)",
+        "url": "https://arxiv.org/abs/2110.08193",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "A hand-built QA benchmark measuring how strongly LLMs lean on demographic stereotypes by contrasting disambiguated vs ambiguous settings.",
+        "keyFinding": "Large pretrained QA models show substantial bias in ambiguous contexts (often worse than majority/random baselines), expressed as a large accuracy gap between stereotypic and non-stereotypic answers.",
+        "weakness": "English QA templates; limited context; ambiguous/abstract items hard to scale.",
+        "implication": "A model can look 'fair' on unambiguous inputs yet be strongly biased when information is missing, so fairness must be measured in under-determined settings.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p27",
+      "type": "Paper",
+      "label": "BOLD: Dataset and Metrics for Measuring Biases in Open-Ended Language Generation",
+      "properties": {
+        "type": "Paper",
+        "label": "BOLD: Dataset and Metrics for Measuring Biases in Open-Ended Language Generation",
+        "id": "p27",
+        "stage": "survey",
+        "role": "method",
+        "year": "2021",
+        "venue": "Findings of EMNLP 2021",
+        "url": "https://arxiv.org/abs/2101.11718",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "A large open-ended generation benchmark with concrete per-domain fairness metrics to quantify bias in LLM output text.",
+        "keyFinding": "Larger models (GPT-2, GPT-3) display more bias in sentiment, regard, and toxicity toward specific groups than smaller ones, with direction/intensity depending on domain.",
+        "weakness": "Metrics lean on external classifiers with measurement error; coreference/regard judgments can misattribute group sentiment.",
+        "implication": "Scaling up models is not bias-neutral; quality and 'fairness' signals must be tracked by group during generation.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p28",
+      "type": "Paper",
+      "label": "Gender Bias in Coreference Resolution: Evaluation and Debiasing Methods",
+      "properties": {
+        "type": "Paper",
+        "label": "Gender Bias in Coreference Resolution: Evaluation and Debiasing Methods",
+        "id": "p28",
+        "stage": "survey",
+        "role": "method",
+        "year": "2018",
+        "venue": "NAACL 2018 (WinoBias)",
+        "url": "https://arxiv.org/abs/1804.06876",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "The canonical gendered coreference benchmark revealing a large performance gap on stereotypical vs anti-stereotypical examples.",
+        "keyFinding": "Coreference systems perform far worse on anti-stereotypical sentences; data augmentation and gender-balanced embeddings narrow but do not remove the gap.",
+        "weakness": "Binary-gender framing; English profession/pronoun stimuli; train/test distribution mismatch can inflate apparent bias.",
+        "implication": "A model's reliability is not uniform across demographic groups — performance can be tied to stereotype conformance.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p29",
+      "type": "Paper",
+      "label": "RealToxicityPrompts: Evaluating Neural Toxic Degeneration in Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "RealToxicityPrompts: Evaluating Neural Toxic Degeneration in Language Models",
+        "id": "p29",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "Findings of EMNLP 2020",
+        "url": "https://arxiv.org/abs/2009.11462",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "The standard dataset and framework for measuring and reducing toxic/unsafe outputs in open-ended generation.",
+        "keyFinding": "Pretrained LMs readily produce toxic continuations from fairly neutral prompts, and toxicity rises with generation length and model size; mitigations reduce but do not eliminate it.",
+        "weakness": "Toxicity measured by a single external classifier that can itself be biased; prompts are single English web snippets.",
+        "implication": "Inference-time choices (length, decoding, caching) materially change the risk-profile of generated content, so adaptive inference can shift harm.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p30",
+      "type": "Paper",
+      "label": "StereoSet: Measuring stereotypical bias in pretrained language models",
+      "properties": {
+        "type": "Paper",
+        "label": "StereoSet: Measuring stereotypical bias in pretrained language models",
+        "id": "p30",
+        "stage": "survey",
+        "role": "method",
+        "year": "2021",
+        "venue": "ACL 2021",
+        "url": "https://arxiv.org/abs/2004.09456",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "Introduces the StereoSet Score to quantify a pretrained LM's preference for stereotypical associations while accounting for fluency.",
+        "keyFinding": "Pretrained models exhibit substantial stereotype preference, and in several cases it increases with model scale/capability.",
+        "weakness": "Associational (co-occurrence-based) measure that can conflate statistical correlation with genuinely harmful bias; limited to four domains.",
+        "implication": "Bigger, more capable models are not automatically fairer; bias can scale with capability, so capability gains must be audited separately.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p31",
+      "type": "Paper",
+      "label": "CrowS-Pairs: A Challenge Dataset for Measuring Social Biases in Masked Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "CrowS-Pairs: A Challenge Dataset for Measuring Social Biases in Masked Language Models",
+        "id": "p31",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "EMNLP 2020",
+        "url": "https://arxiv.org/abs/2010.00133",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "A minimal-pair benchmark scoring social bias by comparing model likelihood of stereotypical vs anti-stereotypical sentences.",
+        "keyFinding": "All tested pretrained masked LMs show measurable social bias favoring stereotypical sentences, with magnitude varying by category and model.",
+        "weakness": "Relies on likelihood differences that engineers can game; sentence-level and English-only; sensitive to template wording.",
+        "implication": "Bias is present even in models not explicitly designed for generation, and is a property of learned associations, not just decode-time choices.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p32",
+      "type": "Paper",
+      "label": "A Group Fairness Lens for Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "A Group Fairness Lens for Large Language Models",
+        "id": "p32",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2312.15478",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "Argues for measuring LLM fairness at the group level across outputs, not with a single aggregate number.",
+        "keyFinding": "LLMs exhibit measurable group-level disparities in generated-output quality/content that are hidden when only a single pooled fairness value is reported.",
+        "weakness": "Group definitions and output-level metric choices are modeler-defined; limited to text-generation outputs and English settings.",
+        "implication": "Reporting only an average fairness score can conceal systematic disadvantage to specific demographic groups.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p33",
+      "type": "Paper",
+      "label": "Measuring Social Biases in Masked Language Models by Proxy of Prediction Quality",
+      "properties": {
+        "type": "Paper",
+        "label": "Measuring Social Biases in Masked Language Models by Proxy of Prediction Quality",
+        "id": "p33",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2402.13954",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "Frames bias as a differential in prediction quality/accuracy across social groups, not just association likelihood.",
+        "keyFinding": "Models show differential prediction quality across demographic group tokens, revealing an accuracy/confidence gap tied to group identity that pure preference measures can miss.",
+        "weakness": "Requires careful token/group mapping; outcome depends on how groups and target tokens are defined; English-centric.",
+        "implication": "Bias can be detected as an asymmetric quality/accuracy gap, aligning model fairness with measured capacity rather than sentiment.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p34",
+      "type": "Paper",
+      "label": "Quantifying Fairness in LLMs Beyond Tokens: A Semantic and Statistical Perspective",
+      "properties": {
+        "type": "Paper",
+        "label": "Quantifying Fairness in LLMs Beyond Tokens: A Semantic and Statistical Perspective",
+        "id": "p34",
+        "stage": "survey",
+        "role": "method",
+        "year": "2025",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2506.19028",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "Adds semantic-level fairness metrics on top of token/statistical metrics to surface group disparities token measures miss.",
+        "keyFinding": "Token- and probability-level metrics understate semantic-level differences across groups, so fair-by-token models can still be semantically uneven.",
+        "weakness": "Relies on semantic-similarity/embedding machinery that can be noisy; group definitions are user-chosen.",
+        "implication": "Fairness evaluation needs semantic-level measurement; apparent token-level parity can mask unequal meaning quality across groups.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p35",
+      "type": "Paper",
+      "label": "All Should Be Equal in the Eyes of Language Models: Counterfactually Aware Fair Text Generation",
+      "properties": {
+        "type": "Paper",
+        "label": "All Should Be Equal in the Eyes of Language Models: Counterfactually Aware Fair Text Generation",
+        "id": "p35",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2311.05451",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "Uses counterfactual group-swapping to make generation equally likely and meaning-preserving across demographic groups.",
+        "keyFinding": "Counterfactually aware regularization reduces demographic bias while maintaining generation quality and fluency.",
+        "weakness": "Counterfactual generation limited to salient attributes; requires controllable generation and can distort rare/dependent attributes.",
+        "implication": "Counterfactual fairness is an achievable target via data/objective engineering, feasible without harming quality much.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p36",
+      "type": "Paper",
+      "label": "The Impact of Debiasing on the Performance of Language Models in Downstream Tasks is Underestimated",
+      "properties": {
+        "type": "Paper",
+        "label": "The Impact of Debiasing on the Performance of Language Models in Downstream Tasks is Underestimated",
+        "id": "p36",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2309.09092",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "Shows that standard debiasing methods hurt downstream performance and robustness more than earlier narrow-task evaluations suggest.",
+        "keyFinding": "Measured across a broad task suite with robustness awareness, debiasing degrades downstream generalization and robustness substantially more than prior claims.",
+        "weakness": "Focuses on intrinsic-to-extrinsic transfer and named debiasing methods; generalization to generative/RLHF-style LLMs limited.",
+        "implication": "Debiasing is not free: removing bias can reduce quality/capability, so fairness and capability must be jointly optimized.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p37",
+      "type": "Paper",
+      "label": "Selecting Shots for Demographic Fairness in Few-Shot Learning with Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Selecting Shots for Demographic Fairness in Few-Shot Learning with Large Language Models",
+        "id": "p37",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "NLP4PI 2024 (ACL Workshop)",
+        "url": "https://arxiv.org/abs/2311.08472",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C4",
+        "directionId": "",
+        "oneLiner": "Shows the demographic makeup of in-context examples drives downstream group fairness and that balanced-shot selection helps.",
+        "keyFinding": "The demographic distribution of selected shots strongly shapes fairness outcomes; selecting balanced shots improves fairness without significantly hurting accuracy.",
+        "weakness": "Limited to few-shot in-context learning and a specific set of attributes/tasks; shot-selection search cost.",
+        "implication": "Inference-time composition of the prompt — analogous to how adaptive inference composes computation — is a controllable lever on group fairness.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p38",
+      "type": "Paper",
+      "label": "Pruning has a disparate impact on model accuracy",
+      "properties": {
+        "type": "Paper",
+        "label": "Pruning has a disparate impact on model accuracy",
+        "id": "p38",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "NeurIPS 2022",
+        "url": "https://arxiv.org/abs/2205.13574",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "Magnitude pruning disproportionately hurts minority subgroups' accuracy, so the compressed model is less fair than its dense counterpart.",
+        "keyFinding": "Aggressive pruning produces unequal accuracy loss across demographics, with underrepresented groups bearing a larger drop, even when overall (average) accuracy is preserved.",
+        "weakness": "Vision classifiers and a single pruning heuristic; accuracy-parity metric; mitigation adds optimization cost.",
+        "implication": "An efficiency transform that looks 'fair' on mean accuracy can be systematically unfair to minority groups, so compression must be audited per-group.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p39",
+      "type": "Paper",
+      "label": "A Fair Loss Function for Network Pruning",
+      "properties": {
+        "type": "Paper",
+        "label": "A Fair Loss Function for Network Pruning",
+        "id": "p39",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "NeurIPS 2022 TSRML Workshop",
+        "url": "https://arxiv.org/abs/2211.10285",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "Adding a fairness loss during pruning keeps accuracy balanced across skin tones instead of letting AUC-ROC drift apart.",
+        "keyFinding": "Pruning alone causes divergent AUC-ROC across dark vs light skin tones; a fair pruning loss eliminates that divergence while preserving sparsity.",
+        "weakness": "Face/skin-tone centric; fairness term is a heuristic loss weight; narrow classifier and dataset.",
+        "implication": "The pruning objective itself is the correct place to inject fairness, rather than post-hoc rebalancing of the sparse model.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p40",
+      "type": "Paper",
+      "label": "Coupling Fairness and Pruning in a Single Run: a Bi-level Optimization Perspective",
+      "properties": {
+        "type": "Paper",
+        "label": "Coupling Fairness and Pruning in a Single Run: a Bi-level Optimization Perspective",
+        "id": "p40",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2312.10181",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "Pruning and fairness are solved together as a single bi-level problem, so the sparse model satisfies both sparsity and group-fairness goals.",
+        "keyFinding": "Treating fairness as a constraint inside a bi-level optimization lets pruning reach high sparsity without sacrificing equalized-odds across groups, outperforming post-hoc pruning-then-rebalancing.",
+        "weakness": "Optimization more expensive and hyperparameter-sensitive; uses standard fairness benchmarks instead of LLM/foundation-model settings.",
+        "implication": "Compression and fairness should be co-optimized, not sequential, because pruning first and correcting later tends to entrench disparity.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p41",
+      "type": "Paper",
+      "label": "FairGRAPE: Fairness-aware GRAdient Pruning mEthod for Face Attribute Classification",
+      "properties": {
+        "type": "Paper",
+        "label": "FairGRAPE: Fairness-aware GRAdient Pruning mEthod for Face Attribute Classification",
+        "id": "p41",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2207.10888",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "A fairness-aware gradient-pruning criterion prunes networks for face attributes without worsening demographic imbalance.",
+        "keyFinding": "Using a fairness-aware ranking of gradients (rather than plain magnitude) preserves demographic parity and individual fairness while pruning.",
+        "weakness": "Face-specific; limited to attribute classification and one fairness metric; assumes well-annotated group labels.",
+        "implication": "The criterion by which weights are pruned is itself a fairness lever; blind magnitude pruning can select the weights that protect minority groups.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p42",
+      "type": "Paper",
+      "label": "Balancing Act: Constraining Disparate Impact in Sparse Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Balancing Act: Constraining Disparate Impact in Sparse Models",
+        "id": "p42",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2310.20673",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "Sparsity and disparate-impact constraints are enforced together, giving sparse models that stay fair by construction.",
+        "keyFinding": "One can attain high sparsity while holding disparate impact near the pre-pruning level, but there is a real sparsity-versus-fairness trade-off a joint method navigates far better than post-hoc corrections.",
+        "weakness": "Constrained optimization adds cost; benchmark-centered; guarantee depends on reliable group labels.",
+        "implication": "Sparse-model fairness must be a hard constraint during training/compression, not an afterthought, and comes at a measurable sparsity cost.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p43",
+      "type": "Paper",
+      "label": "Fair Scratch Tickets: Finding Fair Sparse Networks without Weight Training",
+      "properties": {
+        "type": "Paper",
+        "label": "Fair Scratch Tickets: Finding Fair Sparse Networks without Weight Training",
+        "id": "p43",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "CVPR 2023",
+        "url": "https://openaccess.thecvf.com/content/CVPR2023/html/Tang_Fair_Scratch_Tickets_Finding_Fair_Sparse_Networks_Without_Weight_Training_CVPR_2023_paper.html",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "Fair, sparse winning tickets exist and can be identified in one shot without training, when importance is scored by a fairness-aware criterion.",
+        "keyFinding": "Iterative magnitude pruning using a fairness-aware importance score finds sparse subnetworks that preserve (or improve) fairness while retaining accuracy.",
+        "weakness": "Dataset/domain specific (image classification); fairness depends on the chosen importance metric and annotation; no large-transformer scaling.",
+        "implication": "Fairness can be embedded in the selection of a sparse subnetwork at initialization, so compression need not be a fairness tax if the right subnetwork is chosen.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p44",
+      "type": "Paper",
+      "label": "You Never Know: Quantization Induces Inconsistent Biases in Vision-Language Foundation Models",
+      "properties": {
+        "type": "Paper",
+        "label": "You Never Know: Quantization Induces Inconsistent Biases in Vision-Language Foundation Models",
+        "id": "p44",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2410.20265",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "Quantization's effect on multimodal bias is inconsistent across models and precision, so it cannot be assumed harmful or harmless.",
+        "keyFinding": "Quantization-induced bias changes vary in direction and magnitude across vision-language models and bit-widths, so no single 'quantization hurts fairness' claim holds.",
+        "weakness": "Multimodal scope; bias measured with a limited set of social-bias benchmarks; no consistent predictive rule.",
+        "implication": "Fairness audits of quantized foundation models must be per-model and per-precision, since aggregate assumptions mislead.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d3_03",
+      "type": "Paper",
+      "label": "How Quantization Shapes Bias in Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "How Quantization Shapes Bias in Large Language Models",
+        "id": "d3_03",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL/cs.LG)",
+        "url": "https://arxiv.org/abs/2508.18088",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d3",
+        "oneLiner": "Quantization slightly increases stereotype/unfairness in generation while reducing toxicity, to varying degree by subgroup and setting.",
+        "keyFinding": "Aggressive quantization tends to increase stereotypes and unfairness in generative tasks, with subgroup- and model-dependent magnitudes; toxicity can decline.",
+        "weakness": "Reports average trends but notes magnitude varies by setting; does not isolate a mechanism; no early-exit/depth dimension; descriptive rather than causal.",
+        "implication": "Establishes that compression redistributes bias onto (generative) fairness dimensions, and that per-subgroup effects are real and heterogeneous.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 11,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d3_02",
+      "type": "Paper",
+      "label": "Fair-GPTQ: Bias-Aware Quantization for Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Fair-GPTQ: Bias-Aware Quantization for Large Language Models",
+        "id": "d3_02",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL)",
+        "url": "https://arxiv.org/abs/2509.15206",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d3",
+        "oneLiner": "Adding fairness constraints to the quantization objective reduces bias with minimal accuracy loss.",
+        "keyFinding": "Fair-GPTQ reduces unfairness vs. a half-precision model while retaining >=90% zero-shot accuracy and 4-bit memory/speed benefits.",
+        "weakness": "Focuses on stereotype/occupational/discriminatory language (narrow bias types); no depth/early-exit dimension; accuracy-preservation floor of 90% is loose; limited model scale.",
+        "implication": "Shows compression-induced unfairness is controllable at the objective level — a template for fairness-aware depth budgets in d3.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 12,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d3_01",
+      "type": "Paper",
+      "label": "Explaining How Quantization Disparately Skews a Model",
+      "properties": {
+        "type": "Paper",
+        "label": "Explaining How Quantization Disparately Skews a Model",
+        "id": "d3_01",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.LG/cs.AI/cs.CY)",
+        "url": "https://arxiv.org/abs/2509.07222",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d3",
+        "oneLiner": "Quantization cascades through the network to lower logit variance and worsen minority-group accuracy.",
+        "keyFinding": "Quantization-induced changes to weights/activations cascade to lower logit variance, higher loss, and compromised group accuracy, particularly for minority groups; mitigable via mixed-precision QAT + reweighting.",
+        "weakness": "Image/classification-oriented analysis; no open-ended generation or LLM benchmark; mechanism is optimization-theoretic, not evaluated on demographic LLM fairness datasets.",
+        "implication": "Provides the causal mechanism (logit-variance collapse) that d3 predicts also operates in depth-budgeted/early-exit inference.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 13,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p48",
+      "type": "Paper",
+      "label": "RELIANT: Fair Knowledge Distillation for Graph Neural Networks",
+      "properties": {
+        "type": "Paper",
+        "label": "RELIANT: Fair Knowledge Distillation for Graph Neural Networks",
+        "id": "p48",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2301.01150",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "A distillation loss that propagates fairness to a compact student, keeping compressed students group-fair.",
+        "keyFinding": "Naive distillation inherits (and can amplify) teacher bias; adding a fairness-aware distillation objective yields fair, compact students without much accuracy loss.",
+        "weakness": "Graph/transductive domain; requires an available teacher; fairness measured on graph node attributes.",
+        "implication": "Distillation — a model-reduction transform — is a vector for bias transfer, so the student objective must explicitly enforce fairness.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p49",
+      "type": "Paper",
+      "label": "What Is Left After Distillation? How Knowledge Transfer Impacts Fairness and Bias",
+      "properties": {
+        "type": "Paper",
+        "label": "What Is Left After Distillation? How Knowledge Transfer Impacts Fairness and Bias",
+        "id": "p49",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2410.08407",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "Distillation is not fairness-neutral — it can amplify or reduce bias depending on teacher/student and settings.",
+        "keyFinding": "Distilling a teacher into a smaller student shifts bias meaningfully, and the direction depends on distillation hyperparameters, teacher bias, and student capacity.",
+        "weakness": "Descriptive, benchmark-driven; bias metrics are limited proxies; no corrective method proposed.",
+        "implication": "Model reduction via distillation must be audited for fairness, because the smaller model can carry more (not less) bias than the teacher.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p50",
+      "type": "Paper",
+      "label": "Characterising Bias in Compressed Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Characterising Bias in Compressed Models",
+        "id": "p50",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "arXiv / ICLR (preprint)",
+        "url": "https://arxiv.org/abs/2010.03058",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C5",
+        "directionId": "",
+        "oneLiner": "Compression does not affect all groups equally, so compressed models can be less fair than the originals.",
+        "keyFinding": "Distillation and pruning at aggressive rates disproportionately hurt underrepresented groups even when average performance is maintained, and the bias depends on the compression method.",
+        "weakness": "Focuses on standard compression methods and a set of benchmarks; group definitions and bias metrics limit scope.",
+        "implication": "Compression is a fairness risk even when it preserves mean accuracy, so subgroup-level auditing is required for any model-reduction technique.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p51",
+      "type": "Paper",
+      "label": "On Calibration of Modern Neural Networks: Temperature Scaling",
+      "properties": {
+        "type": "Paper",
+        "label": "On Calibration of Modern Neural Networks: Temperature Scaling",
+        "id": "p51",
+        "stage": "survey",
+        "role": "method",
+        "year": "2017",
+        "venue": "ICML 2017",
+        "url": "https://arxiv.org/abs/1706.04599",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "Introduces temperature scaling as a simple, effective post-hoc calibration method for modern neural nets.",
+        "keyFinding": "Modern networks are overconfident (poor ECE), and a single temperature parameter learned on validation data substantially recalibrates them, better than Platt or binning in many settings.",
+        "weakness": "Post-hoc on validation data; a single global temperature is not group- or input-conditional; assumes a well-defined label distribution.",
+        "implication": "Confidence scores are systematically miscalibrated, so any threshold on confidence (e.g., early exit) inherits that miscalibration.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p52",
+      "type": "Paper",
+      "label": "Can LLMs Express Their Uncertainty? An Empirical Evaluation of Confidence Elicitation in LLMs",
+      "properties": {
+        "type": "Paper",
+        "label": "Can LLMs Express Their Uncertainty? An Empirical Evaluation of Confidence Elicitation in LLMs",
+        "id": "p52",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "ICLR 2024",
+        "url": "https://arxiv.org/abs/2306.13063",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "LLM verbalized confidence exhibits substantial overconfidence and poor failure prediction, casting doubt on its reliability.",
+        "keyFinding": "Vanilla verbalized confidence is overconfident and unreliable for detecting wrong answers; certain prompting/self-consistency methods improve uncertainty estimation but not to a reliable degree.",
+        "weakness": "Evaluates a limited set of elicitation strategies and tasks; confidence is not fully calibrated without post-processing.",
+        "implication": "Since LLM confidence is unreliable, any confidence-driven early-exit decision has an uncertain basis, which could differ by input/group.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p53",
+      "type": "Paper",
+      "label": "Semantic Uncertainty: Linguistic Invariances for Uncertainty Estimation in Natural Language Generation",
+      "properties": {
+        "type": "Paper",
+        "label": "Semantic Uncertainty: Linguistic Invariances for Uncertainty Estimation in Natural Language Generation",
+        "id": "p53",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "ICLR 2023",
+        "url": "https://arxiv.org/abs/2302.09664",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "Aggregate sampling entropy over meaning-equivalent outputs to estimate generation uncertainty.",
+        "keyFinding": "Semantic entropy better distinguishes correct from incorrect generations than token-level metrics, improving selective prediction and could reduce hallucination risk.",
+        "weakness": "Requires multiple samples and an entailment model; relies on the meaning-partitioning assumption; cost is high.",
+        "implication": "Token-level confidence is a poor proxy for generation uncertainty; meaning-aware uncertainty is more reliable.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p54",
+      "type": "Paper",
+      "label": "Thermometer: Towards Universal Calibration for Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Thermometer: Towards Universal Calibration for Large Language Models",
+        "id": "p54",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "ICML 2024",
+        "url": "https://arxiv.org/abs/2403.08819",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "A universal calibrator that works across tasks and distributions, avoiding per-task temperature tuning.",
+        "keyFinding": "Thermometer generalizes temperature-scaling-style calibration across tasks, achieving better calibration with fewer labels and being robust to distribution shift.",
+        "weakness": "Requires some labeled data; may not fully capture uncertainty in open-ended generation; calibration quality depends on calibration set.",
+        "implication": "Calibration can be made task- and distribution-agnostic, but the calibration data composition (and any group skew) still matters.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p55",
+      "type": "Paper",
+      "label": "Teaching Models to Express Their Uncertainty in Words",
+      "properties": {
+        "type": "Paper",
+        "label": "Teaching Models to Express Their Uncertainty in Words",
+        "id": "p55",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "ICML 2022",
+        "url": "https://arxiv.org/abs/2205.14334",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "Fine-tune a model to verbalize calibrated confidence about its sampled answers.",
+        "keyFinding": "Trained verbalized confidence is better calibrated and more accurate than a baseline, improving calibration and selective prediction.",
+        "weakness": "Requires sampled answers; verbalization is not fully reliable for very open tasks; not group-disaggregated.",
+        "implication": "Confidence can be learned as a first-class output rather than derived from logits, offering a controllable uncertainty signal for exit decisions.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p56",
+      "type": "Paper",
+      "label": "Entropy Alone is Insufficient for Safe Selective Prediction in LLMs",
+      "properties": {
+        "type": "Paper",
+        "label": "Entropy Alone is Insufficient for Safe Selective Prediction in LLMs",
+        "id": "p56",
+        "stage": "survey",
+        "role": "method",
+        "year": "2025",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2603.21172",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "Shows entropy is not a safe standalone signal for when LLMs should abstain or be trusted.",
+        "keyFinding": "Low-entropy high-confidence outputs can still be wrong, so entropy alone is not a safe abstention/trust signal.",
+        "weakness": "Entropy is a single-uncertainty proxy; findings depend on task and model; framing is empiricist.",
+        "implication": "Early-exit decisions based purely on entropy (or confidence) may be unsafe, since low-uncertainty tokens can still be incorrect.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p57",
+      "type": "Paper",
+      "label": "Revisiting Uncertainty Estimation and Calibration of Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Revisiting Uncertainty Estimation and Calibration of Large Language Models",
+        "id": "p57",
+        "stage": "survey",
+        "role": "method",
+        "year": "2025",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2505.23854",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "Reassesses LLM uncertainty/calibration across methods and models, showing dependency on model and task.",
+        "keyFinding": "Uncertainty-estimation quality and calibration vary substantially across methods, models, and tasks, and are rarely reliable enough for risk-sensitive decisions.",
+        "weakness": "Descriptive; relies on calibration/uncertainty proxies; limited corrective method.",
+        "implication": "Portable, reliable confidence for LLMs remains unsolved, so decisions on confidence (e.g., early exit) need per-model auditing.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p58",
+      "type": "Paper",
+      "label": "The Art of Abstention: Selective Prediction and Error Regularization for Natural Language Processing",
+      "properties": {
+        "type": "Paper",
+        "label": "The Art of Abstention: Selective Prediction and Error Regularization for Natural Language Processing",
+        "id": "p58",
+        "stage": "survey",
+        "role": "method",
+        "year": "2021",
+        "venue": "ACL 2021",
+        "url": "https://aclanthology.org/2021.acl-long.84/",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "A training objective that improves selective prediction (abstention) and the risk-coverage trade-off in NLP.",
+        "keyFinding": "Error-regularized selective prediction substantially improves risk-coverage and calibration, enabling models to abstain on hard inputs while preserving accuracy on confident ones.",
+        "weakness": "Focuses on classification-style NLP; abstention metrics may not map to generation; no group-level abstention analysis.",
+        "implication": "Selective prediction gives a principled lever for compute-and-answer decisions; how well it abstains per group is a fairness question.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p59",
+      "type": "Paper",
+      "label": "Calibrated Uncertainty Quantification for Multi-Modal LLMs",
+      "properties": {
+        "type": "Paper",
+        "label": "Calibrated Uncertainty Quantification for Multi-Modal LLMs",
+        "id": "p59",
+        "stage": "survey",
+        "role": "method",
+        "year": "2025",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2505.03788",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "Calibration tuned for text LLMs does not transfer to multimodal LLMs, so calibration must be modality-aware.",
+        "keyFinding": "Uncertainty calibration methods from text-only LLMs transfer poorly to multimodal LLMs, and modality-aware calibration improves reliability.",
+        "weakness": "Multimodal scope; relies on calibration/uncertainty proxies; limited model breadth.",
+        "implication": "Calibration must be tailored to the model/modality and its input distribution, which can vary across content types.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p60",
+      "type": "Paper",
+      "label": "The Well-Tempered Classifier: Some Elementary Properties of Temperature Scaling",
+      "properties": {
+        "type": "Paper",
+        "label": "The Well-Tempered Classifier: Some Elementary Properties of Temperature Scaling",
+        "id": "p60",
+        "stage": "survey",
+        "role": "method",
+        "year": "2026",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2602.14862",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "Analyzes temperature scaling's structural properties and its role/limits among calibration methods.",
+        "keyFinding": "Temperature scaling is uniquely simple/robust among post-hoc calibrators, and its effectiveness is tied to assumptions about the label/score distribution that may not always hold.",
+        "weakness": "Theoretical treatment with limited empirical breadth; assumes a well-defined score/label distribution.",
+        "implication": "Temperature scaling is a convenient but assumption-laden calibrator; its single scalar cannot fix distribution- or group-specific miscalibration.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p61",
+      "type": "Paper",
+      "label": "Beyond Post-Hoc Temperature Scaling: Bilevel Optimization for LLM Calibration",
+      "properties": {
+        "type": "Paper",
+        "label": "Beyond Post-Hoc Temperature Scaling: Bilevel Optimization for LLM Calibration",
+        "id": "p61",
+        "stage": "survey",
+        "role": "method",
+        "year": "2026",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2608.07419",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C6",
+        "directionId": "",
+        "oneLiner": "Calibrates LLMs via bilevel optimization, going beyond simple post-hoc temperature scaling.",
+        "keyFinding": "Bilevel-optimized calibration outperforms post-hoc temperature scaling in calibration error and robustness, while integrating with preference-based training.",
+        "weakness": "Optimization cost/complexity; evaluation on calibration proxies; limited breadth of models/tasks.",
+        "implication": "Calibration can be integrated into training rather than applied post-hoc, enabling more precise (potentially group-aware) calibration.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p62",
+      "type": "Paper",
+      "label": "BERT Rediscovers the Classical NLP Pipeline",
+      "properties": {
+        "type": "Paper",
+        "label": "BERT Rediscovers the Classical NLP Pipeline",
+        "id": "p62",
+        "stage": "survey",
+        "role": "method",
+        "year": "2019",
+        "venue": "ACL 2019 (BlackboxNLP Workshop)",
+        "url": "https://arxiv.org/abs/1905.05950",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "BERT's layers recapitulate the classical NLP pipeline, with syntax emerging early and semantics later.",
+        "keyFinding": "Per-layer probing accuracy organizes into a clear bottom-up order (surface → syntactic → semantic), each task peaking at a characteristic depth and often declining afterward.",
+        "weakness": "Linear probes are read-only and show only what is decodable, not what the model uses; limited to BERT-base and English.",
+        "implication": "Representation 'maturity' is task- and depth-specific, so a fixed-depth readout (including an early exit) captures different information for different inputs.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p63",
+      "type": "Paper",
+      "label": "The Bottom-up Evolution of Representations in the Transformer: A Study with Machine Translation and Language Modeling Objectives",
+      "properties": {
+        "type": "Paper",
+        "label": "The Bottom-up Evolution of Representations in the Transformer: A Study with Machine Translation and Language Modeling Objectives",
+        "id": "p63",
+        "stage": "survey",
+        "role": "method",
+        "year": "2019",
+        "venue": "EMNLP 2019",
+        "url": "https://arxiv.org/abs/1909.01380",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "Transformer representations specialize bottom-up, with each type of linguistic knowledge emerging at a distinct layer.",
+        "keyFinding": "Lower layers encode language-general features that transfer across objectives, while deeper layers encode task-specific information; specialization is incremental and bottom-up.",
+        "weakness": "Focused on MT/LM objectives; relies on correlational probing and layer transfer.",
+        "implication": "The 'maturity depth' of a representation depends on the information type, so shallow outputs retain general structure but miss deep task-specific signal.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p64",
+      "type": "Paper",
+      "label": "Understanding Deep Neural Networks via Linear Separability of Hidden Layers",
+      "properties": {
+        "type": "Paper",
+        "label": "Understanding Deep Neural Networks via Linear Separability of Hidden Layers",
+        "id": "p64",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2307.13962",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "Hidden representations become linearly separable as depth increases, yielding a quantitative 'maturity' measure per layer.",
+        "keyFinding": "Linear separability of hidden representations increases progressively with depth and correlates with task accuracy, offering a layer-wise maturity metric.",
+        "weakness": "Evaluated primarily on vision/feedforward architectures rather than Transformer LLMs; separability is dataset-specific.",
+        "implication": "Separability is a computable, quantitative proxy for representation maturity that can be measured per subpopulation.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p65",
+      "type": "Paper",
+      "label": "Investigating Gender Bias in BERT",
+      "properties": {
+        "type": "Paper",
+        "label": "Investigating Gender Bias in BERT",
+        "id": "p65",
+        "stage": "survey",
+        "role": "method",
+        "year": "2020",
+        "venue": "arXiv preprint (workshop)",
+        "url": "https://arxiv.org/abs/2009.05021",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "Gender information is concentrated in particular BERT layers, and layer-wise probing localizes where stereotypes live.",
+        "keyFinding": "Gender bias is unevenly distributed across layers; a subset of layers is far more predictive of gender and stereotype associations, i.e., the bias 'matures' at specific depths.",
+        "weakness": "Encoder-only BERT, English, single demographic axis; probing is correlational and task-limited.",
+        "implication": "If gender is decodable mainly at specific layers, then the depth at which inference stops directly changes the amount of gender information available.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p66",
+      "type": "Paper",
+      "label": "Locating and Mitigating Gender Bias in Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Locating and Mitigating Gender Bias in Large Language Models",
+        "id": "p66",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2403.14409",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "Gender bias is localized to specific layers and components, so it can be targeted rather than treated uniformly.",
+        "keyFinding": "Gender bias concentrates in particular layers and modules (often MLPs and attention at certain depths); removing it there reduces bias with minimal general-performance loss.",
+        "weakness": "Bias measurement is attribute/task-dependent; mitigation heuristics may not generalize across all bias types.",
+        "implication": "The depth at which outputs are taken changes the effective bias level, so early-exit depth selection is a fairness lever.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p67",
+      "type": "Paper",
+      "label": "Projective Methods for Mitigating Gender Bias in Pre-trained Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Projective Methods for Mitigating Gender Bias in Pre-trained Language Models",
+        "id": "p67",
+        "stage": "survey",
+        "role": "method",
+        "year": "2024",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2403.18803",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "A gender subspace recurs across layers with varying strength, and projecting it out has layer-dependent effects.",
+        "keyFinding": "The feminine/masculine direction strength varies by layer (typically growing with depth), and projective debiasing behaves differently at different layers.",
+        "weakness": "Focus on the gender subspace in BERT-class encoder models; bias measured via a single-direction projection.",
+        "implication": "Since gender-direction strength is layer-dependent, exit depth directly affects how much gender information leaks into predictions.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p68",
+      "type": "Paper",
+      "label": "Gender Encoding Patterns in Pretrained Language Model Representations",
+      "properties": {
+        "type": "Paper",
+        "label": "Gender Encoding Patterns in Pretrained Language Model Representations",
+        "id": "p68",
+        "stage": "survey",
+        "role": "method",
+        "year": "2025",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2503.06734",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "Gender information is encoded unevenly across layers and contexts, revealing where demographic signals live.",
+        "keyFinding": "The degree of gender encoding varies substantially across layers and depends on context, so no single layer is a uniform 'gender' source.",
+        "weakness": "Recent preprint with narrower gender scope and limited model coverage; probing-based (correlational).",
+        "implication": "Layer-dependent gender encoding means the information available at an early-exit depth differs across contexts and groups.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p69",
+      "type": "Paper",
+      "label": "Fine-Tuned Transformers Show Clusters of Similar Representations Across Layers",
+      "properties": {
+        "type": "Paper",
+        "label": "Fine-Tuned Transformers Show Clusters of Similar Representations Across Layers",
+        "id": "p69",
+        "stage": "survey",
+        "role": "method",
+        "year": "2021",
+        "venue": "arXiv preprint (workshop)",
+        "url": "https://arxiv.org/abs/2109.08406",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "Transformer layers collapse into a few clusters of similar representations after fine-tuning, not a smooth gradient.",
+        "keyFinding": "Fine-tuned layers show block/clustered similarity structure (early, middle, late groups), so representation change is not monotonic and some layer groups are near-redundant.",
+        "weakness": "Focuses on representational similarity rather than task/attribute accuracy; encoder models only.",
+        "implication": "If layers form near-redundant clusters, exit-depth choice and per-group maturity differences depend on cluster boundaries.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p70",
+      "type": "Paper",
+      "label": "On the Effect of Dropping Layers of Pre-trained Transformer Models",
+      "properties": {
+        "type": "Paper",
+        "label": "On the Effect of Dropping Layers of Pre-trained Transformer Models",
+        "id": "p70",
+        "stage": "survey",
+        "role": "method",
+        "year": "2022",
+        "venue": "Computer Speech & Language (arXiv 2020)",
+        "url": "https://arxiv.org/abs/2004.03844",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "Some transformer layers are nearly redundant or even harmful, so layer removal is surprisingly cheap.",
+        "keyFinding": "Many layers (including middle and some early ones) can be removed with minimal accuracy loss, revealing differential per-layer contribution.",
+        "weakness": "Layer removal is a crude proxy for early exit; not tested for subpopulation fairness; encoder-heavy.",
+        "implication": "Since layer importance varies, the depth at which inference stops does not preserve information equally across inputs.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:p71",
+      "type": "Paper",
+      "label": "The Linear Representation Hypothesis and the Geometry of Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "The Linear Representation Hypothesis and the Geometry of Large Language Models",
+        "id": "p71",
+        "stage": "survey",
+        "role": "method",
+        "year": "2023",
+        "venue": "arXiv preprint (ICML 2024)",
+        "url": "https://arxiv.org/abs/2311.03658",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "C7",
+        "directionId": "",
+        "oneLiner": "LLM features are stored as linear directions, giving a geometric basis for reading concepts from hidden states.",
+        "keyFinding": "Provides formal conditions and evidence that concepts are represented as approximately linear directions in activation space, supporting linear probing and steering.",
+        "weakness": "Theory-oriented with limited empirical breadth; no direct per-layer maturity or demographic subgroup analysis.",
+        "implication": "If concepts are linear directions, a linear probe at a layer measures how 'mature' a concept's direction is there.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S1",
+      "type": "Survey",
+      "label": "A Survey of Early Exit Deep Neural Networks in NLP",
+      "properties": {
+        "type": "Survey",
+        "label": "A Survey of Early Exit Deep Neural Networks in NLP",
+        "id": "S1",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2025",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2501.07670",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Reviews early-exit methods for NLP models (encoder and decoder), including exit criteria (confidence, entropy, patience, hash), multi-exit architectures, training schemes (self-distillation, layer dropout), and efficiency/quality trade-offs, with a focus on NLP tasks and emerging LLM settings.",
+        "keyFinding": "Reviews early-exit methods for NLP models (encoder and decoder), including exit criteria (confidence, entropy, patience, hash), multi-exit architectures, training schemes (self-distillation, layer dropout), and efficiency/quality trade-offs, with a focus on NLP tasks and emerging LLM settings.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S2",
+      "type": "Survey",
+      "label": "Adaptive Inference through Early-Exit Networks: Design, Challenges and Directions",
+      "properties": {
+        "type": "Survey",
+        "label": "Adaptive Inference through Early-Exit Networks: Design, Challenges and Directions",
+        "id": "S2",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2021",
+        "venue": "arXiv / ACM workshop",
+        "url": "https://arxiv.org/abs/2106.05022",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Foundational survey of early-exit (adaptive inference) networks: where exits are placed, how the decision to exit is made, how accuracy and latency trade off, and the open design challenges and research directions.",
+        "keyFinding": "Foundational survey of early-exit (adaptive inference) networks: where exits are placed, how the decision to exit is made, how accuracy and latency trade off, and the open design challenges and research directions.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S3",
+      "type": "Survey",
+      "label": "Split Computing and Early Exiting for Deep Learning Applications: Survey and Research Challenges",
+      "properties": {
+        "type": "Survey",
+        "label": "Split Computing and Early Exiting for Deep Learning Applications: Survey and Research Challenges",
+        "id": "S3",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2021",
+        "venue": "arXiv / ACM Computing Surveys",
+        "url": "https://arxiv.org/abs/2103.04505",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Surveys split-computing (deploying neural networks across edge/cloud) and early-exit techniques together, covering when/where computation is offloaded or halted to reduce latency/resource use, and the open research challenges.",
+        "keyFinding": "Surveys split-computing (deploying neural networks across edge/cloud) and early-exit techniques together, covering when/where computation is offloaded or halted to reduce latency/resource use, and the open research challenges.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S4",
+      "type": "Survey",
+      "label": "Taming the Titans: A Survey of Efficient LLM Inference Serving",
+      "properties": {
+        "type": "Survey",
+        "label": "Taming the Titans: A Survey of Efficient LLM Inference Serving",
+        "id": "S4",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2025",
+        "venue": "INLG 2025 (ACL)",
+        "url": "https://aclanthology.org/2025.inlg-main.32/",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Survey of efficient LLM inference serving, covering model-level optimizations (speculative decoding, quantization, pruning, dynamic depth) and system-level techniques (batching, KV-cache management, scheduling) for throughput/latency/cost.",
+        "keyFinding": "Survey of efficient LLM inference serving, covering model-level optimizations (speculative decoding, quantization, pruning, dynamic depth) and system-level techniques (batching, KV-cache management, scheduling) for throughput/latency/cost.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S5",
+      "type": "Survey",
+      "label": "Towards Efficient Generative Large Language Model Serving: A Survey from Algorithms to Systems",
+      "properties": {
+        "type": "Survey",
+        "label": "Towards Efficient Generative Large Language Model Serving: A Survey from Algorithms to Systems",
+        "id": "S5",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2312.15234",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Comprehensive survey of generative LLM serving covering both algorithmic acceleration (speculative decoding, quantization, pruning, distillation) and systems (scheduling, batching, caching), and how they combine to reduce end-to-end inference cost.",
+        "keyFinding": "Comprehensive survey of generative LLM serving covering both algorithmic acceleration (speculative decoding, quantization, pruning, distillation) and systems (scheduling, batching, caching), and how they combine to reduce end-to-end inference cost.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S6",
+      "type": "Survey",
+      "label": "Speculative Decoding and Beyond: An In-Depth Survey of Techniques",
+      "properties": {
+        "type": "Survey",
+        "label": "Speculative Decoding and Beyond: An In-Depth Survey of Techniques",
+        "id": "S6",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2025",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2502.19732",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Deep survey of speculative decoding techniques (external draft models, self-speculative decoding, multi-token prediction, acceptance sampling) that accelerate LLM decoding while preserving output quality / distribution.",
+        "keyFinding": "Deep survey of speculative decoding techniques (external draft models, self-speculative decoding, multi-token prediction, acceptance sampling) that accelerate LLM decoding while preserving output quality / distribution.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S7",
+      "type": "Survey",
+      "label": "A Survey on Fairness in Large Language Models",
+      "properties": {
+        "type": "Survey",
+        "label": "A Survey on Fairness in Large Language Models",
+        "id": "S7",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2308.10149",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Survey of fairness in LLMs: definitions, sources of bias in data/training/inference, evaluation methods and benchmarks, and mitigation approaches, with attention to generative and downstream-task settings.",
+        "keyFinding": "Survey of fairness in LLMs: definitions, sources of bias in data/training/inference, evaluation methods and benchmarks, and mitigation approaches, with attention to generative and downstream-task settings.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S8",
+      "type": "Survey",
+      "label": "Bias and Fairness in Large Language Models: A Survey",
+      "properties": {
+        "type": "Survey",
+        "label": "Bias and Fairness in Large Language Models: A Survey",
+        "id": "S8",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2024",
+        "venue": "Computational Linguistics 50(3)",
+        "url": "https://arxiv.org/abs/2309.00770",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "A highly cited survey of bias and fairness in LLMs that organizes the field into intrinsic (data/representation), contextual, and extrinsic (downstream-task) bias, cataloguing datasets, metrics, and debiasing methods and critiquing evaluation practice.",
+        "keyFinding": "A highly cited survey of bias and fairness in LLMs that organizes the field into intrinsic (data/representation), contextual, and extrinsic (downstream-task) bias, cataloguing datasets, metrics, and debiasing methods and critiquing evaluation practice.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S9",
+      "type": "Survey",
+      "label": "Fairness in Large Language Models: A Taxonomic Survey",
+      "properties": {
+        "type": "Survey",
+        "label": "Fairness in Large Language Models: A Taxonomic Survey",
+        "id": "S9",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2024",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2404.01349",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Taxonomic survey of fairness in LLMs that maps fairness definitions, bias sources, evaluation methods, and mitigation approaches across the LLM life cycle (data, pre-training, fine-tuning, inference).",
+        "keyFinding": "Taxonomic survey of fairness in LLMs that maps fairness definitions, bias sources, evaluation methods, and mitigation approaches across the LLM life cycle (data, pre-training, fine-tuning, inference).",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S10",
+      "type": "Survey",
+      "label": "A Survey on Bias and Fairness in Machine Learning",
+      "properties": {
+        "type": "Survey",
+        "label": "A Survey on Bias and Fairness in Machine Learning",
+        "id": "S10",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2019",
+        "venue": "ACM Computing Surveys",
+        "url": "https://arxiv.org/abs/1908.09635",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Foundational survey of bias and fairness in machine learning: definitions, taxonomies of bias (in data, algorithm, user-interaction), fairness notions and metrics (parity, equalized odds, counterfactual), and mitigation (pre-, in-, post-processing).",
+        "keyFinding": "Foundational survey of bias and fairness in machine learning: definitions, taxonomies of bias (in data, algorithm, user-interaction), fairness notions and metrics (parity, equalized odds, counterfactual), and mitigation (pre-, in-, post-processing).",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "survey:S11",
+      "type": "Survey",
+      "label": "Calibration in Deep Learning: A Survey of the State-of-the-Art",
+      "properties": {
+        "type": "Survey",
+        "label": "Calibration in Deep Learning: A Survey of the State-of-the-Art",
+        "id": "S11",
+        "stage": "survey",
+        "role": "survey",
+        "year": "2023",
+        "venue": "arXiv preprint",
+        "url": "https://arxiv.org/abs/2308.01222",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "",
+        "oneLiner": "Survey of confidence calibration in deep learning: definitions of calibration (ECE, Brier), causes of miscalibration, post-hoc methods (temperature scaling, Platt, binning), and training-based calibration, with discussion of LLM frontiers.",
+        "keyFinding": "Survey of confidence calibration in deep learning: definitions of calibration (ECE, Brier), causes of miscalibration, post-hoc methods (temperature scaling, Platt, binning), and training-based calibration, with discussion of LLM frontiers.",
+        "weakness": "",
+        "implication": "",
+        "isSurvey": true,
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d1_01",
+      "type": "Paper",
+      "label": "Improving Group Fairness in Knowledge Distillation via Laplace Approximation of Early Exits",
+      "properties": {
+        "type": "Paper",
+        "label": "Improving Group Fairness in Knowledge Distillation via Laplace Approximation of Early Exits",
+        "id": "d1_01",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.LG/cs.AI)",
+        "url": "https://arxiv.org/abs/2505.01070",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d1",
+        "oneLiner": "Calibrated uncertainty extracted at early exits can be used to reweight training and improve group fairness in distillation.",
+        "keyFinding": "Laplace-based calibrated uncertainty at early exits more robustly identifies difficult/ambiguous instances than margin-based approaches, improving group fairness on MultiNLI.",
+        "weakness": "Small scale (BERT on one multi-label benchmark), evaluates group fairness only via reweighting-driven accuracy, and does not measure per-group exit-depth/accuracy-vs-depth distributions under a fixed threshold.",
+        "implication": "Suggests the exit-confidence signal is a legitimate fairness lever, motivating d1/d2: if calibration at exits is already used to improve fairness, a shared threshold may not exit at equal true-error across groups.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 14,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d1_02",
+      "type": "Paper",
+      "label": "Beyond Greedy Exits: Improved Early Exit Decisions for Risk Control and Reliability",
+      "properties": {
+        "type": "Paper",
+        "label": "Beyond Greedy Exits: Improved Early Exit Decisions for Risk Control and Reliability",
+        "id": "d1_02",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.LG/cs.AI)",
+        "url": "https://arxiv.org/abs/2509.23666",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d1",
+        "oneLiner": "A bandit-based adaptive exit threshold improves reliability and speedup but keeps risk marginal rather than group-wise.",
+        "keyFinding": "Adaptive, uncertainty-aware exit (UAT) yields 1.70-2.10x speedup with <2% drop and stronger risk control than static-threshold greedy exits.",
+        "weakness": "Focuses on reliability/risk and efficiency, not demographic groups; no per-group fairness analysis; risk guarantees are marginal, not per-group (so a group-gap could persist by construction).",
+        "implication": "Exit decision is a dynamic per-instance function; if the confidence signal is group-correlated, the adaptive threshold inherits that — an open door for d1/d2.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 15,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d1_03",
+      "type": "Paper",
+      "label": "The Diminishing Returns of Early-Exit Decoding in Modern LLMs",
+      "properties": {
+        "type": "Paper",
+        "label": "The Diminishing Returns of Early-Exit Decoding in Modern LLMs",
+        "id": "d1_03",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL/cs.AI)",
+        "url": "https://arxiv.org/abs/2603.23701",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d1",
+        "oneLiner": "Modern LLMs show diminishing and architecture-dependent early-exit potential.",
+        "keyFinding": "Early-exit usefulness is shrinking in newer models and depends on architecture (dense > MoE/SSM), scale (>20B) and tuning (base > tuned).",
+        "weakness": "Efficiency/suitability only — no fairness dimension; no per-group exit-depth or accuracy-vs-depth curves; ignores demographic stratification.",
+        "implication": "Any d1 fairness result is conditional on the model's early-exit suitability; a fairness gap may be negligible simply because the model rarely exits early.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 16,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d1_04",
+      "type": "Paper",
+      "label": "SimLens for Early Exit in Large Language Models: Eliciting Accurate Latent Predictions with One More Token",
+      "properties": {
+        "type": "Paper",
+        "label": "SimLens for Early Exit in Large Language Models: Eliciting Accurate Latent Predictions with One More Token",
+        "id": "d1_04",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL/cs.PF)",
+        "url": "https://arxiv.org/abs/2507.17618",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d1",
+        "oneLiner": "A training-free decoder yields accurate intermediate-layer predictions and an entropy-based confidence signal for early exit.",
+        "keyFinding": "SimLens recovers accurate intermediate predictions and improves Iso-Compute accuracy; SimExit gives ~1.15-1.40x speedup at controlled accuracy.",
+        "weakness": "Single-token decision tasks only; no demographic/group analysis; no per-group exit-depth audit; assumes a single shared Iso-Compute benchmark.",
+        "implication": "The exit signal (entropy/confidence) is now well-defined and accurate enough for d1 to compute per-group accuracy-vs-depth curves on it.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 17,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d1_05",
+      "type": "Paper",
+      "label": "HALF: Harm-Aware LLM Fairness Evaluation Aligned with Deployment",
+      "properties": {
+        "type": "Paper",
+        "label": "HALF: Harm-Aware LLM Fairness Evaluation Aligned with Deployment",
+        "id": "d1_05",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL/cs.AI)",
+        "url": "https://arxiv.org/abs/2510.12217",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d1",
+        "oneLiner": "A deployment-aligned, harm-weighted framework shows LLM fairness is uneven across domains and not guaranteed by scale.",
+        "keyFinding": "Fairness is domain-contingent and not guaranteed by model size/performance; reasoning models vary by domain (good in medical, worse in education).",
+        "weakness": "No adaptive-inference/depth dimension; not about exit-depth or per-group compute; harm weighting is opinion-derived and domain-level not group-level.",
+        "implication": "For d1, per-group fairness of adaptive compute must be assessed within deployment context and by harm severity, not just aggregate metrics.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 18,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d2_01",
+      "type": "Paper",
+      "label": "Token-Level Entropy Reveals Demographic Disparities in Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Token-Level Entropy Reveals Demographic Disparities in Large Language Models",
+        "id": "d2_01",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL/cs.CV)",
+        "url": "https://arxiv.org/abs/2501.19337",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d2",
+        "oneLiner": "LLM token-entropy is already differentiated by signaled race/gender, so a confidence-gated exit threshold may exit differently across groups.",
+        "keyFinding": "Black-associated names yield higher first-token entropy/diversity than White ones (uniformly signed across models), whereas explicit label probing is mostly null/reversed.",
+        "weakness": "Sentence-completion entropy only; not tied to any early-exit/adaptive-compute policy; small per-prompt effects; no calibration/ECE analysis; chat-format dependence complicates generalization.",
+        "implication": "If entropy gates early exit (CALM/PABEE-style), a single shared threshold will not yield equal exit-depth or equal true-error across groups — the d2 hypothesis.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 19,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d2_02",
+      "type": "Paper",
+      "label": "The Confidence Trap: Gender Bias and Predictive Certainty in LLMs",
+      "properties": {
+        "type": "Paper",
+        "label": "The Confidence Trap: Gender Bias and Predictive Certainty in LLMs",
+        "id": "d2_02",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "AAAI 2026 (also arXiv preprint cs.CL/cs.LG)",
+        "url": "https://arxiv.org/abs/2601.07806",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d2",
+        "oneLiner": "A fairness-aware calibration metric (Gender-ECE) reveals that model confidence is group-miscalibrated on gender bias.",
+        "keyFinding": "Models differ sharply in gender calibration; Gemma-2 is worst; raw confidence calibration does not reflect gender fairness.",
+        "weakness": "Gendered-pronoun resolution only (binary gender, a narrow task); six models; no mitigation/intervention; not tied to an adaptive-exit confidence policy.",
+        "implication": "Shared confidence thresholds are group-miscalibrated on a protected dimension, amplifying the risk that adaptive-exit decisions discriminate.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 20,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d2_03",
+      "type": "Paper",
+      "label": "Hierarchical Group-Conditional Conformal Risk Control for Selective Prediction in Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Hierarchical Group-Conditional Conformal Risk Control for Selective Prediction in Language Models",
+        "id": "d2_03",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.AI)",
+        "url": "https://arxiv.org/abs/2607.24562",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d2",
+        "oneLiner": "Hierarchical group-conditional conformal risk control enforces per-group risk guarantees on selective prediction with abstention.",
+        "keyFinding": "HG-CRC reaches ~0% per-group violation (empirically) on ARC for well-calibrated models while standard CRC violates the budget in up to 47% of shifted trials.",
+        "weakness": "Marginal-guarantee-forcing (not fairness-in-parity); high participation/coverage cost (22-37 points); still benchmark-specific; abstraction can trigger heavy abstention; not demographic-labeled fairness per se.",
+        "implication": "Provides a concrete, testable mechanism for d2: group-conditional thresholding/calibration can flatten per-group error while preserving group safety.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 21,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d2_04",
+      "type": "Paper",
+      "label": "Fair and Calibrated Toxicity Detection with Robust Training and Abstention",
+      "properties": {
+        "type": "Paper",
+        "label": "Fair and Calibrated Toxicity Detection with Robust Training and Abstention",
+        "id": "d2_04",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.LG)",
+        "url": "https://arxiv.org/abs/2605.14074",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d2",
+        "oneLiner": "Calibration disparity is a hidden fairness violation, and confidence-based abstention can be unfair across groups.",
+        "keyFinding": "Aggregate calibration can look perfect (ECE 0.013) while all subgroups are miscalibrated; temperature scaling fails on non-uniform miscalibration; confidence abstention underperforms for identity-mentioning content.",
+        "weakness": "Toxicity classification (not generation); per-identity rather than broad demographic groups; abstention is a yes/no safety decision, not a depth decision; small-scale.",
+        "implication": "For d2, both per-group calibration AND the abstention/exit decision itself can carry group bias — a shared exit threshold is doubly at risk.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 22,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d2_05",
+      "type": "Paper",
+      "label": "Density Ridge Selective Prediction for LLM and VLM Hallucination Detection under Calibration Label Scarcity",
+      "properties": {
+        "type": "Paper",
+        "label": "Density Ridge Selective Prediction for LLM and VLM Hallucination Detection under Calibration Label Scarcity",
+        "id": "d2_05",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.LG/cs.AI/cs.CV)",
+        "url": "https://arxiv.org/abs/2606.10198",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d2",
+        "oneLiner": "A density-ridge confidence estimator is more accurate but still degrades under calibration-label scarcity.",
+        "keyFinding": "Density-ridge scoring beats Semantic Entropy/log-probability by 5-20 AUROC points and degrades more gracefully under label scarcity (n_cal=200).",
+        "weakness": "No fairness/group dimension; hallucination-detection framing; no per-group calibration or demographic analysis; geometric estimator is domain-specific.",
+        "implication": "Per-group calibration for small demographic groups will face label scarcity; this work shows which estimator degrades least and how much.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 23,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d3_04",
+      "type": "Paper",
+      "label": "Uncertainty Drives Social Bias Changes in Quantized Large Language Models",
+      "properties": {
+        "type": "Paper",
+        "label": "Uncertainty Drives Social Bias Changes in Quantized Large Language Models",
+        "id": "d3_04",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL)",
+        "url": "https://arxiv.org/abs/2602.06181",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d3",
+        "oneLiner": "Quantization flips biases unpredictably and asymmetrically across groups, driven by uncertainty, even when aggregate bias is unchanged.",
+        "keyFinding": "Up to 21% of responses flip bias state with no aggregate change; uncertainty makes flips 3-11x more likely; asymmetric group impacts (+18.6% worse / -14.1% better) cancel in aggregate.",
+        "weakness": "Quantization-specific (not pruning/early-exit); uncertainty link is correlational; group-specific shifts vary unpredictably across models, limiting portability of conclusions.",
+        "implication": "The uncertainty/confidence signal is the driver of compression-induced, group-asymmetric error — directly bridging d3 to d2 and to d1's entropy-gated exit.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 24,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "paper:d3_05",
+      "type": "Paper",
+      "label": "The Impact of Inference Acceleration on Bias of LLMs",
+      "properties": {
+        "type": "Paper",
+        "label": "The Impact of Inference Acceleration on Bias of LLMs",
+        "id": "d3_05",
+        "stage": "latest",
+        "role": "B",
+        "year": "",
+        "venue": "arXiv preprint (cs.CL/cs.AI/cs.LG)",
+        "url": "https://arxiv.org/abs/2410.22118",
+        "arxivId": "",
+        "doi": "",
+        "clusterId": "",
+        "directionId": "d3",
+        "oneLiner": "Inference acceleration changes LLM bias in complex, model- and strategy-specific ways.",
+        "keyFinding": "Acceleration optimizations cause significant, unpredictable changes in demographic bias; effects vary by strategy-model-bias-type combination.",
+        "weakness": "Older (outside strict window); observable-level and unpredictable; no mechanistic explanation; no per-group exit-depth or depth-budget analysis; acceleration strategies treated at a high level.",
+        "implication": "Adopting acceleration (including adaptive-depth) without per-group re-audit risks silent bias shifts — the practical motivation for d3 and d1.",
+        "isSurvey": false,
+        "x": null,
+        "y": null,
+        "community": 25,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p001",
+      "type": "OpenProblem",
+      "label": "Do different demographic groups exit at systematically different depths (exit-distribution disparity)?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Do different demographic groups exit at systematically different depths (exit-distribution disparity)?",
+        "clusterId": "C1",
+        "question": "Do different demographic groups exit at systematically different depths (exit-distribution disparity)?",
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p002",
+      "type": "OpenProblem",
+      "label": "Is the confidence/entropy that drives exit equally reliable across groups? (calibration disparity)",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Is the confidence/entropy that drives exit equally reliable across groups? (calibration disparity)",
+        "clusterId": "C1",
+        "question": "Is the confidence/entropy that drives exit equally reliable across groups? (calibration disparity)",
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p003",
+      "type": "OpenProblem",
+      "label": "Are accuracy-vs-depth curves different across groups, so a fixed threshold yields unequal quality? (layer-wise capability disparity)",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Are accuracy-vs-depth curves different across groups, so a fixed threshold yields unequal quality? (layer-wise capability disparity)",
+        "clusterId": "C1",
+        "question": "Are accuracy-vs-depth curves different across groups, so a fixed threshold yields unequal quality? (layer-wise capability disparity)",
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p004",
+      "type": "OpenProblem",
+      "label": "Can a learned exit router be trained to be group-fair?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Can a learned exit router be trained to be group-fair?",
+        "clusterId": "C1",
+        "question": "Can a learned exit router be trained to be group-fair?",
+        "x": null,
+        "y": null,
+        "community": 0,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p005",
+      "type": "OpenProblem",
+      "label": "Does the draft acceptance rate (and hence per-token compute saved) differ across demographic groups?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Does the draft acceptance rate (and hence per-token compute saved) differ across demographic groups?",
+        "clusterId": "C2",
+        "question": "Does the draft acceptance rate (and hence per-token compute saved) differ across demographic groups?",
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p006",
+      "type": "OpenProblem",
+      "label": "Does lossless verification preserve the exact output distribution for all groups, or only in aggregate?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Does lossless verification preserve the exact output distribution for all groups, or only in aggregate?",
+        "clusterId": "C2",
+        "question": "Does lossless verification preserve the exact output distribution for all groups, or only in aggregate?",
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p007",
+      "type": "OpenProblem",
+      "label": "Can self-speculative drafting be calibrated to be group-fair?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Can self-speculative drafting be calibrated to be group-fair?",
+        "clusterId": "C2",
+        "question": "Can self-speculative drafting be calibrated to be group-fair?",
+        "x": null,
+        "y": null,
+        "community": 1,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p008",
+      "type": "OpenProblem",
+      "label": "Which efficiency transform most changes per-group output quality?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Which efficiency transform most changes per-group output quality?",
+        "clusterId": "C3",
+        "question": "Which efficiency transform most changes per-group output quality?",
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p009",
+      "type": "OpenProblem",
+      "label": "Is dropping layers (a depth-budgeting primitive) fairness-neutral or does it hurt specific groups?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Is dropping layers (a depth-budgeting primitive) fairness-neutral or does it hurt specific groups?",
+        "clusterId": "C3",
+        "question": "Is dropping layers (a depth-budgeting primitive) fairness-neutral or does it hurt specific groups?",
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p010",
+      "type": "OpenProblem",
+      "label": "How do KV-cache eviction and quantization interact with adaptive depth fairness?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "How do KV-cache eviction and quantization interact with adaptive depth fairness?",
+        "clusterId": "C3",
+        "question": "How do KV-cache eviction and quantization interact with adaptive depth fairness?",
+        "x": null,
+        "y": null,
+        "community": 2,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p011",
+      "type": "OpenProblem",
+      "label": "Which fairness notion (parity, counterfactual, accuracy gap) best captures adaptive-inference harm?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Which fairness notion (parity, counterfactual, accuracy gap) best captures adaptive-inference harm?",
+        "clusterId": "C4",
+        "question": "Which fairness notion (parity, counterfactual, accuracy gap) best captures adaptive-inference harm?",
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p012",
+      "type": "OpenProblem",
+      "label": "How to measure per-group accuracy/quality gaps when computation is budgeted?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "How to measure per-group accuracy/quality gaps when computation is budgeted?",
+        "clusterId": "C4",
+        "question": "How to measure per-group accuracy/quality gaps when computation is budgeted?",
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p013",
+      "type": "OpenProblem",
+      "label": "Do the standard benchmarks have enough coverage to detect early-exit- induced disparity?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Do the standard benchmarks have enough coverage to detect early-exit- induced disparity?",
+        "clusterId": "C4",
+        "question": "Do the standard benchmarks have enough coverage to detect early-exit- induced disparity?",
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p014",
+      "type": "OpenProblem",
+      "label": "How to aggregate accuracy and bias (the 'bias score' tension) in a fair-decision-aware way?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "How to aggregate accuracy and bias (the 'bias score' tension) in a fair-decision-aware way?",
+        "clusterId": "C4",
+        "question": "How to aggregate accuracy and bias (the 'bias score' tension) in a fair-decision-aware way?",
+        "x": null,
+        "y": null,
+        "community": 3,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p015",
+      "type": "OpenProblem",
+      "label": "What is the general mechanism by which compression redistributes error onto minority groups, and does it transfer to depth-budgeted (early-exit) inference?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "What is the general mechanism by which compression redistributes error onto minority groups, and does it transfer to depth-budgeted (early-exit) inference?",
+        "clusterId": "C5",
+        "question": "What is the general mechanism by which compression redistributes error onto minority groups, and does it transfer to depth-budgeted (early-exit) inference?",
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p016",
+      "type": "OpenProblem",
+      "label": "Can a fairness penalty be added to the compression/exit objective without hurting efficiency?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Can a fairness penalty be added to the compression/exit objective without hurting efficiency?",
+        "clusterId": "C5",
+        "question": "Can a fairness penalty be added to the compression/exit objective without hurting efficiency?",
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p017",
+      "type": "OpenProblem",
+      "label": "Is there a principled accuracy/efficiency/fairness trade-off curve, and how should it be exposed?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Is there a principled accuracy/efficiency/fairness trade-off curve, and how should it be exposed?",
+        "clusterId": "C5",
+        "question": "Is there a principled accuracy/efficiency/fairness trade-off curve, and how should it be exposed?",
+        "x": null,
+        "y": null,
+        "community": 4,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p018",
+      "type": "OpenProblem",
+      "label": "Is confidence calibrated differently across demographic groups, so a shared threshold exits at different true-error levels?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Is confidence calibrated differently across demographic groups, so a shared threshold exits at different true-error levels?",
+        "clusterId": "C6",
+        "question": "Is confidence calibrated differently across demographic groups, so a shared threshold exits at different true-error levels?",
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p019",
+      "type": "OpenProblem",
+      "label": "How to measure group-wise ECE for exit decisions?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "How to measure group-wise ECE for exit decisions?",
+        "clusterId": "C6",
+        "question": "How to measure group-wise ECE for exit decisions?",
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p020",
+      "type": "OpenProblem",
+      "label": "Do selective-prediction / abstention methods perform differently per group?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Do selective-prediction / abstention methods perform differently per group?",
+        "clusterId": "C6",
+        "question": "Do selective-prediction / abstention methods perform differently per group?",
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p021",
+      "type": "OpenProblem",
+      "label": "Can temperature scaling or calibration be applied per-group before exiting?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Can temperature scaling or calibration be applied per-group before exiting?",
+        "clusterId": "C6",
+        "question": "Can temperature scaling or calibration be applied per-group before exiting?",
+        "x": null,
+        "y": null,
+        "community": 5,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p022",
+      "type": "OpenProblem",
+      "label": "Do demographic attributes (gender, race, etc.) become linearly separable at different depths for different groups?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Do demographic attributes (gender, race, etc.) become linearly separable at different depths for different groups?",
+        "clusterId": "C7",
+        "question": "Do demographic attributes (gender, race, etc.) become linearly separable at different depths for different groups?",
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p023",
+      "type": "OpenProblem",
+      "label": "Is layer importance/contribution heterogeneous such that a fixed exit depth preserves different information for different groups?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "Is layer importance/contribution heterogeneous such that a fixed exit depth preserves different information for different groups?",
+        "clusterId": "C7",
+        "question": "Is layer importance/contribution heterogeneous such that a fixed exit depth preserves different information for different groups?",
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    },
+    {
+      "id": "problem:p024",
+      "type": "OpenProblem",
+      "label": "How to operationalize 'representation maturity' (linear-separable / probe accuracy) as a per-group, per-layer metric?",
+      "properties": {
+        "type": "OpenProblem",
+        "label": "How to operationalize 'representation maturity' (linear-separable / probe accuracy) as a per-group, per-layer metric?",
+        "clusterId": "C7",
+        "question": "How to operationalize 'representation maturity' (linear-separable / probe accuracy) as a per-group, per-layer metric?",
+        "x": null,
+        "y": null,
+        "community": 6,
+        "betweenness": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "geid_70_0",
+      "source": "paper:p1",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_1",
+      "source": "cluster:C1",
+      "target": "paper:p1",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_2",
+      "source": "paper:p2",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_3",
+      "source": "cluster:C1",
+      "target": "paper:p2",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_4",
+      "source": "paper:p3",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_5",
+      "source": "cluster:C1",
+      "target": "paper:p3",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_6",
+      "source": "paper:p4",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_7",
+      "source": "cluster:C1",
+      "target": "paper:p4",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_8",
+      "source": "paper:p5",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_9",
+      "source": "cluster:C1",
+      "target": "paper:p5",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_10",
+      "source": "paper:p6",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_11",
+      "source": "cluster:C1",
+      "target": "paper:p6",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_12",
+      "source": "paper:p7",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_13",
+      "source": "cluster:C1",
+      "target": "paper:p7",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_14",
+      "source": "paper:p9",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_15",
+      "source": "cluster:C1",
+      "target": "paper:p9",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_16",
+      "source": "paper:p10",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_17",
+      "source": "cluster:C1",
+      "target": "paper:p10",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_18",
+      "source": "paper:p11",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_19",
+      "source": "cluster:C1",
+      "target": "paper:p11",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_20",
+      "source": "paper:p12",
+      "target": "cluster:C2",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_21",
+      "source": "cluster:C2",
+      "target": "paper:p12",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_22",
+      "source": "paper:p13",
+      "target": "cluster:C2",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_23",
+      "source": "cluster:C2",
+      "target": "paper:p13",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_24",
+      "source": "paper:p14",
+      "target": "cluster:C2",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_25",
+      "source": "cluster:C2",
+      "target": "paper:p14",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_26",
+      "source": "paper:p15",
+      "target": "cluster:C2",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_27",
+      "source": "cluster:C2",
+      "target": "paper:p15",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_28",
+      "source": "paper:p16",
+      "target": "cluster:C2",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_29",
+      "source": "cluster:C2",
+      "target": "paper:p16",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_30",
+      "source": "paper:p17",
+      "target": "cluster:C2",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_31",
+      "source": "cluster:C2",
+      "target": "paper:p17",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_32",
+      "source": "paper:p18",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_33",
+      "source": "cluster:C3",
+      "target": "paper:p18",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_34",
+      "source": "paper:p19",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_35",
+      "source": "cluster:C3",
+      "target": "paper:p19",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_36",
+      "source": "paper:p20",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_37",
+      "source": "cluster:C3",
+      "target": "paper:p20",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_38",
+      "source": "paper:p21",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_39",
+      "source": "cluster:C3",
+      "target": "paper:p21",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_40",
+      "source": "paper:p22",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_41",
+      "source": "cluster:C3",
+      "target": "paper:p22",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_42",
+      "source": "paper:p23",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_43",
+      "source": "cluster:C3",
+      "target": "paper:p23",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_44",
+      "source": "paper:p24",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_45",
+      "source": "cluster:C3",
+      "target": "paper:p24",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_46",
+      "source": "paper:p25",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_47",
+      "source": "cluster:C3",
+      "target": "paper:p25",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_48",
+      "source": "paper:p26",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_49",
+      "source": "cluster:C4",
+      "target": "paper:p26",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_50",
+      "source": "paper:p27",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_51",
+      "source": "cluster:C4",
+      "target": "paper:p27",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_52",
+      "source": "paper:p28",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_53",
+      "source": "cluster:C4",
+      "target": "paper:p28",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_54",
+      "source": "paper:p29",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_55",
+      "source": "cluster:C4",
+      "target": "paper:p29",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_56",
+      "source": "paper:p30",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_57",
+      "source": "cluster:C4",
+      "target": "paper:p30",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_58",
+      "source": "paper:p31",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_59",
+      "source": "cluster:C4",
+      "target": "paper:p31",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_60",
+      "source": "paper:p32",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_61",
+      "source": "cluster:C4",
+      "target": "paper:p32",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_62",
+      "source": "paper:p33",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_63",
+      "source": "cluster:C4",
+      "target": "paper:p33",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_64",
+      "source": "paper:p34",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_65",
+      "source": "cluster:C4",
+      "target": "paper:p34",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_66",
+      "source": "paper:p35",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_67",
+      "source": "cluster:C4",
+      "target": "paper:p35",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_68",
+      "source": "paper:p36",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_69",
+      "source": "cluster:C4",
+      "target": "paper:p36",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_70",
+      "source": "paper:p37",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_71",
+      "source": "cluster:C4",
+      "target": "paper:p37",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_72",
+      "source": "paper:p38",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_73",
+      "source": "cluster:C5",
+      "target": "paper:p38",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_74",
+      "source": "paper:p39",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_75",
+      "source": "cluster:C5",
+      "target": "paper:p39",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_76",
+      "source": "paper:p40",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_77",
+      "source": "cluster:C5",
+      "target": "paper:p40",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_78",
+      "source": "paper:p41",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_79",
+      "source": "cluster:C5",
+      "target": "paper:p41",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_80",
+      "source": "paper:p42",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_81",
+      "source": "cluster:C5",
+      "target": "paper:p42",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_82",
+      "source": "paper:p43",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_83",
+      "source": "cluster:C5",
+      "target": "paper:p43",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_84",
+      "source": "paper:p44",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_85",
+      "source": "cluster:C5",
+      "target": "paper:p44",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_86",
+      "source": "paper:p48",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_87",
+      "source": "cluster:C5",
+      "target": "paper:p48",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_88",
+      "source": "paper:p49",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_89",
+      "source": "cluster:C5",
+      "target": "paper:p49",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_90",
+      "source": "paper:p50",
+      "target": "cluster:C5",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_91",
+      "source": "cluster:C5",
+      "target": "paper:p50",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_92",
+      "source": "paper:p51",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_93",
+      "source": "cluster:C6",
+      "target": "paper:p51",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_94",
+      "source": "paper:p52",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_95",
+      "source": "cluster:C6",
+      "target": "paper:p52",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_96",
+      "source": "paper:p53",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_97",
+      "source": "cluster:C6",
+      "target": "paper:p53",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_98",
+      "source": "paper:p54",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_99",
+      "source": "cluster:C6",
+      "target": "paper:p54",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_100",
+      "source": "paper:p55",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_101",
+      "source": "cluster:C6",
+      "target": "paper:p55",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_102",
+      "source": "paper:p56",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_103",
+      "source": "cluster:C6",
+      "target": "paper:p56",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_104",
+      "source": "paper:p57",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_105",
+      "source": "cluster:C6",
+      "target": "paper:p57",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_106",
+      "source": "paper:p58",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_107",
+      "source": "cluster:C6",
+      "target": "paper:p58",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_108",
+      "source": "paper:p59",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_109",
+      "source": "cluster:C6",
+      "target": "paper:p59",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_110",
+      "source": "paper:p60",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_111",
+      "source": "cluster:C6",
+      "target": "paper:p60",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_112",
+      "source": "paper:p61",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_113",
+      "source": "cluster:C6",
+      "target": "paper:p61",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_114",
+      "source": "paper:p62",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_115",
+      "source": "cluster:C7",
+      "target": "paper:p62",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_116",
+      "source": "paper:p63",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_117",
+      "source": "cluster:C7",
+      "target": "paper:p63",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_118",
+      "source": "paper:p64",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_119",
+      "source": "cluster:C7",
+      "target": "paper:p64",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_120",
+      "source": "paper:p65",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_121",
+      "source": "cluster:C7",
+      "target": "paper:p65",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_122",
+      "source": "paper:p66",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_123",
+      "source": "cluster:C7",
+      "target": "paper:p66",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_124",
+      "source": "paper:p67",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_125",
+      "source": "cluster:C7",
+      "target": "paper:p67",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_126",
+      "source": "paper:p68",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_127",
+      "source": "cluster:C7",
+      "target": "paper:p68",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_128",
+      "source": "paper:p69",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_129",
+      "source": "cluster:C7",
+      "target": "paper:p69",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_130",
+      "source": "paper:p70",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_131",
+      "source": "cluster:C7",
+      "target": "paper:p70",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_132",
+      "source": "paper:p71",
+      "target": "cluster:C7",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_133",
+      "source": "cluster:C7",
+      "target": "paper:p71",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_134",
+      "source": "survey:S1",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_135",
+      "source": "cluster:C1",
+      "target": "survey:S1",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_136",
+      "source": "survey:S2",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_137",
+      "source": "cluster:C1",
+      "target": "survey:S2",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_138",
+      "source": "survey:S3",
+      "target": "cluster:C1",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_139",
+      "source": "cluster:C1",
+      "target": "survey:S3",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_140",
+      "source": "survey:S4",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_141",
+      "source": "cluster:C3",
+      "target": "survey:S4",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_142",
+      "source": "survey:S5",
+      "target": "cluster:C3",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_143",
+      "source": "cluster:C3",
+      "target": "survey:S5",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_144",
+      "source": "survey:S6",
+      "target": "cluster:C2",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_145",
+      "source": "cluster:C2",
+      "target": "survey:S6",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_146",
+      "source": "survey:S7",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_147",
+      "source": "cluster:C4",
+      "target": "survey:S7",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_148",
+      "source": "survey:S8",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_149",
+      "source": "cluster:C4",
+      "target": "survey:S8",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_150",
+      "source": "survey:S9",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_151",
+      "source": "cluster:C4",
+      "target": "survey:S9",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_152",
+      "source": "survey:S10",
+      "target": "cluster:C4",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_153",
+      "source": "cluster:C4",
+      "target": "survey:S10",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_154",
+      "source": "survey:S11",
+      "target": "cluster:C6",
+      "type": "SURVEY_COVERS",
+      "properties": {
+        "type": "SURVEY_COVERS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_155",
+      "source": "cluster:C6",
+      "target": "survey:S11",
+      "type": "CLUSTER_CONTAINS",
+      "properties": {
+        "type": "CLUSTER_CONTAINS",
+        "sourceStage": "survey"
+      }
+    },
+    {
+      "id": "geid_70_156",
+      "source": "cluster:C1",
+      "target": "problem:p001",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_157",
+      "source": "cluster:C1",
+      "target": "problem:p002",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_158",
+      "source": "cluster:C1",
+      "target": "problem:p003",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_159",
+      "source": "cluster:C1",
+      "target": "problem:p004",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_160",
+      "source": "cluster:C2",
+      "target": "problem:p005",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_161",
+      "source": "cluster:C2",
+      "target": "problem:p006",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_162",
+      "source": "cluster:C2",
+      "target": "problem:p007",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_163",
+      "source": "cluster:C3",
+      "target": "problem:p008",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_164",
+      "source": "cluster:C3",
+      "target": "problem:p009",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_165",
+      "source": "cluster:C3",
+      "target": "problem:p010",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_166",
+      "source": "cluster:C4",
+      "target": "problem:p011",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_167",
+      "source": "cluster:C4",
+      "target": "problem:p012",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_168",
+      "source": "cluster:C4",
+      "target": "problem:p013",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_169",
+      "source": "cluster:C4",
+      "target": "problem:p014",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_170",
+      "source": "cluster:C5",
+      "target": "problem:p015",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_171",
+      "source": "cluster:C5",
+      "target": "problem:p016",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_172",
+      "source": "cluster:C5",
+      "target": "problem:p017",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_173",
+      "source": "cluster:C6",
+      "target": "problem:p018",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_174",
+      "source": "cluster:C6",
+      "target": "problem:p019",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_175",
+      "source": "cluster:C6",
+      "target": "problem:p020",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_176",
+      "source": "cluster:C6",
+      "target": "problem:p021",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_177",
+      "source": "cluster:C7",
+      "target": "problem:p022",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_178",
+      "source": "cluster:C7",
+      "target": "problem:p023",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    },
+    {
+      "id": "geid_70_179",
+      "source": "cluster:C7",
+      "target": "problem:p024",
+      "type": "OPEN_PROBLEM_IN",
+      "properties": {
+        "type": "OPEN_PROBLEM_IN"
+      }
+    }
+  ]
+}

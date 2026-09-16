@@ -8,12 +8,12 @@ Autonomous Research System: an automated research control plane that goes from a
 
 | Document | Contents |
 |---|---|
-| [2026-08-20-autoresearch-ml-control-plane-design.md](2026-08-20-autoresearch-ml-control-plane-design.md) | **The single implementation baseline**: AutoResearchService + minimal state + dynamic rubric + autonomous iteration + Domain Profile (ML v1) |
-| [2026-08-16-candidate-to-paper-design.md](2026-08-16-candidate-to-paper-design.md) | candidate → paper end-to-end flow (default entry point) |
-| [2026-08-16-records-to-paper-design.md](2026-08-16-records-to-paper-design.md) | Existing experiment records → paper (second entry point) |
-| [2026-08-16-idea-generation-design.md](2026-08-16-idea-generation-design.md) | Brainstorming + candidate generation + gating |
-| [2026-08-15-hypothesis-local-pool-design.md](2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool lifecycle index |
-| [2026-08-15-autoresearch-figures-and-experiment-design.md](2026-08-15-autoresearch-figures-and-experiment-design.md) | Paper figures, trustworthy experiments, ablation rules |
+| [2026-08-20-autoresearch-ml-control-plane-design.md](docs/archive/designs/2026-08-20-autoresearch-ml-control-plane-design.md) | **The single implementation baseline**: AutoResearchService + minimal state + dynamic rubric + autonomous iteration + Domain Profile (ML v1) |
+| [2026-08-16-candidate-to-paper-design.md](docs/archive/designs/2026-08-16-candidate-to-paper-design.md) | candidate → paper end-to-end flow (default entry point) |
+| [2026-08-16-records-to-paper-design.md](docs/archive/designs/2026-08-16-records-to-paper-design.md) | Existing experiment records → paper (second entry point) |
+| [2026-08-16-idea-generation-design.md](docs/archive/designs/2026-08-16-idea-generation-design.md) | Brainstorming + candidate generation + gating |
+| [2026-08-15-hypothesis-local-pool-design.md](docs/archive/designs/2026-08-15-hypothesis-local-pool-design.md) | HypothesisPool lifecycle index |
+| [2026-08-15-autoresearch-figures-and-experiment-design.md](docs/archive/designs/2026-08-15-autoresearch-figures-and-experiment-design.md) | Paper figures, trustworthy experiments, ablation rules |
 
 ## Code Implementation
 
@@ -24,9 +24,9 @@ Autonomous Research System: an automated research control plane that goes from a
 
 | Group | Files |
 |---|---|
-| candidate→paper | [candidate-to-paper-handoff/](candidate-to-paper-handoff/): 00 master control + stages 01–10 |
-| records→paper | [records-paper-handoff/](records-paper-handoff/): 00 master control + 01, 02, 04, 05 (includes the data contract; writing reuses candidate 08) |
-| Minimal validation | [verify_exp/](verify_exp/): figure pipeline, drawio MCP, pure LLM / drawio results |
+| candidate→paper | [candidate-to-paper-handoff/](docs/workflows/candidate-to-paper-handoff/): 00 master control + stages 01–10 |
+| records→paper | [records-paper-handoff/](docs/workflows/records-paper-handoff/): 00 master control + 01, 02, 04, 05 (includes the data contract; writing reuses candidate 08) |
+| Minimal validation | [figure-validation/](experiments/figure-validation/): figure pipeline, drawio MCP, pure LLM / drawio results |
 
 ## Historical / Deferred References (Not the Implementation Baseline)
 

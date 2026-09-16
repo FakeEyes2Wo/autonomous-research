@@ -167,6 +167,12 @@ export function createWorkbench(config = {}, hooks = {}) {
     return configured ? safeProject(configured) : undefined
   }
 
+  async function projectOrThrow(id) {
+    const project = await validProject(id)
+    if (!project) throw problem(404, 'project_not_allowed', 'project is not in the server allowlist')
+    return project
+  }
+
   async function discovered(project) {
     const result = []
     const seen = new Set()
@@ -230,6 +236,12 @@ export function createWorkbench(config = {}, hooks = {}) {
     if (entry.root !== project.root) return undefined
     const safe = await safeDocument(entry.directory)
     return safe ? { ...entry, ...safe } : undefined
+  }
+
+  async function documentOrThrow(project, id) {
+    const document = await documentFor(project, id)
+    if (!document) throw problem(404, 'document_not_found', 'document is not available')
+    return document
   }
 
   async function withSaveLock(key, operation) {
@@ -544,49 +556,47 @@ export function createWorkbench(config = {}, hooks = {}) {
     if (!url.pathname.startsWith(PREFIX)) return false
     try {
       if (url.pathname === `${PREFIX}/session-target` && req.method === 'GET') {
-        const project = await validProject(url.searchParams.get('projectId'))
-        if (!project) return fail(res, 404, 'project_not_allowed', 'project is not in the server allowlist')
+        const project = await projectOrThrow(url.searchParams.get('projectId'))
         return json(res, 200, { projectId: project.id, workspaceId: project.workspaceId, cwd: project.root }) || true
       }
       if (url.pathname === `${PREFIX}/documents` && req.method === 'GET') {
-        const project = await validProject(url.searchParams.get('projectId'))
-        if (!project) return fail(res, 404, 'project_not_allowed', 'project is not in the server allowlist')
+        const project = await projectOrThrow(url.searchParams.get('projectId'))
         const compiler = await findCompiler(config)
         return json(res, 200, { documents: await list(project), engine: engineInfo(config, compiler) }) || true
       }
       if (url.pathname === `${PREFIX}/documents` && req.method === 'POST') {
         if (!jsonRequest(req)) return fail(res, 415, 'json_required', 'this endpoint accepts application/json only')
         const value = await body(req); if (!object(value)) throw problem(400, 'invalid_request', 'request must be an object')
-        const project = await validProject(value.projectId); if (!project) throw problem(404, 'project_not_allowed', 'project is not in the server allowlist')
+        const project = await projectOrThrow(value.projectId)
         return json(res, 201, await create(project)) || true
       }
       if (url.pathname === `${PREFIX}/document` && req.method === 'GET') {
-        const project = await validProject(url.searchParams.get('projectId')); if (!project) throw problem(404, 'project_not_allowed', 'project is not in the server allowlist')
-        const document = await documentFor(project, url.searchParams.get('documentId')); if (!document) throw problem(404, 'document_not_found', 'document is not available')
+        const project = await projectOrThrow(url.searchParams.get('projectId'))
+        const document = await documentOrThrow(project, url.searchParams.get('documentId'))
         return json(res, 200, await documentDto(project, document)) || true
       }
       if (url.pathname === `${PREFIX}/document` && req.method === 'PUT') {
         if (!jsonRequest(req)) return fail(res, 415, 'json_required', 'this endpoint accepts application/json only')
         const value = await body(req); if (!object(value)) throw problem(400, 'invalid_request', 'request must be an object')
-        const project = await validProject(value.projectId); if (!project) throw problem(404, 'project_not_allowed', 'project is not in the server allowlist')
-        const document = await documentFor(project, value.documentId); if (!document) throw problem(404, 'document_not_found', 'document is not available')
+        const project = await projectOrThrow(value.projectId)
+        const document = await documentOrThrow(project, value.documentId)
         return json(res, 200, await save(project, document, value.expectedRevision, value.source)) || true
       }
       if (url.pathname === `${PREFIX}/build` && req.method === 'POST') {
         if (!jsonRequest(req)) return fail(res, 415, 'json_required', 'this endpoint accepts application/json only')
         const value = await body(req); if (!object(value)) throw problem(400, 'invalid_request', 'request must be an object')
-        const project = await validProject(value.projectId); if (!project) throw problem(404, 'project_not_allowed', 'project is not in the server allowlist')
-        const document = await documentFor(project, value.documentId); if (!document) throw problem(404, 'document_not_found', 'document is not available')
+        const project = await projectOrThrow(value.projectId)
+        const document = await documentOrThrow(project, value.documentId)
         return json(res, 202, buildDto(project, document, await startBuild(project, document, value.expectedRevision))) || true
       }
       if (url.pathname === `${PREFIX}/build` && req.method === 'GET') {
-        const project = await validProject(url.searchParams.get('projectId')); if (!project) throw problem(404, 'project_not_allowed', 'project is not in the server allowlist')
+        const project = await projectOrThrow(url.searchParams.get('projectId'))
         const build = builds.get(url.searchParams.get('buildId')); if (!build || build.project.id !== project.id || build.project.root !== project.root) throw problem(404, 'build_not_found', 'build is not available')
         return json(res, 200, buildDto(project, build.document, build)) || true
       }
       if (url.pathname === `${PREFIX}/pdf` && req.method === 'GET') {
-        const project = await validProject(url.searchParams.get('projectId')); if (!project) throw problem(404, 'project_not_allowed', 'project is not in the server allowlist')
-        const document = await documentFor(project, url.searchParams.get('documentId')); if (!document) throw problem(404, 'document_not_found', 'document is not available')
+        const project = await projectOrThrow(url.searchParams.get('projectId'))
+        const document = await documentOrThrow(project, url.searchParams.get('documentId'))
         await readPdf(project, document, url.searchParams.get('version'), req, res); return true
       }
       return fail(res, 404, 'not_found', 'unknown workbench route')

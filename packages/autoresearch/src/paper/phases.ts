@@ -47,6 +47,14 @@ export function hasStyleRef(options: Readonly<PaperOptions>): boolean {
   return Boolean(options.styleRef)
 }
 
+async function writePaperSections(paperDir: string, sections?: Record<string, string>): Promise<void> {
+  for (const [name, content] of Object.entries(sections ?? {})) {
+    const file = join(paperDir, name)
+    await ensureDir(dirname(file))
+    await writeFile(file, content, 'utf8')
+  }
+}
+
 export async function readStyleProfile(runDir: string): Promise<string | undefined> {
   for (const file of [join(runDir, 'style_profile.md'), join(runDir, 'paper', 'style_profile.md')]) {
     if (existsSync(file)) return readText(file)
@@ -89,7 +97,7 @@ export async function negotiateContract(ctx: PaperContext): Promise<string> {
     {
       reflexion: (contract, round) =>
         `Self-reflexion round ${round}: review the contract below. Fix untestable assertions, missing evidence coverage, and overclaim risks. Return only the improved contract.\n\nCurrent contract:\n${contract}`,
-      buildInput: (current, round, reflexion) => ({
+      buildInput: (current, _round, reflexion) => ({
         ...base,
         ...(current ? { paperContract: current, plan: reflexion } : {}),
       }),
@@ -137,7 +145,7 @@ export async function generateFigures(ctx: PaperContext): Promise<string> {
     return errors
   }
 
-  const runFigure = async (input: RoleInput, label: string) => {
+  const runFigure = async (input: RoleInput) => {
     try {
       return await ctx.deps.provider.run('figure-generator', input, ctx.agentContext)
     } catch (error) {
@@ -156,7 +164,7 @@ export async function generateFigures(ctx: PaperContext): Promise<string> {
   for (let attempt = 0; attempt <= MAX_FIGURE_RETRIES; attempt += 1) {
     const result = await runFigure({
       runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText, plan: feedback,
-    }, 'figure-generator')
+    })
     const structured = result.structured as { scripts?: Record<string, string>; latexIncludes?: string } | undefined
     latexIncludes = structured?.latexIncludes ?? ''
     const errors = await writeAndRun(structured?.scripts ?? {})
@@ -179,7 +187,7 @@ export async function generateFigures(ctx: PaperContext): Promise<string> {
         paperFigures: latexIncludes,
         ...(figureImages.length > 0 ? { figureImages } : {}),
         plan: `Self-reflexion round ${round}: check textOverload, elementOverload, elementOverlap, and embedded main title. Return improved scripts and latexIncludes.\n\nCurrent latexIncludes:\n${latexIncludes}`,
-      }, 'figure-generator')
+      })
       const improved = reflex.structured as { scripts?: Record<string, string>; latexIncludes?: string } | undefined
       if (!improved?.scripts && !improved?.latexIncludes) break
       const reflexErrors = await writeAndRun(improved.scripts ?? {})
@@ -230,11 +238,7 @@ export async function writePaper(ctx: PaperContext, feedback?: string): Promise<
   if (!value?.mainTex) throw new Error('writer did not return mainTex')
   await writeFile(join(paperDir, 'main.tex'), value.mainTex, 'utf8')
   if (value.bib) await writeFile(join(paperDir, 'references.bib'), value.bib, 'utf8')
-  for (const [name, content] of Object.entries(value.sections ?? {})) {
-    const file = join(paperDir, name)
-    await ensureDir(dirname(file))
-    await writeFile(file, content, 'utf8')
-  }
+  await writePaperSections(paperDir, value.sections)
   if (value.failureReport?.trim()) {
     await writeText(join(runDir, FAILURE_REPORT_FILE), `# FAILURE_REPORT — 人类完善笔记\n\n${value.failureReport.trim()}\n`)
   }
@@ -399,11 +403,7 @@ export async function polishPaper(ctx: PaperContext): Promise<void> {
   const value = result.structured as { mainTex?: string; sections?: Record<string, string>; changes?: string[] } | undefined
   if (!value?.mainTex) throw new Error('paper-polisher did not return mainTex')
   await writeFile(join(paperDir, 'main.tex'), value.mainTex, 'utf8')
-  for (const [name, content] of Object.entries(value.sections ?? {})) {
-    const file = join(paperDir, name)
-    await ensureDir(dirname(file))
-    await writeFile(file, content, 'utf8')
-  }
+  await writePaperSections(paperDir, value.sections)
   await writeText(join(paperDir, 'PAPER_POLISH_LOG.md'), `# Paper Polish Log\n\n${(value.changes ?? []).map((x) => `- ${x}`).join('\n')}\n`)
   const compile = await compilePaper(paperDir)
   if (!compile.ok) throw new Error('paper polish failed to compile')

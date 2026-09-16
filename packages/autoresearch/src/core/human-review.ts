@@ -1,6 +1,6 @@
 import { appendFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { ensureDir, nowIso } from './utils.js'
+import { ensureDir } from './utils.js'
 
 export const REVIEW_GATES = ['idea', 'rubric', 'experiment', 'evidence', 'paper_draft'] as const
 export type ReviewGateId = typeof REVIEW_GATES[number]

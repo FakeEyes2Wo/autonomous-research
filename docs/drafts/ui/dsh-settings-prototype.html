@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>AutoResearch · DSH 配置原型</title>
+  <style>
+    :root { --bg:#101316; --panel:#181d21; --line:#2a333a; --text:#edf2f5; --muted:#a2aeb8; --accent:#97e2be; --accent-bg:#213a31; --warn:#edc887; --error:#ffaaa4; --radius:14px; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.65 "Segoe UI","Microsoft YaHei",sans-serif; }
+    button,input,select { font:inherit; }
+    button,select { cursor:pointer; }
+    button { color:var(--text); border:1px solid var(--line); border-radius:9px; background:#242d34; padding:8px 14px; }
+    button:hover { border-color:#81978d; background:#2b383b; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    button.primary { background:var(--accent); border-color:var(--accent); color:#12271d; font-weight:650; }
+    button.ghost { background:transparent; }
+    input,select { width:100%; color:var(--text); background:#11181d; border:1px solid #3b4852; padding:9px 10px; border-radius:8px; min-height:42px; }
+    input[type=checkbox] { width:18px; min-height:18px; accent-color:var(--accent); cursor:pointer; }
+    :focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+    [hidden] { display:none!important; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { font-size:28px; letter-spacing:-.7px; line-height:1.3; margin-bottom:9px; }
+    h2 { font-size:17px; margin-bottom:5px; }
+    h3 { font-size:14px; margin-bottom:5px; }
+    p { margin-bottom:14px; }
+    code,pre { font-family:Consolas,"Cascadia Code",monospace; }
+    code { color:#becdd7; font-size:12px; overflow-wrap:anywhere; }
+    a { color:var(--accent); }
+    .muted,.help { color:var(--muted); }
+    .small,.help { font-size:12px; }
+    .eyebrow { color:var(--accent); font-size:11px; letter-spacing:1.7px; font-weight:650; margin-bottom:10px; }
+    .shell { display:grid; grid-template-columns:210px minmax(0,1fr); min-height:100vh; }
+    .sidebar { border-right:1px solid var(--line); background:#12181c; padding:30px 18px; display:flex; flex-direction:column; gap:26px; }
+    .brand { display:flex; align-items:center; gap:10px; font-size:19px; font-weight:650; letter-spacing:.4px; }
+    .logo { display:grid; place-items:center; width:32px; height:32px; background:var(--accent-bg); border-radius:10px; color:var(--accent); font-size:20px; }
+    .nav-title { font-size:11px; letter-spacing:1.5px; color:#7f909c; margin:16px 12px 9px; }
+    .nav-item { display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; margin-bottom:5px; border:1px solid transparent; background:transparent; color:var(--muted); text-align:left; border-radius:8px; }
+    .nav-item.active { color:var(--accent); background:#20322c; border-color:#365446; }
+    .sidebar-foot { margin-top:auto; padding:15px 10px 0; border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+    .workspace { min-width:0; }
+    .topbar { min-height:67px; padding:15px 32px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .breadcrumbs { color:var(--muted); font-size:12px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; border:1px solid #3a474f; border-radius:100px; padding:3px 10px; font-size:11px; white-space:nowrap; color:#bed0db; }
+    .pill.green { color:var(--accent); border-color:#3a5d4b; background:#1c3027; }
+    .pill.amber { color:var(--warn); border-color:#615039; background:#30281e; }
+    main { padding:30px 32px 112px; max-width:1460px; margin:auto; }
+    .heading { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; }
+    .project { max-width:280px; min-width:215px; }
+    .project label { color:var(--muted); font-size:11px; margin-bottom:5px; display:block; }
+    .prototype-note { padding:10px 14px; border:1px solid #524b35; border-radius:9px; color:#d9c99f; background:#25231c; font-size:12px; margin:7px 0 23px; }
+    .tabs { display:flex; gap:5px; border-bottom:1px solid var(--line); margin-bottom:25px; overflow-x:auto; }
+    .tabs button { padding:11px 17px; border:0; border-bottom:2px solid transparent; border-radius:6px 6px 0 0; background:transparent; color:var(--muted); white-space:nowrap; }
+    .tabs button[aria-selected=true] { color:var(--accent); border-bottom-color:var(--accent); }
+    .content-grid { display:grid; grid-template-columns:minmax(0,1fr) 262px; gap:22px; align-items:start; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:21px; margin-bottom:18px; }
+    .card-top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+    .card-top p { margin:4px 0 0; }
+    .connect-icon { width:42px; height:42px; border-radius:12px; background:#263b32; display:grid; place-items:center; color:var(--accent); font-size:21px; flex-shrink:0; }
+    .flex { display:flex; align-items:center; gap:12px; }
+    .connection-details { display:grid; grid-template-columns:1fr 1fr; gap:13px; padding:15px 0; margin:12px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .connection-details span { display:block; color:var(--muted); font-size:11px; margin-bottom:3px; }
+    .presets { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .preset { text-align:left; padding:14px; background:#151c21; min-height:140px; display:flex; flex-direction:column; gap:7px; }
+    .preset.selected { border-color:#62957c; background:#1e2e26; }
+    .preset strong { font-size:14px; }
+    .preset .small { color:var(--muted); }
+    .preset .preset-tag { margin-top:auto; color:var(--accent); font-size:11px; }
+    .flow { display:flex; gap:6px; flex-wrap:wrap; margin-top:18px; }
+    .flow span { padding:5px 8px; border-radius:5px; font-size:11px; background:#222d34; color:#bacad3; }
+    .flow i { font-style:normal; color:#667b87; align-self:center; }
+    .summary h2 { font-size:14px; margin-bottom:18px; }
+    .summary-row { display:flex; justify-content:space-between; gap:8px; margin-bottom:12px; font-size:12px; }
+    .summary-row span:first-child { color:var(--muted); }
+    .summary-row strong { font-weight:500; text-align:right; }
+    .divider { height:1px; background:var(--line); margin:17px 0; }
+    .summary-note { color:var(--muted); font-size:12px; margin-bottom:0; }
+    .notice { padding:12px 14px; border-radius:8px; background:#202b31; color:#b9cbd6; font-size:12px; border-left:2px solid #627e8f; }
+    .notice.warn { background:#2b261f; color:#d9c49e; border-color:#b18d50; }
+    .check-label { display:flex; align-items:center; gap:9px; }
+    .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:17px; }
+    .field { display:block; font-size:12px; }
+    .field > span { display:block; margin-bottom:7px; }
+    .field .help { display:block; margin-top:6px; line-height:1.5; }
+    .table-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; min-width:600px; font-size:12px; }
+    th { color:var(--muted); font-weight:400; text-align:left; font-size:11px; padding:7px 8px 11px; }
+    td { padding:12px 8px; border-top:1px solid var(--line); vertical-align:middle; }
+    td:first-child,th:first-child { padding-left:0; }
+    td:last-child,th:last-child { padding-right:0; }
+    td select { min-width:130px; font-size:12px; padding:8px; }
+    td strong { display:block; font-size:12px; font-weight:550; }
+    td code { display:block; margin-top:3px; font-size:10px; }
+    .tier-name { color:var(--accent); }
+    .role-table { min-width:630px; }
+    .role-table td:first-child { width:27%; }
+    .role-table td:nth-child(2) { width:23%; }
+    .role-table td:nth-child(3) { width:27%; }
+    .role-table select { min-width:104px; }
+    .role-table input { min-width:80px; max-width:100px; font-size:12px; }
+    .step { display:grid; grid-template-columns:minmax(0,1fr) 128px; gap:15px; padding:15px 0; border-top:1px solid var(--line); align-items:center; }
+    .step:first-child { border:0; padding-top:0; }
+    .step p { margin:3px 0 0; font-size:12px; color:var(--muted); }
+    details { margin-top:20px; padding-top:15px; border-top:1px solid var(--line); }
+    summary { cursor:pointer; color:var(--muted); font-size:12px; margin-bottom:15px; }
+    .footer { position:fixed; z-index:5; bottom:0; left:210px; right:0; min-height:77px; background:#161d22f5; backdrop-filter:blur(12px); border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 32px; }
+    .footer-actions { display:flex; gap:9px; }
+    .footer-status { font-size:12px; color:var(--muted); }
+    .footer-status strong { color:var(--text); font-weight:500; display:block; }
+    #errors { color:var(--error); border:1px solid #703e3b; background:#2b1e20; padding:15px 18px; border-radius:10px; margin-bottom:20px; }
+    #errors ul { margin:8px 0 0; padding-left:20px; }
+    [aria-invalid=true] { border-color:var(--error); }
+    dialog { color:var(--text); background:#182127; border:1px solid #485761; border-radius:16px; padding:26px; max-width:850px; width:calc(100% - 36px); max-height:86vh; overflow:auto; }
+    dialog::backdrop { background:#000a; backdrop-filter:blur(4px); }
+    .dialog-head { display:flex; align-items:start; justify-content:space-between; gap:20px; }
+    .dialog-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:20px; }
+    .diff-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+    pre { padding:15px; border:1px solid var(--line); border-radius:8px; background:#0e161b; font-size:11px; color:#c3d8cf; line-height:1.7; overflow:auto; max-height:45vh; margin:8px 0 0; }
+    .guide-grid { display:grid; grid-template-columns:120px 1fr; gap:8px 18px; margin:20px 0; font-size:12px; }
+    .guide-grid dt { color:var(--muted); }
+    .guide-grid dd { margin:0; }
+    #toast { position:fixed; right:28px; bottom:93px; z-index:30; max-width:420px; background:#294737; color:#dbf7e6; border:1px solid #547e64; border-radius:10px; padding:13px 18px; box-shadow:0 10px 40px #0006; }
+    @media(min-width:1450px) { main { padding-top:38px; } .card { padding:25px; } }
+    @media(max-width:1150px) { .shell { grid-template-columns:170px minmax(0,1fr); } .sidebar { padding:25px 12px; } .footer { left:170px; } .content-grid { grid-template-columns:minmax(0,1fr); } .summary { display:grid; grid-template-columns:1fr 1fr; gap:18px; } .summary .card { margin:0; } }
+    @media(max-width:720px) { .shell { display:block; } .sidebar { display:none; } .topbar { padding:12px 18px; } main { padding:23px 18px 158px; } h1 { font-size:25px; } .heading { flex-direction:column; gap:8px; } .project { max-width:none; width:100%; margin-bottom:15px; } .presets { grid-template-columns:1fr; } .preset { min-height:100px; } .field-grid,.summary,.diff-grid { grid-template-columns:1fr; } .footer { left:0; padding:12px 18px; flex-direction:column; align-items:stretch; } .footer-actions { justify-content:flex-end; } .footer-actions button { padding:8px 10px; } .tabs button { padding:11px 12px; } .card { padding:17px; } .card-top { flex-wrap:wrap; } .connection-details { grid-template-columns:1fr; } #toast { left:18px; right:18px; bottom:140px; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="DSH 设置位置示意">
+      <div class="brand"><span class="logo" aria-hidden="true">⌘</span> dsh <span class="pill">WEB</span></div>
+      <div>
+        <div class="nav-title">SETTINGS</div>
+        <span class="nav-item">◌ <span>常规设置</span></span>
+        <button class="nav-item" data-action="guide">◇ <span>Models · 模型连接</span></button>
+        <span class="nav-item">⊞ <span>插件</span></span>
+        <span class="nav-item active" aria-current="page">⌁ <span>AutoResearch</span></span>
+      </div>
+      <div class="sidebar-foot">个人研究工作台<br><span class="small">可选 CPA · 保留 DeepSeek<br>Claude 适配预留</span></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><span class="breadcrumbs">设置 <span aria-hidden="true"> / </span> AutoResearch</span><span class="pill amber">离线交互原型 · 未连接 DSH</span></header>
+      <main>
+        <div class="heading">
+          <div><div class="eyebrow">RESEARCH CONTROL</div><h1>把智能用在关键步骤。</h1><p class="muted">模型分档、研究流程与调用预算，在一个地方配置。</p></div>
+          <div class="project"><label for="project">项目范围 · 示例，非实际目录选择</label><select id="project" disabled><option>autonomous-research（示例）</option></select><div class="help">.autoresearch/project-settings.yaml</div></div>
+        </div>
+        <div class="prototype-note">本页只演示配置交互，不连接模型、不读取项目、不收集密钥。保存仅在内存中生效，刷新会重置；导出为离线 v2 示例。正式 schema 已由 `packages/autoresearch-web` 接入核心 settings service。</div>
+        <div class="tabs" role="tablist" aria-label="配置分类">
+          <button role="tab" id="tab-quick" aria-selected="true" aria-controls="panel-quick" data-tab="quick">快速配置</button>
+          <button role="tab" id="tab-models" aria-selected="false" aria-controls="panel-models" data-tab="models" tabindex="-1">模型分档</button>
+          <button role="tab" id="tab-workflow" aria-selected="false" aria-controls="panel-workflow" data-tab="workflow" tabindex="-1">流程</button>
+          <button role="tab" id="tab-budget" aria-selected="false" aria-controls="panel-budget" data-tab="budget" tabindex="-1">预算</button>
+        </div>
+        <div id="errors" role="alert" tabindex="-1" hidden></div>
+        <div class="content-grid">
+          <div>
+            <section id="panel-quick" role="tabpanel" aria-labelledby="tab-quick">
+              <div class="card">
+                <div class="card-top"><div class="flex"><div class="connect-icon" aria-hidden="true">⇄</div><div><h2>CPA 模型连接</h2><p class="muted small">复用 DSH Models，连接与项目策略分开管理。</p></div></div><span class="pill amber">示例 · 未探测</span></div>
+                <div class="connection-details"><div><span>代理地址示例</span><code>http://127.0.0.1:8317/v1</code></div><div><span>协议 / 客户端凭据</span><code>openai-responses</code> <span>凭据由 DSH 管理，本页不接收</span></div></div>
+                <div class="card-top" style="margin-bottom:0"><p class="help">先添加真实 route，再将其分配给项目档位。<br>未安装 CPA 时，仍可配置 DeepSeek。</p><button data-action="guide">查看 Models 配置指引 ↗</button></div>
+              </div>
+              <div class="card">
+                <div class="card-top"><div><h2>选一个起点，再按需调整</h2><p class="help">只修改本页草稿；保留模型选择与每角色限额。</p></div></div>
+                <div class="presets">
+                  <button class="preset" data-preset="economy" aria-pressed="false"><strong>节省调用</strong><span class="small">按需步骤、较小预算。保留 supervisor 的高智能决策。</span><span class="preset-tag">60K / run · minimal</span></button>
+                  <button class="preset selected" data-preset="balanced" aria-pressed="true"><strong>平衡研究</strong><span class="small">日常实验使用 standard，决策与综合使用 deep。</span><span class="preset-tag">120K / run · minimal</span></button>
+                  <button class="preset" data-preset="quality" aria-pressed="false"><strong>高质量审查</strong><span class="small">计划与执行增加能力投入，显式启用独立审查。</span><span class="preset-tag">240K / run · minimal</span></button>
+                </div>
+                <div class="flow" aria-label="最小研究流程"><span>本地检查</span><i>→</i><span>计划 + 设计</span><i>→</i><span>执行</span><i>→</i><span>证据验证</span><i>→</i><span>研究决策</span></div>
+                <p class="help" style="margin:14px 0 0">普通明确课题可收敛为 3 次角色启动；不等于 3 次模型请求。必要风险审查不会因精简而消失。</p>
+              </div>
+              <div class="notice">推荐配置顺序：Models 添加连接 → 项目分档 → 流程与预算 → 预览并保存。正式版保存只影响新 run，不中途改变正在执行的实验。</div>
+            </section>
+
+            <section id="panel-models" role="tabpanel" aria-labelledby="tab-models" hidden>
+              <div class="card">
+                <div class="card-top"><div><h2>项目模型分档</h2><p class="help">目录为演示数据，provider/model 必须在正式部署中验证。</p></div><label class="check-label small"><input type="checkbox" data-path="modelRouting.enabled">启用路由</label></div>
+                <div class="field-grid"><label class="field"><span>默认档位</span><select data-path="modelRouting.defaultTier"><option value="cheap">cheap · 轻量整理</option><option value="standard">standard · 日常执行</option><option value="deep">deep · 高智能推理</option></select></label><div class="notice">首期思考强度来自 provider route 默认值，不向子代理传递无效的 reasoningEffort 字段。</div></div>
+                <div class="table-scroll" style="margin-top:18px"><table><thead><tr><th>档位</th><th>Provider</th><th>模型</th><th>Route 思考强度</th></tr></thead><tbody id="tiers"></tbody></table></div>
+                <p class="help" id="routing-state" style="margin:14px 0 0"></p>
+              </div>
+              <div class="card">
+                <div class="card-top"><div><h2>哪些步骤需要高智能？</h2><p class="help">按角色配置；升级只针对语义问题，不针对网络或格式错误。</p></div><span class="pill green">可配置</span></div>
+                <div class="table-scroll"><table class="role-table"><thead><tr><th>角色 / 任务</th><th>档位</th><th>按条件升级至 deep</th><th>输出上限</th></tr></thead><tbody id="roles"></tbody></table></div>
+                <p class="help" style="margin:15px 0 0">“语义冲突”对应 evidence_conflict / quality_low；“重大缺陷”对应 fatal_flaw / high_stakes_decision。deep 角色无需再次升级。</p>
+              </div>
+            </section>
+
+            <section id="panel-workflow" role="tabpanel" aria-labelledby="tab-workflow" hidden>
+              <div class="card">
+                <div class="card-top"><div><h2>研究流程</h2><p class="help">模式随 run 冻结；旧项目默认沿用 legacy。</p></div><span class="pill">项目级</span></div>
+                <label class="field"><span>执行模式</span><select data-path="workflow.mode"><option value="minimal">minimal · 最小研究闭环</option><option value="legacy">legacy · 兼容现有流程</option></select></label>
+                <div class="notice warn" id="legacy-note" style="margin-top:14px" hidden>legacy 保持原有固定流程。下面的精简步骤策略不作为 legacy 已生效能力展示，正式版将标明模式支持范围。</div>
+                <div id="steps" style="margin-top:23px"></div>
+                <div class="field-grid" style="margin-top:15px"><label class="field"><span>候选上限</span><input type="number" min="0" step="1" data-path="workflow.candidateLimit"><span class="help">0 表示禁止额外候选生成</span></label><label class="field"><span>额外反思轮数</span><input type="number" min="0" step="1" data-path="workflow.reflexionRounds"><span class="help">0 仍保留基本产物验证</span></label><label class="field"><span>论文改进轮数</span><input type="number" min="0" step="1" data-path="workflow.paperImprovementRounds"><span class="help">0 不代表失败审计自动通过</span></label></div>
+              </div>
+              <div class="notice warn">环境与证据验证不可关闭。若独立审查设为“关闭”但出现关键风险，运行应暂停并说明问题，不绕过检查继续。</div>
+            </section>
+
+            <section id="panel-budget" role="tabpanel" aria-labelledby="tab-budget" hidden>
+              <div class="card">
+                <div class="card-top"><div><h2>调用预算</h2><p class="help">限制配置 ≠ 已实现拦截。正式运行时还需验证每个底层请求。</p></div><span class="pill amber">执行器未接入</span></div>
+                <div class="field-grid">
+                  <label class="field"><span>单次输入 token 上限</span><input type="number" min="1" step="1" data-path="budget.maxInputTokens"><span class="help">最终还受档位、角色和模型容量约束</span></label>
+                  <label class="field"><span>单次输出 token 上限</span><input type="number" min="1" step="1" data-path="budget.maxOutputTokens"><span class="help">包含 reasoning 的输出预留</span></label>
+                  <label class="field"><span>整个 run 的 token 上限</span><input type="number" min="1" step="1" data-path="budget.maxRunTokens"><span class="help">并发共享，恢复不重置历史消耗</span></label>
+                  <label class="field"><span>角色启动次数上限</span><input type="number" min="1" step="1" data-path="budget.maxRoleCalls"><span class="help">包含修复与升级，不等于模型请求次数</span></label>
+                </div>
+                <details><summary>高级：重试、升级与上下文分区</summary><div class="field-grid" id="budget-advanced"></div></details>
+              </div>
+              <div class="card"><h2>实际用量</h2><p class="muted small">尚未连接运行记录，无可展示的请求账本。</p><div class="notice">正式版将区分 observed / estimated / unknown。reasoning 若已包含在输出，不再次计入总 token；未知用量不能显示为 0。</div></div>
+            </section>
+          </div>
+
+          <aside class="summary" aria-label="草稿策略摘要">
+            <div class="card"><div class="eyebrow">EFFECTIVE DRAFT</div><h2>当前草稿摘要</h2><div class="summary-row"><span>执行模式</span><strong id="sum-mode"></strong></div><div class="summary-row"><span>默认模型档位</span><strong id="sum-tier"></strong></div><div class="summary-row"><span>高智能角色</span><strong id="sum-deep"></strong></div><div class="divider"></div><div class="summary-row"><span>整次 token 预算</span><strong id="sum-budget"></strong></div><div class="summary-row"><span>每任务升级</span><strong id="sum-upgrade"></strong></div><div class="summary-row"><span>配置状态</span><strong id="sum-dirty"></strong></div><div class="divider"></div><p class="summary-note">模型 ID、容量与能力均为示例。此处展示策略意图，不代表模型已可用。</p></div>
+            <div class="card"><h2>清楚区分作用域</h2><p class="small muted">连接、协议与凭据<br><strong style="color:var(--text);font-weight:500">DSH 宿主 settings（默认 .dsh/settings.yaml，以宿主配置为准）</strong></p><p class="small muted">模型表、流程与预算<br><strong style="color:var(--text);font-weight:500">当前项目 YAML</strong></p><p class="summary-note">在途 run 保留自身快照。项目保存不会热切正在执行的模型。</p></div>
+          </aside>
+        </div>
+      </main>
+      <footer class="footer"><div class="footer-status"><strong id="save-status">示例已载入</strong><span>仅内存保存 · 正式版下次新运行生效</span></div><div class="footer-actions"><button class="ghost" id="reset" data-action="reset">放弃修改</button><button data-action="preview">预览 YAML</button><button class="primary" data-action="review">校验并保存</button></div></footer>
+    </div>
+  </div>
+  <dialog id="guide-dialog" aria-labelledby="guide-title"><div class="dialog-head"><div><div class="eyebrow">DSH / SETTINGS / MODELS</div><h2 id="guide-title">在 DSH 中配置 CPA 连接</h2></div><button data-close="guide-dialog" aria-label="关闭连接指引">×</button></div><p class="muted small">这是填写指引，不是真实连接表单。请勿向原型输入密钥。</p><dl class="guide-grid"><dt>Provider ID</dt><dd><code>cpa-gpt</code>（唯一 ID）</dd><dt>API</dt><dd><code>openai-responses</code></dd><dt>Base URL</dt><dd><code>http://127.0.0.1:8317/v1</code>（按部署修改）</dd><dt>API key</dt><dd>在 DSH Models 输入 CPA 客户端 key，交由 credentials 保存。</dd><dt>Models</dt><dd>使用“获取模型”或手工输入实际别名；容量按部署核对。</dd><dt>Deep route</dt><dd>确认支持 high 后，使用可选 CPA 包生成 <code>cpa-gpt-deep</code> 的 route 默认 reasoning；当前原生 Models 卡片没有该控件。</dd></dl><div class="notice warn">保存凭据不等于连通测试通过。目录列出模型，也不证明工具、图片或思考强度可用。测试请求需单独、显式触发。</div><div class="dialog-actions"><button class="primary" data-close="guide-dialog">知道了</button></div></dialog>
+  <dialog id="preview-dialog" aria-labelledby="preview-title"><div class="dialog-head"><div><div class="eyebrow">PROJECT SETTINGS / V2 DRAFT</div><h2 id="preview-title">配置预览</h2></div><button data-close="preview-dialog" aria-label="关闭配置预览">×</button></div><p class="muted small">无模型密钥。正式 v2 schema 已由 Web bundle 接入核心 settings service；本离线原型仍只在内存中保存，请勿用导出的示例直接覆盖项目文件。</p><div id="change-count" class="notice"></div><div class="diff-grid" id="diff-grid"><div id="before-column"><span class="small muted">上次内存保存</span><pre id="before-yaml"></pre></div><div><span class="small muted">当前草稿</span><pre id="draft-yaml"></pre></div></div><div class="dialog-actions"><button data-close="preview-dialog">返回编辑</button><button data-action="download">下载示例 YAML</button><button class="primary" id="confirm-save" data-action="confirm">确认保存（仅内存）</button></div></dialog>
+  <div id="toast" role="status" hidden></div>
+  <script>
+    'use strict';
+    const clone = value => JSON.parse(JSON.stringify(value));
+    const $ = selector => document.querySelector(selector);
+    const all = selector => [...document.querySelectorAll(selector)];
+    const routes = {
+      'deepseek-official': { label:'DeepSeek · 示例', models:['deepseek-v4-flash'], reasoning:'默认 · 未验证', context:32768, maxOutput:8192 },
+      'cpa-gpt': { label:'CPA GPT · 示例', models:['gpt-self'], reasoning:'默认 · 未验证', context:32768, maxOutput:8192 },
+      'cpa-gpt-deep': { label:'CPA GPT Deep · 示例', models:['gpt-self'], reasoning:'high · 未验证', context:32768, maxOutput:8192 }
+    };
+    const roleMeta = [
+      ['planner','计划与实验设计'],['research-worker','实验执行'],['supervisor','研究决策'],['writer','论文综合写作'],
+      ['idea-generator','新颖假设生成'],['experiment-reflexion','风险独立审查'],['model-scout','模型资料整理'],['evidence-agent','证据整理（优先本地）']
+    ];
+    const defaults = {
+      version:2,
+      model:{ useGlobal:true },
+      modelRouting:{ enabled:true, defaultTier:'standard', tiers:{
+        cheap:{provider:'deepseek-official',model:'deepseek-v4-flash'},
+        standard:{provider:'cpa-gpt',model:'gpt-self'},
+        deep:{provider:'cpa-gpt-deep',model:'gpt-self'}
+      },roles:{
+        planner:{tier:'standard',escalateTo:'deep',escalateOn:['evidence_conflict','quality_low']},
+        'research-worker':{tier:'standard',maxInputTokens:12000,maxOutputTokens:6000},
+        supervisor:{tier:'deep',maxInputTokens:10000,maxOutputTokens:3000},
+        writer:{tier:'deep',maxInputTokens:24000,maxOutputTokens:8000},
+        'idea-generator':{tier:'deep'},'experiment-reflexion':{tier:'deep'},'model-scout':{tier:'cheap'},'evidence-agent':{tier:'cheap'}
+      }},
+      workflow:{mode:'minimal',brainstorm:'auto',deepDive:'auto',modelScout:'auto',experimentReview:'auto',postResultSynthesis:'auto',paper:'auto',paperImprovementRounds:0,candidateLimit:3,reflexionRounds:1},
+      budget:{maxInputTokens:24000,maxOutputTokens:8000,maxRunTokens:120000,maxRoleCalls:120,maxRetriesPerCall:1,jsonRepairAttempts:1,maxUpgradesPerTask:1,context:{treeSummaryTokens:2500,evidenceTokens:5000,paperTokens:8000,failureTokens:2500}}
+    };
+    let draft = clone(defaults), saved = clone(defaults), preset = 'balanced', savedPreset = 'balanced', timer;
+    const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const getPath = path => path.split('.').reduce((obj,key) => obj?.[key],draft);
+    function setPath(path,value) { const keys=path.split('.'); const key=keys.pop(); const parent=keys.reduce((obj,k)=>obj[k],draft); parent[key]=value; }
+    function options(values,selected) { return values.map(([id,label])=>`<option value="${escapeHTML(id)}"${id===selected?' selected':''}>${escapeHTML(label)}</option>`).join(''); }
+    const tierOptions = selected => options([['cheap','cheap · 轻量'],['standard','standard · 标准'],['deep','deep · 高智能']],selected);
+    const escalationOptions = selected => options([['none','不自动升级'],['semantic','语义冲突 → deep'],['critical','重大缺陷 → deep']],selected);
+    function renderTables() {
+      $('#tiers').innerHTML = Object.entries(draft.modelRouting.tiers).map(([tier,value])=>`<tr><td><strong class="tier-name">${tier}</strong></td><td><select aria-label="${tier} provider" data-provider="${tier}">${options(Object.entries(routes).map(([id,r])=>[id,r.label]),value.provider)}</select></td><td><select aria-label="${tier} 模型" data-path="modelRouting.tiers.${tier}.model">${options(routes[value.provider].models.map(id=>[id,id]),value.model)}</select></td><td class="help">${routes[value.provider].reasoning}</td></tr>`).join('');
+      $('#roles').innerHTML = roleMeta.map(([id,label])=>{
+        const role=draft.modelRouting.roles[id]; const escalation=role.escalateOn?.includes('fatal_flaw')?'critical':role.escalateTo?'semantic':'none';
+        return `<tr><td><strong>${label}</strong><code>${id}</code></td><td><select aria-label="${label}档位" data-role-tier="${id}">${tierOptions(role.tier)}</select></td><td><select aria-label="${label}升级条件" data-escalation="${id}"${role.tier==='deep'?' disabled':''}>${escalationOptions(escalation)}</select></td><td><input aria-label="${label}输出上限" type="number" min="1" step="1" placeholder="继承" data-role-output="${id}" value="${role.maxOutputTokens??''}"></td></tr>`;
+      }).join('');
+    }
+    const steps=[['brainstorm','调研与候选生成','明确课题时跳过重复生成。'],['deepDive','深度文献探索','关键资料不足或用户明确要求时执行。'],['modelScout','模型资料收集','新 backbone 或资源条件不明确时执行。'],['experimentReview','独立实验审查','统计协议冲突、泄漏风险等触发。'],['postResultSynthesis','结果综合','仅在有新增证据且决策需要时执行。'],['paper','论文生成','按运行交付要求，实验任务不自动写论文。']];
+    $('#steps').innerHTML=steps.map(([id,label,help])=>`<div class="step"><div><h3>${label}</h3><p>${help}</p></div><select aria-label="${label}" data-path="workflow.${id}">${options([['auto','按需 · auto'],['enabled','启用'],['never','关闭']],'auto')}</select></div>`).join('');
+    const advanced=[['maxRetriesPerCall','每模型步骤重试次数'],['jsonRepairAttempts','额外格式修复次数'],['maxUpgradesPerTask','每任务升级次数'],['context.treeSummaryTokens','研究树摘要 token'],['context.evidenceTokens','证据分区 token'],['context.paperTokens','论文分区 token'],['context.failureTokens','失败摘要 token']];
+    $('#budget-advanced').innerHTML=advanced.map(([id,label])=>`<label class="field"><span>${label}</span><input type="number" min="0" step="1" data-path="budget.${id}"></label>`).join('');
+    function syncFields() { all('[data-path]').forEach(el=>{const value=getPath(el.dataset.path); if(el.type==='checkbox') el.checked=value; else el.value=value??'';}); }
+    function dirty() { return JSON.stringify(draft)!==JSON.stringify(saved); }
+    function refresh() {
+      $('#sum-mode').textContent=draft.workflow.mode;
+      $('#sum-tier').textContent=draft.modelRouting.enabled?draft.modelRouting.defaultTier:'跟随父会话';
+      $('#sum-deep').textContent=draft.modelRouting.enabled?`${Object.values(draft.modelRouting.roles).filter(r=>r.tier==='deep').length} / ${roleMeta.length}`:'未启用角色表';
+      $('#sum-budget').textContent=Number.isSafeInteger(draft.budget.maxRunTokens)?draft.budget.maxRunTokens.toLocaleString('en-US'):'待修正';
+      $('#sum-upgrade').textContent=`${draft.budget.maxUpgradesPerTask??'—'} 次`;
+      $('#sum-dirty').textContent=dirty()?'未保存':'内存已同步';
+      $('#save-status').textContent=dirty()?'有未保存修改':'示例已同步（内存）';
+      $('#reset').disabled=!dirty();
+      $('#routing-state').textContent=draft.modelRouting.enabled?'已启用项目角色表；不会修改父会话的默认模型。':'角色表暂停使用；示例 model.useGlobal=true，因此跟随父会话，不代表回退到某个固定 provider。';
+      $('#legacy-note').hidden=draft.workflow.mode!=='legacy';
+      all('[data-preset]').forEach(el=>{const active=el.dataset.preset===preset;el.classList.toggle('selected',active);el.setAttribute('aria-pressed',String(active));});
+    }
+    function clearErrors() { $('#errors').hidden=true; all('[aria-invalid]').forEach(el=>el.removeAttribute('aria-invalid')); }
+    function changed() { preset=null; clearErrors(); refresh(); }
+    function notify(message) { clearTimeout(timer); $('#toast').textContent=message; $('#toast').hidden=false; timer=setTimeout(()=>$('#toast').hidden=true,5000); }
+    function activateTab(name,focus=false) {
+      all('[data-tab]').forEach(el=>{const active=el.dataset.tab===name;el.setAttribute('aria-selected',String(active));el.tabIndex=active?0:-1;if(active&&focus)el.focus();});
+      all('[role=tabpanel]').forEach(el=>el.hidden=el.id!==`panel-${name}`);
+    }
+    document.addEventListener('input',event=>{
+      const el=event.target;
+      if(el.matches('input[data-path]')) {setPath(el.dataset.path,el.type==='checkbox'?el.checked:el.value===''?null:Number(el.value));changed();}
+      if(el.matches('[data-role-output]')) {const role=draft.modelRouting.roles[el.dataset.roleOutput];if(el.value==='')delete role.maxOutputTokens;else role.maxOutputTokens=Number(el.value);changed();}
+    });
+    document.addEventListener('change',event=>{
+      const el=event.target;
+      if(el.matches('select[data-path]')) {setPath(el.dataset.path,el.value);changed();}
+      if(el.dataset.provider) {draft.modelRouting.tiers[el.dataset.provider]={provider:el.value,model:routes[el.value].models[0]};renderTables();changed();}
+      if(el.dataset.roleTier) {const role=draft.modelRouting.roles[el.dataset.roleTier];role.tier=el.value;if(role.tier==='deep'){delete role.escalateTo;delete role.escalateOn;}renderTables();changed();}
+      if(el.dataset.escalation) {const role=draft.modelRouting.roles[el.dataset.escalation];delete role.escalateTo;delete role.escalateOn;if(el.value!=='none'){role.escalateTo='deep';role.escalateOn=el.value==='semantic'?['evidence_conflict','quality_low']:['fatal_flaw','high_stakes_decision'];}changed();}
+    });
+    function applyPreset(name) {
+      const runLimits={economy:60000,balanced:120000,quality:240000};
+      draft.workflow=clone(defaults.workflow);draft.modelRouting.enabled=true;draft.modelRouting.defaultTier='standard';
+      for(const [id,role] of Object.entries(draft.modelRouting.roles)) {role.tier=defaults.modelRouting.roles[id].tier;delete role.escalateTo;delete role.escalateOn;}
+      Object.assign(draft.modelRouting.roles.planner,{escalateTo:'deep',escalateOn:['evidence_conflict','quality_low']});
+      if(name==='economy'){draft.workflow.candidateLimit=1;draft.workflow.reflexionRounds=0;draft.modelRouting.roles.writer.tier='standard';}
+      if(name==='quality'){draft.workflow.experimentReview='enabled';draft.modelRouting.roles.planner.tier='deep';delete draft.modelRouting.roles.planner.escalateTo;delete draft.modelRouting.roles.planner.escalateOn;Object.assign(draft.modelRouting.roles['research-worker'],{escalateTo:'deep',escalateOn:['fatal_flaw','high_stakes_decision']});}
+      draft.budget.maxRunTokens=runLimits[name];preset=name;renderTables();syncFields();clearErrors();refresh();notify('预设已应用到草稿，尚未保存。模型选择与每角色限额保持不变。');
+    }
+    function validationErrors() {
+      const errors=[];const add=(path,message)=>errors.push({path,message});
+      all('input[type=number]').forEach(el=>{
+        if(el.dataset.roleOutput&&el.value==='')return;
+        const path=el.dataset.path||`modelRouting.roles.${el.dataset.roleOutput}.maxOutputTokens`;
+        const min=Number(el.min);if(el.value===''||!Number.isSafeInteger(Number(el.value))||Number(el.value)<min)add(path,`请输入不小于 ${min} 的整数`);
+      });
+      if(draft.modelRouting.enabled) for(const [tier,choice] of Object.entries(draft.modelRouting.tiers)) {
+        const route=routes[choice.provider];
+        if(!route||!route.models.includes(choice.model))add(`modelRouting.tiers.${tier}`,'provider/model 不在示例目录中');
+      }
+      if(draft.workflow.brainstorm==='enabled'&&draft.workflow.candidateLimit===0)add('workflow.candidateLimit','启用候选生成时，上限不能为 0');
+      return errors;
+    }
+    function validate() {
+      clearErrors();const errors=validationErrors();if(!errors.length)return true;
+      $('#errors').innerHTML='<strong>请先修正这些字段</strong><ul>'+errors.map(e=>`<li><code>${escapeHTML(e.path)}</code>：${escapeHTML(e.message)}</li>`).join('')+'</ul>';
+      $('#errors').hidden=false;
+      for(const error of errors)all('input,select').filter(el=>el.dataset.path===error.path||`modelRouting.roles.${el.dataset.roleOutput}.maxOutputTokens`===error.path).forEach(el=>el.setAttribute('aria-invalid','true'));
+      const first=errors[0].path;activateTab(first.startsWith('budget')?'budget':first.startsWith('workflow')?'workflow':'models');
+      $('#errors').focus();$('#errors').scrollIntoView({behavior:'smooth',block:'center'});return false;
+    }
+    function yaml(value,depth=0) {
+      const indent='  '.repeat(depth);
+      return Object.entries(value).map(([key,item])=>{
+        if(Array.isArray(item))return `${indent}${key}: [${item.map(v=>JSON.stringify(v)).join(', ')}]`;
+        if(item&&typeof item==='object')return `${indent}${key}:\n${yaml(item,depth+1)}`;
+        return `${indent}${key}: ${typeof item==='string'?JSON.stringify(item):String(item)}`;
+      }).join('\n');
+    }
+    const header='# AutoResearch v2 schema 离线示例\n# 正式 Web bundle 通过核心 settings service 读写；本文件仅展示模型/流程/预算，不能直接覆盖项目配置。\n# provider/model 与容量为示例；此文件不含凭据。\n';
+    function changes(before,after,path='') {
+      return [...new Set([...Object.keys(before),...Object.keys(after)])].flatMap(key=>{
+        const a=before[key],b=after[key],next=path?`${path}.${key}`:key;
+        if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b))return changes(a,b,next);
+        return JSON.stringify(a)===JSON.stringify(b)?[]:[next];
+      });
+    }
+    function preview(review) {
+      if(!validate())return;
+      $('#preview-title').textContent=review?'确认这次配置变更':'无密钥 YAML 预览';
+      $('#before-yaml').textContent=yaml(saved);$('#draft-yaml').textContent=header+yaml(draft)+'\n';
+      const count=changes(saved,draft).length;
+      $('#change-count').textContent=count?`${count} 个字段发生变化。仅进行原型本地校验；真实模型可用性与服务器校验尚未接入。`:'没有配置变化。示例目录不代表可用模型，执行器与服务器校验尚未接入。';
+      $('#before-column').hidden=!review;$('#diff-grid').style.gridTemplateColumns=review?'':'1fr';
+      $('#confirm-save').hidden=!review;$('#confirm-save').disabled=!dirty();$('#preview-dialog').showModal();
+    }
+    function download() {
+      if(!validate())return;
+      const blob=new Blob([header+yaml(draft)+'\n'],{type:'text/yaml;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='autoresearch-v2-example.yaml';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('已导出示例 YAML，不包含密钥。未修改项目或 DSH 配置。');
+    }
+    document.addEventListener('click',event=>{
+      const el=event.target.closest('button');if(!el)return;
+      if(el.dataset.tab)activateTab(el.dataset.tab);
+      if(el.dataset.preset)applyPreset(el.dataset.preset);
+      if(el.dataset.close)document.getElementById(el.dataset.close).close();
+      switch(el.dataset.action){
+        case 'guide':$('#guide-dialog').showModal();break;
+        case 'reset':if(confirm('放弃未保存修改，恢复到上次内存保存？')){draft=clone(saved);preset=savedPreset;renderTables();syncFields();clearErrors();refresh();notify('已恢复上次内存保存。');}break;
+        case 'preview':preview(false);break;
+        case 'review':preview(true);break;
+        case 'confirm':if(validate()){saved=clone(draft);savedPreset=preset;$('#preview-dialog').close();refresh();notify('原型已保存到内存。没有写入 DSH 或项目文件，刷新即重置。');}break;
+        case 'download':download();break;
+      }
+    });
+    $('.tabs').addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      const tabs=all('[data-tab]');const index=tabs.indexOf(document.activeElement);if(index<0)return;
+      const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(index+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+      event.preventDefault();activateTab(tabs[next].dataset.tab,true);
+    });
+    window.addEventListener('beforeunload',event=>{if(dirty()){event.preventDefault();event.returnValue='';}});
+    renderTables();syncFields();refresh();
+  </script>
+</body>
+</html>

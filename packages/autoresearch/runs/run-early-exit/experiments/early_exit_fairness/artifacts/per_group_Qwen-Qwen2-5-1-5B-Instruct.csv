@@ -1,0 +1,7 @@
+model,split,group,n,mean_exit_depth,exit_accuracy,ece,brier
+Qwen/Qwen2.5-1.5B-Instruct,clean_unseen,he,80,8.925,0.6875,0.12748,0.22017
+Qwen/Qwen2.5-1.5B-Instruct,clean_unseen,she,76,8.5658,0.30263,0.48253,0.48215
+Qwen/Qwen2.5-1.5B-Instruct,conflict_unseen,she,80,8.6625,0.6625,0.15821,0.23655
+Qwen/Qwen2.5-1.5B-Instruct,conflict_unseen,he,76,8.75,0.28947,0.50158,0.49528
+Qwen/Qwen2.5-1.5B-Instruct,conflict_seen,he,69,9.029,0.42029,0.36776,0.37659
+Qwen/Qwen2.5-1.5B-Instruct,conflict_seen,she,86,9.1163,0.55814,0.21569,0.29023

@@ -16,6 +16,7 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --experimental-strip-types scripts/test.mjs",
+    "check:dsh": "node scripts/check-dsh-runtime.mjs",
     "install:dsh": "node scripts/install-dsh-plugin.mjs",
     "run:headless": "npm run build && node scripts/run-headless.mjs"
   },

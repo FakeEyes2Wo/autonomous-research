@@ -21,7 +21,7 @@ import {
   writePaper,
   writePaperReport,
 } from './phases.js'
-import type { PaperContext, PaperDependencies, PaperOptions } from './context.js'
+import type { PaperContext, PaperDependencies } from './context.js'
 
 export type { PaperOptions } from './context.js'
 

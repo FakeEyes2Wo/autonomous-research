@@ -157,7 +157,7 @@ export async function runBrainstorm(
   state = { ...state, surveyRaw, clusters, surveyPapers, records: surveyPapers }
 
   await atomicWriteJson(surveyPoolPath(runDir), surveyRaw)
-  await writeWikis(deps, state, surveyPapers)
+  await writeWikis(state, surveyPapers)
   await writeSurveyOverview(deps, state, surveyRaw)
 
   const surveyIndex = renderUnifiedWikiIndex(surveyPapers)
@@ -198,7 +198,7 @@ export async function runBrainstorm(
     })
   }
 
-  await writeWikis(deps, state, frontierPapers)
+  await writeWikis(state, frontierPapers)
   await writeDirectionsOverview(state, directions)
 
   const mergedIndex = renderUnifiedWikiIndex(records)
@@ -226,7 +226,7 @@ export async function runBrainstorm(
 
 // ---------- Stage 1 ----------
 
-function surveyPlan(deps: BrainstormDependencies, ctx: BrainstormState): string {
+function surveyPlan(deps: BrainstormDependencies): string {
   return [
     `Stage: survey`,
     `Goal: breadth first; find field surveys/reviews first`,
@@ -240,7 +240,7 @@ function surveyPlan(deps: BrainstormDependencies, ctx: BrainstormState): string 
 async function survey(deps: BrainstormDependencies, ctx: BrainstormState): Promise<RawSurvey> {
   const result = await deps.provider.run('paper-survey', {
     runDir: ctx.runDir,
-    plan: surveyPlan(deps, ctx),
+    plan: surveyPlan(deps),
   }, ctx.agentContext)
   const raw = (result.structured ?? {}) as RawSurvey
   const surveys = raw.surveys ?? []
@@ -279,7 +279,6 @@ function toClusters(raw: RawSurvey): KnowledgeCluster[] {
 }
 
 async function writeWikis(
-  deps: BrainstormDependencies,
   ctx: BrainstormState,
   records: readonly PaperRecord[],
 ): Promise<void> {

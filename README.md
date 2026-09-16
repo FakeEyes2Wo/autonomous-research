@@ -8,7 +8,7 @@ idea → plan → work → evidence → decide → paper | failure report
 
 它既可以完成文献探索、独立实验和论文流水线，也可以通过可选 Web 包提供项目设置与对话式 LaTeX/PDF 工作台。当前部署方式是从本仓库源码构建并链接到 DSH profile；这里不承诺 npm registry 发布状态，也不宣称兼容任意最新 DSH。当前依赖锚点见各包 `package.json`，升级宿主后应重新验收。
 
-快速导航：[安装核心包](#安装核心包) · [可选 Web 工作台](#可选-web-工作台) · [使用方式](#两种使用方式) · [workflow](#minimal-与-legacy完整workflow) · [实验协议](#实验工程与科学协议) · [恢复](#产物与断点恢复) · [排错](#常见问题)
+快速导航：[安装核心包](#安装核心包) · [可选 Web 工作台](#可选-web-工作台) · [使用方式](#两种使用方式) · [workflow](#minimal-与-legacy完整workflow) · [实验协议](#实验工程与科学协议) · [恢复](#产物与断点恢复) · [排错](#常见问题) · [目录说明](docs/project-layout.md) · [设计文档](docs/README.md)
 
 ## 能力与边界
 
@@ -24,7 +24,7 @@ idea → plan → work → evidence → decide → paper | failure report
 
 ## 界面预览
 
-下面三张图由仓库自带浏览器测试在临时项目和 mock host 中实际渲染，不是设计稿，也不包含真实模型运行或真实研究结果。复现命令、截图边界和验证记录见[截图说明](docs/assets/autoresearch/README.md)与[本次验证记录](docs/drafts/2026-09-10-readme-screenshots-verification.md)。
+下面三张图由仓库自带浏览器测试在临时项目和 mock host 中实际渲染，不是设计稿，也不包含真实模型运行或真实研究结果。复现命令、截图边界和验证记录见[截图说明](docs/assets/autoresearch/README.md)与[本次验证记录](docs/verification/2026-09-10-readme-screenshots-verification.md)。
 
 ![AutoResearch 项目设置页：模型来源、研究强度与论文输出](docs/assets/autoresearch/settings.png)
 
@@ -40,7 +40,7 @@ _桌面工作台（本地临时 mock host，示例论文与聊天内容）。_
 
 _390×844 窄屏工作台（本地临时 mock host，示例论文与聊天内容）。_
 
-完整交互说明见[对话式科研工作台指南](docs/drafts/2026-09-10-conversational-workbench-guide.md)。
+完整交互说明见[对话式科研工作台指南](docs/guides/2026-09-10-conversational-workbench-guide.md)。
 
 ## 环境要求
 
@@ -239,4 +239,4 @@ Web 的核心 settings bridge 没有加载。确认核心与 Web 两个本地包
 
 - [核心包：运行、工具与工程约定](packages/autoresearch/README.md)
 - [Web 包：安装、host contract 与安全边界](packages/autoresearch-web/README.md)
-- [对话式科研工作台：目录、会话、编辑与迁移](docs/drafts/2026-09-10-conversational-workbench-guide.md)
+- [对话式科研工作台：目录、会话、编辑与迁移](docs/guides/2026-09-10-conversational-workbench-guide.md)

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { checkDshRuntime } from './check-dsh-runtime.mjs'
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -25,7 +26,27 @@ const dshHome = resolve(
       ? join(homedir(), dshHomeValue.slice(2))
       : dshHomeValue,
 )
-const profileName = process.argv[2] ?? 'web'
+function parseArgs(argv) {
+  let profileName = 'web'
+  let dshPackagePath
+  let profileSeen = false
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index]
+    if (argument === '--dsh-package') {
+      dshPackagePath = argv[index + 1]
+      if (!dshPackagePath) throw new Error('--dsh-package requires an absolute path to dsh/package.json')
+      index += 1
+    } else if (!argument.startsWith('-') && !profileSeen) {
+      profileName = argument
+      profileSeen = true
+    } else {
+      throw new Error(`Unknown argument: ${argument}`)
+    }
+  }
+  return { profileName, dshPackagePath }
+}
+
+const { profileName, dshPackagePath } = parseArgs(process.argv.slice(2))
 const profileDir = join(dshHome, 'profiles', profileName)
 const packageJsonPath = join(profileDir, 'package.json')
 const patchPath = join(profileDir, 'cordis.patch.yml')
@@ -34,6 +55,8 @@ if (!existsSync(packageJsonPath) || !existsSync(patchPath)) {
   console.error(`DSH profile not found: ${profileDir}`)
   process.exit(1)
 }
+
+if (dshPackagePath && !await checkDshRuntime({ dshPackagePath })) process.exit(1)
 
 const pkg = JSON.parse(await readFile(packageJsonPath, 'utf8'))
 pkg.dependencies ??= {}
@@ -61,4 +84,9 @@ for (const name of ['preset.yml', 'agent.cordis.yml']) {
   await copyFile(join(presetSrc, name), join(presetDest, name))
 }
 console.log(`Installed AutoResearch agent preset in ${presetDest}`)
+if (!dshPackagePath) {
+  console.log('\nOffline configuration copying does not validate runtime readiness.')
+  console.log('Validate the selected host before starting DSH:')
+  console.log('  npm run check:dsh -- --dsh-package <absolute path to host dsh/package.json>')
+}
 console.log(`\nNext step (optional): run in ${profileDir}:\n  pnpm install\n  dsh --profile ${profileName}`)

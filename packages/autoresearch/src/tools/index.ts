@@ -57,14 +57,6 @@ function requirePath(args: Record<string, unknown>, key: 'runDir' | 'projectDir'
 const requireRunDir = (args: Record<string, unknown>): string => requirePath(args, 'runDir')
 const requireProjectDir = (args: Record<string, unknown>): string => requirePath(args, 'projectDir')
 
-async function loadTree(runDir: string): Promise<ResearchTree> {
-  return ResearchTree.load(runDir)
-}
-
-function defineTool(def: ToolDefinitionLike): ToolDefinitionLike {
-  return def
-}
-
 function strArray(value: unknown): string[] | undefined {
   return Array.isArray(value) ? value.map(String) : undefined
 }
@@ -78,7 +70,7 @@ function mergeSettings(base: Record<string, unknown>, patch: Record<string, unkn
   return result
 }
 
-export const researchHypothesisAdd: ToolDefinitionLike = defineTool({
+export const researchHypothesisAdd: ToolDefinitionLike = {
   name: 'research_hypothesis_add',
   description: 'Add or revise a hypothesis in the ResearchTree.',
   parameters: {
@@ -95,7 +87,7 @@ export const researchHypothesisAdd: ToolDefinitionLike = defineTool({
   },
   output: jsonOutput,
   async execute(args) {
-    const tree = await loadTree(requireRunDir(args))
+    const tree = await ResearchTree.load(requireRunDir(args))
     const node = tree.add('hypothesis', String(args.content), {
       ...(typeof args.id === 'string' ? { id: args.id } : {}),
       ...(typeof args.status === 'string' ? { status: args.status } : {}),
@@ -104,9 +96,9 @@ export const researchHypothesisAdd: ToolDefinitionLike = defineTool({
     await tree.save()
     return node
   },
-})
+}
 
-export const researchActionStart: ToolDefinitionLike = defineTool({
+export const researchActionStart: ToolDefinitionLike = {
   name: 'research_action_start',
   description: 'Start a research action for a hypothesis.',
   parameters: {
@@ -122,7 +114,7 @@ export const researchActionStart: ToolDefinitionLike = defineTool({
   },
   output: jsonOutput,
   async execute(args) {
-    const tree = await loadTree(requireRunDir(args))
+    const tree = await ResearchTree.load(requireRunDir(args))
     const node = tree.add('action', String(args.content), {
       parent: String(args.hypothesisId),
       status: 'running',
@@ -131,9 +123,9 @@ export const researchActionStart: ToolDefinitionLike = defineTool({
     await tree.save()
     return node
   },
-})
+}
 
-export const researchActionFinish: ToolDefinitionLike = defineTool({
+export const researchActionFinish: ToolDefinitionLike = {
   name: 'research_action_finish',
   description: 'Finish a research action with a result and artifacts.',
   parameters: {
@@ -150,7 +142,7 @@ export const researchActionFinish: ToolDefinitionLike = defineTool({
   },
   output: jsonOutput,
   async execute(args) {
-    const tree = await loadTree(requireRunDir(args))
+    const tree = await ResearchTree.load(requireRunDir(args))
     const node = tree.update(String(args.actionId), {
       status: String(args.status),
       content: String(args.summary),
@@ -159,9 +151,9 @@ export const researchActionFinish: ToolDefinitionLike = defineTool({
     await tree.save()
     return node
   },
-})
+}
 
-export const researchEvidenceAdd: ToolDefinitionLike = defineTool({
+export const researchEvidenceAdd: ToolDefinitionLike = {
   name: 'research_evidence_add',
   description: 'Add evidence bound to an action or hypothesis.',
   parameters: {
@@ -183,7 +175,7 @@ export const researchEvidenceAdd: ToolDefinitionLike = defineTool({
     if (!isEvidenceVerdict(verdict)) throw new TypeError(`invalid verdict: ${verdict}`)
     const parent = typeof args.actionId === 'string' ? args.actionId : typeof args.hypothesisId === 'string' ? args.hypothesisId : undefined
     if (!parent) throw new TypeError('evidence requires actionId or hypothesisId')
-    const tree = await loadTree(requireRunDir(args))
+    const tree = await ResearchTree.load(requireRunDir(args))
     const node = tree.add('evidence', String(args.content), {
       parent,
       status: verdict,
@@ -192,9 +184,9 @@ export const researchEvidenceAdd: ToolDefinitionLike = defineTool({
     await tree.save()
     return node
   },
-})
+}
 
-export const researchTreeQuery: ToolDefinitionLike = defineTool({
+export const researchTreeQuery: ToolDefinitionLike = {
   name: 'research_tree_query',
   description: 'Query the ResearchTree by id, kind, status, or parent.',
   parameters: {
@@ -211,7 +203,7 @@ export const researchTreeQuery: ToolDefinitionLike = defineTool({
   },
   output: { schema: { type: 'array', items: { type: 'object', additionalProperties: true } }, render: renderJson },
   async execute(args) {
-    const tree = await loadTree(requireRunDir(args))
+    const tree = await ResearchTree.load(requireRunDir(args))
     return tree.query({
       ...(typeof args.id === 'string' ? { id: args.id } : {}),
       ...(typeof args.kind === 'string' ? { kind: args.kind as 'hypothesis' | 'action' | 'evidence' } : {}),
@@ -219,10 +211,10 @@ export const researchTreeQuery: ToolDefinitionLike = defineTool({
       ...(typeof args.parent === 'string' ? { parent: args.parent } : {}),
     })
   },
-})
+}
 
 export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefinitionLike {
-  return defineTool({
+  return {
     name: 'experiment_run',
     description: 'Run a standalone automatic experiment from a user task requirement.',
     parameters: {
@@ -253,10 +245,10 @@ export function createExperimentRunTool(provider: RoleAgentProvider): ToolDefini
         },
       })
     },
-  })
+  }
 }
 
-export const projectSettingsGet: ToolDefinitionLike = defineTool({
+export const projectSettingsGet: ToolDefinitionLike = {
   name: 'project_settings_get',
   description: 'Read the current project AutoResearch settings (secrets masked).',
   parameters: {
@@ -274,9 +266,9 @@ export const projectSettingsGet: ToolDefinitionLike = defineTool({
     const secrets = await loadProjectSecrets(projectDir)
     return maskProjectSettings(settings, secrets)
   },
-})
+}
 
-export const projectSettingsReadDocument: ToolDefinitionLike = defineTool({
+export const projectSettingsReadDocument: ToolDefinitionLike = {
   name: 'project_settings_read_document',
   description: 'Read project settings with source and content revision metadata.',
   parameters: { type: 'object', properties: { projectDir: runDirSchema }, required: ['projectDir'], additionalProperties: false },
@@ -286,17 +278,17 @@ export const projectSettingsReadDocument: ToolDefinitionLike = defineTool({
     const secrets = await loadProjectSecrets(requireProjectDir(args))
     return { ...document, settings: maskProjectSettings(document.settings, secrets) }
   },
-})
+}
 
-export const projectSettingsValidate: ToolDefinitionLike = defineTool({
+export const projectSettingsValidate: ToolDefinitionLike = {
   name: 'project_settings_validate',
   description: 'Validate a project settings candidate without writing it.',
   parameters: { type: 'object', properties: { projectSettings: { type: 'object', additionalProperties: true } }, required: ['projectSettings'], additionalProperties: false },
   output: jsonOutput,
   async execute(args) { return validateProjectSettingsCandidate(args.projectSettings) },
-})
+}
 
-export const projectSettingsPatch: ToolDefinitionLike = defineTool({
+export const projectSettingsPatch: ToolDefinitionLike = {
   name: 'project_settings_patch',
   description: 'Atomically patch project settings using an expected content revision.',
   parameters: { type: 'object', properties: { projectDir: runDirSchema, expectedRevision: stringSchema('SHA-256 revision of the document'), ops: { type: 'array', items: { type: 'object', additionalProperties: true } } }, required: ['projectDir', 'expectedRevision', 'ops'], additionalProperties: false },
@@ -306,9 +298,9 @@ export const projectSettingsPatch: ToolDefinitionLike = defineTool({
     const secrets = await loadProjectSecrets(requireProjectDir(args))
     return { ...document, settings: maskProjectSettings(document.settings, secrets) }
   },
-})
+}
 
-export const projectSettingsSave: ToolDefinitionLike = defineTool({
+export const projectSettingsSave: ToolDefinitionLike = {
   name: 'project_settings_save',
   description: 'Save project AutoResearch settings, optionally updating the figure API secret.',
   parameters: {
@@ -339,9 +331,9 @@ export const projectSettingsSave: ToolDefinitionLike = defineTool({
     const secrets = await loadProjectSecrets(projectDir)
     return maskProjectSettings(saved, secrets)
   },
-})
+}
 
-export const figureApiTest: ToolDefinitionLike = defineTool({
+export const figureApiTest: ToolDefinitionLike = {
   name: 'figure_api_test',
   description: 'Test the configured external figure generation API.',
   parameters: {
@@ -363,11 +355,11 @@ export const figureApiTest: ToolDefinitionLike = defineTool({
     })
     return result
   },
-})
+}
 
 export { bindToolWorkspacePaths } from './workspace-paths.js'
 
-export const paperPipelineStatus: ToolDefinitionLike = defineTool({
+export const paperPipelineStatus: ToolDefinitionLike = {
   name: 'paper_pipeline_status',
   description: 'Show the paper pipeline checkpoint status for a run directory.',
   parameters: {
@@ -386,9 +378,9 @@ export const paperPipelineStatus: ToolDefinitionLike = defineTool({
     if (existsSync(join(runDir, 'RUBRIC_REVIEW_WARNING.md'))) warnings.push('RUBRIC_REVIEW_WARNING.md')
     return cp ? { ...cp, warnings } : { status: 'no_checkpoint', warnings }
   },
-})
+}
 
-export const paperPipelineLastRun: ToolDefinitionLike = defineTool({
+export const paperPipelineLastRun: ToolDefinitionLike = {
   name: 'paper_pipeline_last_run',
   description: 'Show the most recent autoresearch run directory recorded for DSH sessions.',
   parameters: {
@@ -400,10 +392,10 @@ export const paperPipelineLastRun: ToolDefinitionLike = defineTool({
   async execute() {
     return (await readLastRun()) ?? { status: 'no_last_run' }
   },
-})
+}
 
 export function createPaperPipelineResumeTool(service: AutoResearchService): ToolDefinitionLike {
-  return defineTool({
+  return {
     name: 'paper_pipeline_resume',
     description: 'Resume a paper pipeline from its checkpoint in a run directory.',
     parameters: {
@@ -425,11 +417,11 @@ export function createPaperPipelineResumeTool(service: AutoResearchService): Too
         signal: exec.signal,
       })
     },
-  })
+  }
 }
 
 export function createResearchRunTool(service: AutoResearchService): ToolDefinitionLike {
-  return defineTool({
+  return {
     name: 'research_run',
     description: 'Start or resume the minimal autonomous research loop in a run directory.',
     parameters: {
@@ -470,5 +462,5 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
         signal: exec.signal,
       })
     },
-  })
+  }
 }

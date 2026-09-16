@@ -183,6 +183,13 @@ function sessionBinding(role: RoleName, taskId: string, childId: string, context
   }
 }
 
+function textFromBlocks(blocks: readonly ContentBlock[] | undefined): string {
+  return (blocks ?? [])
+    .filter((block): block is ContentBlock & { type: 'text'; text: string } => block.type === 'text' && typeof block.text === 'string')
+    .map((block) => block.text)
+    .join('')
+}
+
 async function withRegistryLock<T>(runDir: string, fn: () => Promise<T>): Promise<T> {
   const key = join(runDir, REGISTRY_FILE)
   const previous = registryLocks.get(key) ?? Promise.resolve()
@@ -256,7 +263,6 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     onAbort?: () => void
   }> = []
   private listenerInstalled = false
-  private removeListener?: () => void
 
   constructor(runtime: SubagentRuntime, options: SubagentProviderOptions = {}) {
     this.runtime = runtime
@@ -267,7 +273,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
 
   private ensureListener(): void {
     if (this.listenerInstalled || !this.eventContext) return
-    this.removeListener = this.eventContext.on('subagent/end', (info) => {
+    this.eventContext.on('subagent/end', (info) => {
       const index = this.waiters.findIndex((waiter) => waiter.id === info.id)
       if (index >= 0) {
         const [waiter] = this.waiters.splice(index, 1)
@@ -393,10 +399,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
         logger.info(`[subagent:${role}] continuable ended stopReason=${end.stopReason}`)
         if (budgetFailure.value) throw budgetFailure.value
         if (end.stopReason !== 'completed') throw stopError(end.stopReason)
-        const text = (end.lastAssistantMessage ?? [])
-          .filter((block): block is ContentBlock & { type: 'text'; text: string } => block.type === 'text' && typeof block.text === 'string')
-          .map((block) => block.text)
-          .join('')
+        const text = textFromBlocks(end.lastAssistantMessage)
         const parsed = parseJsonDetailed(text)
         const structured = parsed.ok ? parsed.value : undefined
         const output = { text, structured, stopReason: end.stopReason, childId: String(activeChildId) }
@@ -416,44 +419,20 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     context: RoleExecutionContext,
     feedback?: string,
   ): Promise<RoleOutput> {
-    const logger = createLogger(input.runDir)
     const route = routeFor(input, role, context)
     const promptWithFeedback = await buildBoundPrompt(role, input, route, context, feedback)
     const schema = objectOutputSchema(role)
+    const logger = createLogger(input.runDir)
     if (input.figureImages?.length) {
       logger.warn(`[subagent:${role}] figureImages provided; using textual path fallback until native image blocks are wired`)
     }
-    logger.info(`[subagent:${role}] calling ctx.subagents.start provider=${this.providerName}`)
-    const started = Date.now()
-    const budgetFailure = { value: undefined as unknown }
-    const provisional = sessionBinding(role, input.taskId ?? role, 'pending-' + randomUUID(), context, route, budgetFailure)
-    const start = () => this.runtime.start(this.providerName, {
-        label: role,
-        prompt: [{ type: 'text', text: promptWithFeedback }],
-        parent: context.parent as Agent,
-        signal: context.signal,
-        ...(schema !== undefined ? { outputSchema: schema } : {}),
-        ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
-      })
-    const run = provisional ? await withRequestBinding(provisional, start) : await start()
-    logger.info(`[subagent:${role}] started id=${String(run.id ?? '')}`)
-    const releaseOwnership = context.requestLedger
-      ? registerOwnedSession(String(run.id), sessionBinding(role, input.taskId ?? role, String(run.id), context, route, budgetFailure)!)
-      : undefined
-    try {
-      const result = await run.result
-      if (budgetFailure.value) throw budgetFailure.value
-      logger.info(`[subagent:${role}] result stopReason=${result.stopReason} in ${Date.now() - started}ms`)
-      if (result.stopReason !== 'completed') throw stopError(result.stopReason)
-      const text = result.output
-        .filter((block): block is ContentBlock & { type: 'text'; text: string } => block.type === 'text' && typeof block.text === 'string')
-        .map((block) => block.text)
-        .join('')
-      return { text, structured: result.structured, stopReason: result.stopReason, childId: run.id }
-    } finally {
-      releaseOwnership?.()
-      await run.dispose()
-    }
+    return this.runNativeAttempt(role, input, context, {
+      prompt: promptWithFeedback,
+      schema,
+      kind: 'role',
+      label: role,
+      log: 'one-shot',
+    })
   }
 
   private async runJsonRepairAttempt(
@@ -475,30 +454,56 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       parseError,
     ].join('\n')
     const boundedPrompt = prompt.length > 0 ? (estimatePromptTokens(prompt) > (route?.maxInputTokens ?? context.policySnapshot?.budget.maxInputTokens ?? 24_000) ? (() => { throw contextInsufficientError(['repair']) })() : prompt) : prompt
+    return this.runNativeAttempt(role, input, context, {
+      prompt: boundedPrompt,
+      schema,
+      kind: 'repair',
+      label: role + ' json-repair',
+      toolFilter: this.repairToolFilter,
+      log: 'repair',
+    })
+  }
+
+  private async runNativeAttempt(
+    role: RoleName,
+    input: RoleInput,
+    context: RoleExecutionContext,
+    options: {
+      prompt: string
+      schema?: ObjectJsonSchema
+      kind: 'role' | 'repair'
+      label: string
+      toolFilter?: ToolRestriction
+      log: 'one-shot' | 'repair'
+    },
+  ): Promise<RoleOutput> {
+    const logger = createLogger(input.runDir)
+    if (options.log === 'one-shot') logger.info(`[subagent:${role}] calling ctx.subagents.start provider=${this.providerName}`)
+    const started = Date.now()
+    const route = routeFor(input, role, context)
     const budgetFailure = { value: undefined as unknown }
-    const provisional = sessionBinding(role, input.taskId ?? role, 'pending-repair-' + randomUUID(), context, route, budgetFailure, 'repair')
-    const start = () => this.runtime.start(this.providerName, {
-        label: role + ' json-repair',
-        prompt: [{ type: 'text', text: boundedPrompt }],
-        parent: context.parent as Agent,
-        signal: context.signal,
-        ...(schema !== undefined ? { outputSchema: schema } : {}),
-        ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
-        ...(this.repairToolFilter ? { toolFilter: this.repairToolFilter } : {}),
-      })
+    const provisional = sessionBinding(role, input.taskId ?? role, (options.kind === 'repair' ? 'pending-repair-' : 'pending-') + randomUUID(), context, route, budgetFailure, options.kind)
+    const startOptions = {
+      label: options.label,
+      prompt: [{ type: 'text' as const, text: options.prompt }],
+      parent: context.parent as Agent,
+      signal: context.signal,
+      ...(options.schema !== undefined ? { outputSchema: options.schema } : {}),
+      ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
+      ...(options.toolFilter ? { toolFilter: options.toolFilter } : {}),
+    }
+    const start = () => this.runtime.start(this.providerName, startOptions)
     const run = provisional ? await withRequestBinding(provisional, start) : await start()
+    if (options.log === 'one-shot') logger.info(`[subagent:${role}] started id=${String(run.id ?? '')}`)
     const releaseOwnership = context.requestLedger
-      ? registerOwnedSession(String(run.id), sessionBinding(role, input.taskId ?? role, String(run.id), context, route, budgetFailure, 'repair')!)
+      ? registerOwnedSession(String(run.id), sessionBinding(role, input.taskId ?? role, String(run.id), context, route, budgetFailure, options.kind)!)
       : undefined
     try {
       const result = await run.result
       if (budgetFailure.value) throw budgetFailure.value
+      if (options.log === 'one-shot') logger.info(`[subagent:${role}] result stopReason=${result.stopReason} in ${Date.now() - started}ms`)
       if (result.stopReason !== 'completed') throw stopError(result.stopReason)
-      const text = result.output
-        .filter((block): block is ContentBlock & { type: 'text'; text: string } => block.type === 'text' && typeof block.text === 'string')
-        .map((block) => block.text)
-        .join('')
-      return { text, structured: result.structured, stopReason: result.stopReason, childId: run.id }
+      return { text: textFromBlocks(result.output), structured: result.structured, stopReason: result.stopReason, childId: run.id }
     } finally {
       releaseOwnership?.()
       await run.dispose()
