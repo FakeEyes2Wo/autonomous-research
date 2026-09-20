@@ -5,6 +5,12 @@ export interface SelectionInput {
   remainingCost: number | null
   testedMechanismKeys: string[]
   registeredAlternatives: string[]
+  /** Project-level compact direction memory. Matching mechanisms are never eligible. */
+  avoidedMechanismKeys?: string[]
+  /** IDs are retained only for an auditable selection reason; their text is not copied into snapshots. */
+  directionMemoryIds?: string[]
+  /** Preferred per-mechanism attribution for the selection reason. */
+  directionMemoryMatches?: Record<string, string[]>
   /** Controller-owned caps. No conversion from tokens or cycles into currency. */
   exploratoryBudget?: { policy: 'controller-caps-v1'; remainingCycles: number; remainingRoleCalls: number | null; remainingTokens: number | null }
 }
@@ -28,8 +34,15 @@ export function selectCandidate(candidates: ResearchCandidate[], input: Selectio
   const reasons: Record<string, string[]> = Object.create(null)
   const eligible: ResearchCandidate[] = []
   let budgetBlocked = false
+  const avoidedMechanisms = new Set(input.avoidedMechanismKeys ?? [])
+  const directionMemoryReason = (candidate: ResearchCandidate): string[] => {
+    if (!avoidedMechanisms.has(candidate.mechanismKey)) return []
+    const ids = [...new Set(input.directionMemoryMatches?.[candidate.mechanismKey] ?? input.directionMemoryIds ?? [])].sort()
+    return ids.length ? ids.map((id) => `project_direction_memory:${id}`) : ['project_direction_memory']
+  }
   for (const candidate of ordered) {
     const list: string[] = reasons[candidate.id] = []
+    list.push(...directionMemoryReason(candidate))
     if (candidate.status === 'rejected') list.push('rejected')
     if (candidate.feasible !== true) list.push('infeasible')
     if (candidate.estimatedCost !== null && !knownCost(candidate.estimatedCost)) list.push('invalid_cost')

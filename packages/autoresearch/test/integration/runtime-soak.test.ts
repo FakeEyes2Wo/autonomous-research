@@ -89,7 +89,8 @@ test('unexpected controller exit cancels its live job and preserves a failure re
   assert.equal(code, 1, stderr)
   const report = JSON.parse(await readFile(join(output, 'report.json'), 'utf8'))
   assert.equal(report.passed, false)
-  assert.match(report.failure, /controller|IPC/i)
+  // Windows may surface the killed controller's broken pipe as EPIPE before the IPC error is named.
+  assert.match(report.failure, /controller|IPC|EPIPE/i)
   assert.equal(report.unresolvedJobs, 0)
   assert.equal(report.finalBudget.reservedWallMs, 0)
   assert.equal(report.finalBudget.activeJobs, 0)

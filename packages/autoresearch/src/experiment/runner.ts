@@ -19,6 +19,8 @@ import { validateWorkerResult } from './validation.js'
 import { assertFailureImportTarget, importResearchFailure, type FailureReportImport } from '../service/failure-import.js'
 import { bindResearchOutputs } from '../service/research-outputs.js'
 import { bindRunProject } from '../service/project-paper.js'
+import { advanceCleanupQueue, finalizeDirectionRetirement, isDirectionRetired } from '../cleanup/index.js'
+import { ResearchStore } from '../research/store.js'
 import {
   runEvidenceAgent,
   runExperimentDesign,
@@ -306,7 +308,7 @@ export const DEFAULT_EXPERIMENT_MAX_ROUNDS = 1
 async function executeExperimentTask(
   deps: ExperimentDependencies,
   request: ExperimentRunRequest,
-  onAdmitted?: () => void,
+  onAdmitted?: (projectDir: string) => void,
 ): Promise<ExperimentRunResult> {
   const { runDir, agentContext } = request
   // Read existing metadata first, then publish the workflow binding before
@@ -332,6 +334,7 @@ async function executeExperimentTask(
   }
   const identity = await bindRunProject({ runDir, projectDir: request.projectDir }, 'experiment', savedState !== undefined)
   const projectDir = identity.projectDir
+  try { await advanceCleanupQueue(projectDir) } catch (error) { console.error(`[cleanup] queue deferred before experiment: ${String(error)}`) }
   const projectSettings = await loadProjectSettings(projectDir)
   resolved ??= await resolveExperimentRequest(request, runDir, projectSettings, savedState !== undefined, legacyManifest)
   const { task, profile, maxRounds } = resolved.value
@@ -342,8 +345,22 @@ async function executeExperimentTask(
   // From this point onward the workflow, project, and frozen request have all
   // been admitted. Output synchronization is safe even if execution pauses or
   // fails later; pre-admission rejections must leave foreign runs untouched.
-  onAdmitted?.()
+  onAdmitted?.(projectDir)
+  if (savedState && savedState.status !== 'COMPLETED' && savedState.status !== 'FAILED') {
+    const current = await new ResearchStore(runDir).loadCurrent()
+    if (current && await isDirectionRetired({ projectDir, runDir, snapshot: current })) {
+      savedState.status = 'PAUSED'
+      savedState.lastError = 'direction retired; cleanup completed and resume will not redispatch it'
+      await saveState(runDir, savedState)
+      return { runDir, status: 'paused', reportPath, evidencePath: savedState.evidencePath, cycles: savedState.cycle, reason: savedState.lastError }
+    }
+  }
   if (savedState && (savedState.status === 'COMPLETED' || savedState.status === 'FAILED')) {
+    try {
+      const current = await new ResearchStore(runDir).loadCurrent()
+      if (current) await finalizeDirectionRetirement({ projectDir, runDir, cycle: savedState.cycle, snapshot: current })
+      else await advanceCleanupQueue(projectDir)
+    } catch (error) { console.error(`[cleanup] terminal experiment hook deferred: ${String(error)}`) }
     return {
       runDir,
       status: savedState.status === 'COMPLETED' ? 'completed' : 'failed',
@@ -541,11 +558,26 @@ export async function runExperimentTask(deps: ExperimentDependencies, request: E
   // Reject source imports before finalization can mutate the source run.
   await assertFailureImportTarget(request.runDir, request.failureReport)
   let experimentAdmitted = false
-  try { return await executeExperimentTask(deps, request, () => { experimentAdmitted = true }) }
+  let admittedProjectDir: string | undefined
+  try { return await executeExperimentTask(deps, request, (projectDir) => { experimentAdmitted = true; admittedProjectDir = projectDir }) }
   finally {
     if (experimentAdmitted) {
       const state = await loadState(request.runDir)
-      if (state) await bindResearchOutputs(request.runDir, state.runId)
+      if (state) {
+        const cleanupProjectDir = admittedProjectDir ?? request.projectDir ?? request.runDir
+        // A retired PAUSED resume is a lifecycle pass only. Its cleanup may
+        // have tombstoned captured research sources, so rebuilding views here
+        // would try to read deleted raw output and could recreate artifacts.
+        const current = await new ResearchStore(request.runDir).loadCurrent()
+        const retired = current ? await isDirectionRetired({ projectDir: cleanupProjectDir, runDir: request.runDir, snapshot: current }) : false
+        if (!retired) await bindResearchOutputs(request.runDir, state.runId)
+        try {
+          if (current) {
+            await finalizeDirectionRetirement({ projectDir: cleanupProjectDir, runDir: request.runDir, cycle: state.cycle, snapshot: current })
+          }
+          await advanceCleanupQueue(cleanupProjectDir)
+        } catch (error) { console.error(`[cleanup] experiment hook deferred: ${String(error)}`) }
+      }
     }
   }
 }

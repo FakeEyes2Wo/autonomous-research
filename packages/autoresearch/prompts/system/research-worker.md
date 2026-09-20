@@ -4,12 +4,14 @@ The controller has frozen `cycles/cycle-N/protocol.json` before your call. Execu
 
 Work inside the given run directory. Use DSH tools for file system, shell, web, and analysis.
 
+Keep generated files under the supplied `AUTORESEARCH_ARTIFACT_DIR` (or the declared `<runDir>/work/...` artifact directory) and return paths relative to the run directory. Do not write result files at the run root, outside the run directory, or into an undeclared shared directory. When an action is complete and its evidence is already known, use the action-finish tool's optional `evidence` entries so completion and evidence are recorded together; do not issue a redundant follow-up evidence call. For a large read-only tree query, explicitly request observation packing with the task and direction owner fields, use the returned handle for later pages, and use the exact read tool when you need the complete bytes. Packing is opt-in and small results remain inline; never summarize an archived observation as if it were verified.
+
 Before running experiments:
 - Read the supplied Plan and Experiment Design input.
 - The supplied Experiment Design is current and authoritative. Consult `EXPERIMENT_DESIGN.md` only when no design input was supplied; never let a stale file override current input.
 - Follow its datasets, conflict construction, split protocol, backbones, metrics, and engineering plan within PROFILE constraints.
 
-Use the five research tools to record:
+Use the research tools to record:
 - hypotheses you are testing,
 - actions you start/finish,
 - evidence you produce.

@@ -4,6 +4,7 @@ import { dirname, relative, resolve, sep } from 'node:path'
 import type { ResearchSnapshot, SourceRef, VersionedRecord } from './contracts.js'
 import { freezeRecord, hashBytes, sealRecord, verifyRecord } from './records.js'
 import { assessEvidence } from './assessment.js'
+import { findSourceTombstone } from '../cleanup/tombstones.js'
 
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT'
 const contained = (root: string, target: string) => target === root || target.startsWith(root + sep)
@@ -85,7 +86,7 @@ export class ResearchStore {
     return snapshots
   }
 
-  private async validate(snapshot: ResearchSnapshot): Promise<void> {
+  private async validate(snapshot: ResearchSnapshot, rejectTombstonedAdmissible = false): Promise<void> {
     if (snapshot.schema !== 'autoresearch/research-snapshot/v1' || !Array.isArray(snapshot.claims) || !Array.isArray(snapshot.hypotheses) || !Array.isArray(snapshot.evidence) || !snapshot.budget) throw new Error('malformed research snapshot')
     for (const record of this.records(snapshot)) verifyRecord(record)
     const history = await this.history(snapshot)
@@ -110,6 +111,7 @@ export class ResearchStore {
     }
     if (!snapshot.claims.some((r) => r.id === snapshot.active_claim.id && r.version === snapshot.active_claim.version) || !snapshot.hypotheses.some((r) => r.id === snapshot.active_hypothesis.id && r.version === snapshot.active_hypothesis.version)) throw new Error('missing active research lineage')
     const sources = [...this.records(snapshot).flatMap((r) => r.source_refs), ...snapshot.evidence.flatMap((r) => [...r.artifacts, ...(r.analysis ? [r.analysis] : [])])]
+    const tombstoned = new Set<string>()
     for (const source of sources) {
       if (!source.path) {
         if (!source.hash) continue // Legacy references are explicitly unknown.
@@ -118,11 +120,26 @@ export class ResearchStore {
         continue
       }
       if (!source.hash) continue // Unknown provenance cannot be admitted by assessEvidence.
-      const bytes = await readFile(await this.path(source.path))
+      let bytes: Buffer
+      try { bytes = await readFile(await this.path(source.path)) }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          const tombstone = await findSourceTombstone(this.runDir, { id: source.id, path: source.path, hash: source.hash })
+          if (tombstone) { tombstoned.add(source.id); continue }
+        }
+        throw error
+      }
       if (hashBytes(bytes) !== source.hash) throw new Error(`source hash mismatch: ${source.id}`)
     }
     for (const row of snapshot.evidence) {
       if (snapshot.assessment?.admissible_evidence_ids.includes(row.id) && (!row.artifacts.length || row.artifacts.some((ref) => !ref.path || !ref.hash) || !row.analysis?.path || !row.analysis.hash)) throw new Error(`admissible evidence lacks verifiable provenance: ${row.id}`)
+      if (rejectTombstonedAdmissible && snapshot.assessment?.admissible_evidence_ids.includes(row.id) && [...row.artifacts, ...(row.analysis ? [row.analysis] : [])].some(ref => tombstoned.has(ref.id))) {
+        const parent = history[1]
+        const changedDirection = !!parent && (snapshot.protocol.content_hash !== parent.protocol.content_hash || snapshot.active_hypothesis.id !== parent.active_hypothesis.id || snapshot.active_hypothesis.version !== parent.active_hypothesis.version)
+        const inheritedAssessment = !!parent?.assessment && parent.assessment.content_hash === snapshot.assessment.content_hash
+        const historicalEvidence = history.slice(1).some(state => state.evidence.some(previous => previous.id === row.id && previous.content_hash === row.content_hash))
+        if (!(changedDirection && inheritedAssessment && historicalEvidence)) throw new Error(`tombstoned source cannot be admitted as formal evidence: ${row.id}`)
+      }
     }
     for (const claim of snapshot.claims) {
       if (claim.status !== 'supported' && claim.status !== 'refuted') continue
@@ -201,7 +218,7 @@ export class ResearchStore {
     safeId(snapshot.id)
     const release = await this.lock()
     try {
-      await this.validate(snapshot)
+      await this.validate(snapshot, true)
       const current = await this.loadCurrent()
       if (expectedHash !== undefined && current?.content_hash !== expectedHash) throw new Error('stale snapshot hash; rebuild selection inputs')
       let existing: ResearchSnapshot | undefined

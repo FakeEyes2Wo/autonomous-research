@@ -9,7 +9,7 @@ import { SubagentRoleAgentProvider } from '../../dist/providers/subagent-provide
 import { DEFAULT_PROJECT_SETTINGS } from '../../dist/settings/schema.js'
 
 async function scenario(f: any, options: { bound: boolean; revise?: boolean; relation?: 'supports' | 'refutes'; sameMeaning?: boolean; wrongHash?: boolean }) {
-  const ctx = { runDir: f.runDir, state: { cycle: 1, runId: 'run' } }
+  const ctx = { projectDir: f.project, runDir: f.runDir, state: { cycle: 1, runId: 'run' } }
   await captureResearchPlan(ctx as never, {})
   const frozen = await freezeResearchCycle(ctx as never, 'alpha improves the result', '')
   const claim = frozen.claims[0], span = f.document.spans[options.relation === 'refutes' ? 1 : 0]

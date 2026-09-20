@@ -10,6 +10,10 @@ import { ResearchStore } from '../../dist/research/index.js'
 import { sealRecord } from '../../dist/research/records.js'
 import { commitResearchDecision } from '../../dist/service/research-cycle.js'
 import { synchronizeResearchViews } from '../../dist/service/research-outputs.js'
+import { listCleanupTasks } from '../../dist/cleanup/queue.js'
+import { ProjectDirectionMemoryStore } from '../../dist/memory/direction-memory.js'
+import { enqueueRefutedDirection } from '../../dist/cleanup/index.js'
+import { createLogger } from '../../dist/core/utils.js'
 import type { RoleName, RoleInput, RoleExecutionContext } from '../../dist/agents/types.js'
 
 const context = () => ({ parent: { id: 'fixture', session: { id: 'fixture' } }, signal: new AbortController().signal })
@@ -85,7 +89,7 @@ test('B2 deferred candidates reopen under a new budget basis while the prior dec
   const store = new ResearchStore(dir)
   const before = (await store.loadCurrent())!
   assert.equal(before.candidate_batches![0]!.entries[0]!.candidate.status, 'deferred')
-  const ctx = { runDir: dir, projectDir: dir, state: { cycle: 2, runId: before.branch_id }, deps: { maxCycles: 3 }, context: context() }
+  const ctx = { runDir: dir, projectDir: dir, state: { cycle: 2, runId: before.branch_id }, deps: { maxCycles: 3 }, logger: createLogger(dir), context: context() }
   await commitResearchDecision(ctx as any, { candidates: [] }, { action: 'revise', reason: 'Explicit extended exploration budget.' }, { id: before.id, hash: before.content_hash })
   const after = (await store.loadCurrent())!
   assert.equal(after.decision!.action, 'revise')
@@ -194,6 +198,7 @@ for (const mode of ['minimal', 'legacy']) for (const entry of ['research', 'expe
     const store = new ResearchStore(dir)
     const parent = await store.loadSnapshot('cycle-1-assessment')
     const successor = await store.loadSnapshot('snapshot-decision-1')
+    assert.equal(await enqueueRefutedDirection({ projectDir: dir, runDir: dir, snapshot: successor }), undefined)
     assert.notEqual(successor.active_hypothesis.version, parent.active_hypothesis.version)
     assert.ok(successor.hypotheses.some(h => h.id === parent.active_hypothesis.id && h.version === parent.active_hypothesis.version))
     assert.equal(parent.content_hash, provider.parentHashBeforeDecision)
@@ -211,6 +216,34 @@ for (const mode of ['minimal', 'legacy']) for (const entry of ['research', 'expe
     if (mode === 'minimal') assert.deepEqual(provider.calls, ['planner', 'research-worker', 'supervisor', 'planner', 'research-worker', 'supervisor'])
   })
 }
+
+test('fresh research refutation creates cleanup memory and PAUSED resume removes its generated artifact without dispatch', async (t) => {
+  const dir = await setup('minimal')
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const provider = new EvidenceProvider()
+  const service = new AutoResearchService(provider)
+  const first = await service.run({ runDir: dir, maxCycles: 1, brainstorm: 'off', humanReview: 'off' }, context())
+  assert.equal(first.status, 'PAUSED')
+  assert.equal(provider.workerExecutions, 1)
+  const store = new ResearchStore(dir)
+  const refuted = await store.loadCurrent()
+  assert.equal(refuted.assessment?.category, 'hypothesis_refuted')
+  assert.equal(refuted.assessment?.claim_status, 'refuted')
+  assert.equal(refuted.claims.find(claim => claim.id === refuted.active_claim.id && claim.version === refuted.active_claim.version)?.status, 'refuted')
+  const firstTasks = (await listCleanupTasks(dir)).filter(task => task.disposition === 'refuted')
+  assert.equal(firstTasks.length, 1)
+  await assert.rejects(() => readFile(join(dir, 'work', 'batch-1.json'), 'utf8'), /ENOENT/)
+  assert.equal(firstTasks[0].state, 'completed')
+  const callsBeforeResume = provider.calls.length
+  const resumed = await service.resume({ runDir: dir, maxCycles: 1, brainstorm: 'off', humanReview: 'off' }, context())
+  assert.equal(resumed.status, 'PAUSED')
+  assert.equal(provider.calls.length, callsBeforeResume)
+  await assert.rejects(() => readFile(join(dir, 'work', 'batch-1.json'), 'utf8'), /ENOENT/)
+  const tasks = await listCleanupTasks(dir)
+  assert.equal(tasks.length, 1)
+  assert.equal(tasks[0].state, 'completed')
+  assert.ok((await new ProjectDirectionMemoryStore(dir).read()).some(record => record.reasonCode === 'confirmed_error'))
+})
 
 test('experiment explicit failure import preserves source bytes and supplies source hashes', async (t) => {
   const source = await mkdtemp(join(tmpdir(), 'ar-failure-source-'))

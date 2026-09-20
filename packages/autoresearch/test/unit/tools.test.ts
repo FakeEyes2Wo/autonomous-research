@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { bindToolWorkspacePaths, projectSettingsGet, researchHypothesisAdd, researchActionStart, researchActionFinish, researchEvidenceAdd, researchTreeQuery } from '../../dist/tools/index.js'
+import { bindToolWorkspacePaths, projectSettingsGet, researchHypothesisAdd, researchActionStart, researchActionFinish, researchEvidenceAdd, researchTreeQuery, researchObservationRead, researchVerifiedReceipt } from '../../dist/tools/index.js'
 
 const exec = { signal: new AbortController().signal }
 
@@ -21,6 +21,41 @@ test('research tools maintain parent/artifact rules', async () => {
     assert.equal(nodes.filter((n) => n.kind === 'evidence').length, 1)
     const actionNode = nodes.find((n) => n.kind === 'action')
     assert.equal(actionNode?.status, 'completed')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('research_action_finish fuses evidence into one tree save and preserves legacy output', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-tools-fusion-'))
+  try {
+    const hyp = await researchHypothesisAdd.execute({ runDir: dir, content: 'hyp' }, exec) as { id: string }
+    const action = await researchActionStart.execute({ runDir: dir, hypothesisId: hyp.id, content: 'act' }, exec) as { id: string }
+    const fused = await researchActionFinish.execute({ runDir: dir, actionId: action.id, status: 'completed', summary: 'done', evidence: [{ content: 'observed', verdict: 'supports' }] }, exec) as { action: { id: string }; evidence: Array<{ content: string }> }
+    assert.equal(fused.action.id, action.id)
+    assert.equal(fused.evidence[0]?.content, 'observed')
+    const before = await researchTreeQuery.execute({ runDir: dir }, exec) as Array<{ kind: string }>
+    await assert.rejects(researchActionFinish.execute({ runDir: dir, actionId: action.id, status: 'completed', summary: 'should fail', evidence: [{ content: '', verdict: 'supports' }] }, exec), /evidence content/)
+    const after = await researchTreeQuery.execute({ runDir: dir }, exec) as Array<{ kind: string }>
+    assert.deepEqual(after, before)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('research_tree_query opt-in packing and observation tools provide exact retrieval and receipts', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ar-tools-pack-'))
+  try {
+    const hyp = await researchHypothesisAdd.execute({ runDir: dir, content: 'large hypothesis ' + 'x'.repeat(4000) }, exec) as { id: string }
+    const result = await researchTreeQuery.execute({ runDir: dir, packObservation: true, observationThresholdBytes: 1, observationExcerptBytes: 11, observationTaskId: 'task-1', observationDirection: 'direction-a' }, exec) as { observation: { handle: string; owner: { taskId?: string } } }
+    assert.equal(result.observation.owner.taskId, 'task-1')
+    const page = await researchObservationRead.execute({ runDir: dir, handle: result.observation.handle, limitBytes: 13 }, exec) as { text: string; nextOffset: number }
+    assert.ok(page.text.length > 0)
+    const receipt = await researchVerifiedReceipt.execute({ runDir: dir, handle: result.observation.handle, source: 'tree-query', quotes: [page.text] }, exec) as { scientificStatus: string; status: string }
+    assert.equal(receipt.status, 'verified')
+    assert.equal(receipt.scientificStatus, 'unverified')
+    await assert.rejects(researchObservationRead.execute({ runDir: dir, handle: '../research_tree.json' }, exec), /invalid observation handle/)
+    assert.ok(hyp.id)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

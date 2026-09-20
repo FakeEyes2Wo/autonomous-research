@@ -6,6 +6,8 @@ import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, Role
 import { resolveModelRoute, type ResolvedModelRoute } from '../policy/model-routing.js'
 import { resolveBudget } from '../policy/budget.js'
 import { clipContext } from '../policy/context.js'
+import { estimateTokens } from '../policy/context.js'
+import { renderLabeledContextEntries } from '../harness/context-budget.js'
 import { assembleResearchContext, canonicalContextJson, type ResearchContextPackage } from '../research-context/index.js'
 import { researchContextForInput } from '../service/research-context.js'
 import { prepareLiteratureExposure, finishLiteratureExposure, promptContainsSpan, type RegisteredLiteratureSource } from '../literature/context-adapter.js'
@@ -172,7 +174,7 @@ async function buildBoundPrompt(role: RoleName, input: RoleInput, route: ReturnT
   }
   const sections = [...grouped.entries()].map(([name, entries]) => ({
     name,
-    text: entries.map((entry) => `### ${String(entry.field)}\n${entry.text}`).join('\n\n'),
+    text: renderLabeledContextEntries(entries.map((entry) => ({ field: String(entry.field), text: entry.text }))),
     required: true,
     priority: name === 'treeSummary' ? 10 : 0,
   }))
@@ -221,7 +223,7 @@ async function prepareResearchContext(role: RoleName, input: RoleInput, context:
 }
 
 function estimatePromptTokens(prompt: string): number {
-  return Math.ceil(prompt.length / 4)
+  return estimateTokens(prompt)
 }
 
 function taskFingerprint(role: RoleName, input: RoleInput, context: RoleExecutionContext): string {

@@ -9,6 +9,7 @@ import { runAgent, structuredText, treeSummary } from '../agent.js'
 import { runReflexion } from '../agent-loop.js'
 import type { RunContext } from '../context.js'
 import type { RegisteredLiteratureSource } from '../../literature/context-adapter.js'
+import { ProjectDirectionMemoryStore, renderDirectionMemory } from '../../memory/direction-memory.js'
 
 export interface IdeaGenerationInput {
   idea: string
@@ -75,6 +76,9 @@ export async function runIdeaGeneration(ctx: RunContext, { idea, profile, relate
   const earlier = JSON.parse((await readOptionalText(capturePath)) ?? '{"source_refs":[]}') as { source_refs: import('../../research/contracts.js').SourceRef[] }
   // A proposal keeps its content identity; each authorized assessment round has a separate accounted identity.
   const reviewAttemptId = newId('idea-review')
+  const directionMemory = new ProjectDirectionMemoryStore(ctx.projectDir)
+  const rememberedInput = renderDirectionMemory(await directionMemory.read())
+  const rememberedGuidance = [failureDirections, rememberedInput].filter(Boolean).join('\n\n')
   const generationInput = {
       runDir: ctx.runDir,
       taskId: `${reviewAttemptId}:generate`,
@@ -83,7 +87,7 @@ export async function runIdeaGeneration(ctx: RunContext, { idea, profile, relate
       treeSummary: treeSummary(ctx.tree),
       ...(relatedPapers ? { relatedPapers } : {}),
       ...(baselines ? { baselines } : {}),
-      ...(failureDirections ? { failureDirections } : {}),
+      ...(rememberedGuidance ? { failureDirections: rememberedGuidance } : {}),
       ...(insight ? { insight } : {}),
       ...(feedback ? { plan: `Human review feedback on the previous idea generation:\n${feedback}` } : {}),
   }
@@ -122,6 +126,13 @@ export async function runIdeaGeneration(ctx: RunContext, { idea, profile, relate
     ].some(sourceId => !registered.has(sourceId))
     const evaluation = { raw: draft, id, status: 'proposed', reasons: [] as string[], revised: undefined as IdeaPackage | undefined }
     evaluations.push(evaluation)
+    const remembered = await directionMemory.match({ idea: draft.statement })
+    if (remembered.length) {
+      evaluation.status = 'rejected'
+      evaluation.reasons.push(...remembered.map((record) => `project_direction_memory:${record.id}`))
+      rejections.push(`project direction memory rejected ${id}`)
+      continue
+    }
     if (unregistered(draft)) {
         evaluation.status = 'rejected'
         evaluation.reasons.push('unregistered_source_span')
@@ -145,6 +156,13 @@ export async function runIdeaGeneration(ctx: RunContext, { idea, profile, relate
     })
     pkg = reflex.pkg
     evaluation.revised = pkg
+    const rememberedAfterReflexion = await directionMemory.match({ idea: pkg.statement })
+    if (rememberedAfterReflexion.length) {
+      evaluation.status = 'rejected'
+      evaluation.reasons.push(...rememberedAfterReflexion.map((record) => `project_direction_memory:${record.id}`))
+      rejections.push(`project direction memory rejected revised ${id}`)
+      continue
+    }
     if (unregistered(pkg)) {
       evaluation.status = 'rejected'
       evaluation.reasons.push('unregistered_source_span')

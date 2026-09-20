@@ -172,8 +172,11 @@ worker 返回后，运行时要求状态为 completed、摘要非空，并至少
 - pilot/smoke 只证明可运行或用于校准，不等于正式验证；
 - formal 运行前冻结带版本的协议；pilot 修改后创建新版本，exploratory 与 formal 结果不可静默混合；
 - 成本敏感比较记录完整 run/episode 的 input/cache/output token、步骤、重试、时间，以及可获得的价格依据；
-- 失败和阴性结果进入证据与报告，不因结论不理想而删除；
+- 普通执行失败和未决阴性结果继续进入证据与报告并保留；经 canonical assessment 确认 refuted，或用户明确放弃的方向，才按退役流程清理；
+
 - evidence 必须区分观察事实、推断和限制，文件存在不等于结论正确。
+
+普通执行失败、暂停、预算耗尽和无效测量继续保留在证据与报告中。经 canonical assessment 确认 refuted，或用户明确放弃的方向，会先写入项目级简短淘汰记忆，再由可恢复 cleanup task 删除已登记且仅属于该方向的代码、实验、结果、日志、缓存和复制品；共享依赖、成功方向、活动任务、用户文件和未知归属旧产物会被保护或使任务保持 `blocked`。见[方向淘汰与清理说明](packages/autoresearch/docs/direction-retirement.md)。
 
 ## 产物与断点恢复
 

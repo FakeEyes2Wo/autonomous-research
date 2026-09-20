@@ -59,3 +59,25 @@ test('unknown monetary cost requires explicit caps and remains null in serialize
   assert.equal(selectCandidate([candidate], { ...fallback, exploratoryBudget: { ...fallback.exploratoryBudget, remainingTokens: 0 } }).stopReason, 'budget')
   assert.equal(selectCandidate([candidate], { ...fallback, exploratoryBudget: undefined }).selectedId, null)
 })
+
+test('project direction memory hard-excludes an exact mechanism while allowing a changed mechanism', () => {
+  const blocked = make('blocked', { mechanismKey: 'same-mechanism' })
+  const changed = make('changed', { mechanismKey: 'new-mechanism' })
+  const decision = selectCandidate([blocked, changed], {
+    ...input,
+    avoidedMechanismKeys: ['same-mechanism'],
+    directionMemoryIds: ['memory-1'],
+  })
+  assert.equal(decision.selectedId, 'changed')
+  assert.ok(decision.reasons.blocked.includes('project_direction_memory:memory-1'))
+  assert.ok(decision.reasons.changed.includes('selected'))
+})
+
+test('a project memory key without a corresponding memory id still blocks deterministically', () => {
+  const decision = selectCandidate([make('blocked', { mechanismKey: 'same-mechanism' })], {
+    ...input,
+    avoidedMechanismKeys: ['same-mechanism'],
+  })
+  assert.equal(decision.selectedId, null)
+  assert.ok(decision.reasons.blocked.includes('project_direction_memory'))
+})

@@ -96,6 +96,7 @@ export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const
 export type LogLevel = typeof LOG_LEVELS[number]
 
 export class Logger {
+  private static readonly active = new Set<Promise<void>>()
   private readonly file?: string
 
   constructor(runDir?: string) {
@@ -114,22 +115,34 @@ export class Logger {
     }
   }
 
-  debug(message: string): void {
-    void this.write('debug', message)
+  private enqueue(level: LogLevel, message: string): void {
+    const pending = this.write(level, message)
+    Logger.active.add(pending)
+    void pending.finally(() => Logger.active.delete(pending)).catch(() => undefined)
   }
 
-  info(message: string): void {
-    void this.write('info', message)
+  async flush(): Promise<void> {
+    while (Logger.active.size) await Promise.allSettled([...Logger.active])
   }
 
-  warn(message: string): void {
-    void this.write('warn', message)
+  static async flushAll(): Promise<void> {
+    while (Logger.active.size) await Promise.allSettled([...Logger.active])
   }
+
+  debug(message: string): void { this.enqueue('debug', message) }
+
+  info(message: string): void { this.enqueue('info', message) }
+
+  warn(message: string): void { this.enqueue('warn', message) }
 
   error(message: string, error?: unknown): void {
     const detail = error instanceof Error ? `${error.message}\n${error.stack ?? ''}` : String(error)
-    void this.write('error', `${message}${detail ? `\n${detail}` : ''}`)
+    this.enqueue('error', `${message}${detail ? `\n${detail}` : ''}`)
   }
+}
+
+export async function flushLoggers(): Promise<void> {
+  await Logger.flushAll()
 }
 
 export function createLogger(runDir?: string): Logger {

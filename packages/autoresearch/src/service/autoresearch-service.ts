@@ -22,6 +22,8 @@ import { assertFailureImportTarget, importResearchFailure, type FailureReportImp
 import { bindResearchOutputs } from './research-outputs.js'
 import { bindRunProject } from './project-paper.js'
 import { discoverProject, validateCompletedDiscovery } from '../project/discovery.js'
+import { advanceCleanupQueue, finalizeDirectionRetirement, isDirectionRetired } from '../cleanup/index.js'
+import { ResearchStore } from '../research/store.js'
 
 export interface ResearchRunOptions {
   failureReport?: FailureReportImport
@@ -152,6 +154,10 @@ export class AutoResearchService {
     logger.info(`AutoResearchService.run start runDir=${runDir}`)
     await ensureDir(runDir)
     const projectPaper = identity.workflow === 'project-paper'
+    // Cleanup is a resumable project concern. A malformed/blocked cleanup
+    // task must never turn into a scientific run failure.
+    try { await advanceCleanupQueue(identity.projectDir) }
+    catch (error) { logger.warn(`cleanup queue could not advance; will retry on resume: ${String(error)}`) }
     if (projectPaper && (options.candidatePath || options.failureReport)) throw new Error('project discovery candidate cannot be replaced on resume')
     if (options.candidatePath) {
       await copyExternalIdea(runDir, options.candidatePath)
@@ -161,6 +167,18 @@ export class AutoResearchService {
     if (state.status === 'COMPLETED' || state.status === 'FAILED') {
       if (projectPaper) await validateCompletedDiscovery(runDir, identity.projectDir)
       logger.info(`run already terminal status=${state.status}`)
+      try {
+        const current = await new ResearchStore(runDir).loadCurrent()
+        if (current) await finalizeDirectionRetirement({ projectDir: identity.projectDir, runDir, cycle: state.cycle, snapshot: current })
+        else await advanceCleanupQueue(identity.projectDir)
+      } catch (error) { console.error(`[cleanup] terminal resume deferred: ${String(error)}`) }
+      return state
+    }
+    const currentBeforeDispatch = await new ResearchStore(runDir).loadCurrent()
+    if (currentBeforeDispatch && await isDirectionRetired({ projectDir: identity.projectDir, runDir, snapshot: currentBeforeDispatch })) {
+      state.status = 'PAUSED'
+      state.lastError = 'direction retired; cleanup completed and resume will not redispatch it'
+      await saveState(runDir, state)
       return state
     }
     state.status = 'RUNNING'
@@ -228,6 +246,11 @@ export class AutoResearchService {
       await bindResearchOutputs(runDir, state.runId)
       await writeLastRun(runDir)
       logger.info(`AutoResearchService.run done status=${result.status}`)
+      try {
+        const current = await new ResearchStore(runDir).loadCurrent()
+        if (current) await finalizeDirectionRetirement({ projectDir: identity.projectDir, runDir, cycle: state.cycle, snapshot: current })
+        else await advanceCleanupQueue(identity.projectDir)
+      } catch (error) { console.error(`[cleanup] hook deferred; will retry on resume: ${String(error)}`) }
       return result
     } catch (error) {
       logger.error('AutoResearchService.run failed', error)
@@ -237,6 +260,14 @@ export class AutoResearchService {
       await saveState(runDir, state)
       await writeFailureReport(runDir, `# PAUSED\n\n${String(error)}\n`)
       await bindResearchOutputs(runDir, state.runId)
+      // A pause can happen immediately after the refutation report is
+      // materialized.  Finalize the cleanup only after that last checkpoint;
+      // the persisted PAUSED state proves there is no live dispatch left.
+      try {
+        const current = await new ResearchStore(runDir).loadCurrent()
+        if (current) await finalizeDirectionRetirement({ projectDir: identity.projectDir, runDir, cycle: state.cycle, snapshot: current })
+        else await advanceCleanupQueue(identity.projectDir)
+      } catch (cleanupError) { logger.warn(`paused refutation registration deferred: ${String(cleanupError)}`) }
       if (isExperimentPauseError(error) || isBudgetExhaustedError(error)) return state
       throw error
     }

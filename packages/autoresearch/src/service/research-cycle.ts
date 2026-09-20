@@ -1,5 +1,5 @@
-import { readFile, open } from 'node:fs/promises'
-import { join } from 'node:path'
+import { readFile, open, stat } from 'node:fs/promises'
+import { join, relative } from 'node:path'
 import type { ActionResult, ResearchDecision } from '../core/types.js'
 import { atomicWriteJson, readOptionalText, safeResolve, writeText } from '../core/utils.js'
 import { ResearchStore, sealRecord, hashContent, assessEvidence, createRevision } from '../research/index.js'
@@ -9,12 +9,24 @@ import { ExperimentPauseError } from '../experiment/errors.js'
 import type { RunContext } from './context.js'
 import { validateScientificEvidence } from '../experiment/evidence-validator.js'
 import { recordResearchExperience } from '../memory/index.js'
+import { selectionHintsForMechanisms } from '../memory/direction-memory.js'
 import type { RegisteredLiteratureSource } from '../literature/context-adapter.js'
+import { openDirectionManifest } from '../cleanup/manifest.js'
+import type { DirectionRef } from '../cleanup/direction-id.js'
+import { reserveDirectionCycleBoundary } from '../cleanup/registration.js'
+import { advanceCleanupQueue, enqueueRefutedDirection, registerDirectionCycleArtifacts, refreshRunCleanupTargets, loadDirectionManifest, directionId, registerDirectionGeneration } from '../cleanup/index.js'
+import { hashBytes } from '../research/records.js'
 
 export const cyclePath = (ctx: RunContext, name: string) => safeResolve(ctx.runDir, 'cycles', `cycle-${ctx.state.cycle}`, name)
 const unknownFingerprints = { code: 'unknown', data: 'unknown', treatment: 'unknown', model: 'unknown' }
 const stamp = (id: string, version = 1) => ({ id, version, created_at: new Date().toISOString(), source_refs: [] })
 const record = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {}
+
+async function ensureDirectionManifest(ctx: RunContext, snapshot: ResearchSnapshot): Promise<void> {
+  const direction: DirectionRef = { projectId: ctx.projectDir, branchId: snapshot.branch_id, claim: snapshot.active_claim, hypothesis: snapshot.active_hypothesis, protocolHash: snapshot.protocol.content_hash }
+  const manifest = await openDirectionManifest(ctx.runDir, direction)
+  await reserveDirectionCycleBoundary({ runDir: ctx.runDir, cycle: ctx.state.cycle, manifestId: manifest.id })
+}
 
 function plannerLiteratureIds(spec: Record<string, unknown>): string[] | undefined {
   if (!Object.hasOwn(spec, 'allowed_literature_span_ids')) return undefined
@@ -66,12 +78,17 @@ async function frozenPlannerLiterature(ctx: RunContext, planner: Record<string, 
 export async function freezeResearchCycle(ctx: RunContext, planText: string, design: string): Promise<ResearchSnapshot> {
   const store = new ResearchStore(ctx.runDir)
   const saved = await readOptionalText(cyclePath(ctx, 'frozen.json'))
-  if (saved) return store.loadSnapshot((JSON.parse(saved) as { snapshotId: string }).snapshotId)
+  if (saved) {
+    const snapshot = await store.loadSnapshot((JSON.parse(saved) as { snapshotId: string }).snapshotId)
+    await ensureDirectionManifest(ctx, snapshot)
+    return snapshot
+  }
   const orphan = await readOptionalText(safeResolve(ctx.runDir, 'research', 'snapshots', `cycle-${ctx.state.cycle}-frozen`, 'manifest.json'))
   if (orphan) {
     const recovered = await store.commit(await store.loadSnapshot(`cycle-${ctx.state.cycle}-frozen`))
     await atomicWriteJson(cyclePath(ctx, 'protocol.json'), recovered.protocol)
     await atomicWriteJson(cyclePath(ctx, 'frozen.json'), { snapshotId: recovered.id })
+    await ensureDirectionManifest(ctx, recovered)
     return recovered
   }
   const parent = await store.loadCurrent()
@@ -116,6 +133,7 @@ export async function freezeResearchCycle(ctx: RunContext, planText: string, des
   const committed = await store.commit(snapshot)
   await atomicWriteJson(cyclePath(ctx, 'protocol.json'), protocol)
   await atomicWriteJson(cyclePath(ctx, 'frozen.json'), { snapshotId: committed.id })
+  await ensureDirectionManifest(ctx, committed)
   return committed
 }
 
@@ -155,6 +173,18 @@ export async function assessResearchCycle(ctx: RunContext, action: ActionResult,
     return recovered
   }
   const frozen = await freezeResearchCycle(ctx, '', '')
+  if (!error && !executionUnknown && action.artifacts.length) {
+    try {
+      const artifacts = []
+      for (const artifact of action.artifacts) {
+        const file = safeResolve(ctx.runDir, artifact)
+        const bytes = await readFile(file)
+        const relativePath = relative(ctx.runDir, file).replaceAll('\\', '/')
+        artifacts.push({ relativePath, sourceId: artifact, hash: hashBytes(bytes), bytes: (await stat(file)).size, kind: 'worker-output', producer: 'trusted-worker', ownership: 'direction' as const })
+      }
+      await registerDirectionGeneration({ runDir: ctx.runDir, manifestId: directionId({ projectId: ctx.projectDir, branchId: frozen.branch_id, claim: frozen.active_claim, hypothesis: frozen.active_hypothesis, protocolHash: frozen.protocol.content_hash }), direction: { projectId: ctx.projectDir, branchId: frozen.branch_id, claim: frozen.active_claim, hypothesis: frozen.active_hypothesis, protocolHash: frozen.protocol.content_hash }, snapshot: frozen, receipt: { schema: 'autoresearch/direction-generation/v1', protocolHash: frozen.protocol.content_hash, claim: frozen.active_claim, hypothesis: frozen.active_hypothesis, artifacts } })
+    } catch (registrationError) { ctx.logger.warn(`direction output registration deferred: ${String(registrationError)}`) }
+  }
   const artifacts = []
   for (const path of action.artifacts) artifacts.push(await store.captureSource(path))
   let raw: unknown
@@ -252,13 +282,31 @@ export async function commitResearchDecision(ctx: RunContext, output: unknown, l
   for (let retry = 0; retry < 3; retry++) {
   const parent = await store.loadCurrent()
   if (!parent?.assessment) throw new ExperimentPauseError('research snapshot changed; reassessment is required')
+  if (parent.assessment.category === 'hypothesis_refuted' && parent.assessment.claim_status === 'refuted') {
+    // Persist the compact negative memory before candidate selection. The run
+    // is still live, so cleanup itself remains protected until the final hook.
+    const direction: DirectionRef = { projectId: ctx.projectDir, branchId: parent.branch_id, claim: parent.active_claim, hypothesis: parent.active_hypothesis, protocolHash: parent.protocol.content_hash }
+    try {
+      await registerDirectionCycleArtifacts({ runDir: ctx.runDir, cycle: ctx.state.cycle, direction, snapshot: parent })
+      const manifest = await loadDirectionManifest(ctx.runDir, directionId(direction))
+      await refreshRunCleanupTargets(ctx.projectDir, ctx.runDir, direction, manifest)
+    } catch (error) {
+      ctx.logger.warn(`direction cleanup registration deferred: ${String(error)}`)
+    }
+    await enqueueRefutedDirection({ projectDir: ctx.projectDir, runDir: ctx.runDir, snapshot: parent })
+    await advanceCleanupQueue(ctx.projectDir)
+  }
   if (parent.decision?.id === `decision-${ctx.state.cycle}`) return materializeCommittedDecision(ctx, parent)
   const ledger = await ctx.context.requestLedger?.snapshot()
+  const directionMemory = await selectionHintsForMechanisms(ctx.projectDir)
   let batch = buildCandidateBatch({ id: `candidate-batch-${ctx.state.cycle}`, parent, proposalParent: proposalSnapshot.active_hypothesis,
     proposalSnapshotHash: proposalSnapshot.content_hash, rawCandidates: Array.isArray(raw.candidates) ? raw.candidates : [], rawSource,
     registeredSpans: admission.registeredSpans, selectionInput: { snapshotHash: parent.content_hash, remainingCost: admission.remainingCostMicros ?? null,
       registeredAlternatives: [...new Set(parent.hypotheses.flatMap(h => h.alternatives))],
       testedMechanismKeys: (parent.candidate_batches ?? []).flatMap(b => b.entries.filter(e => e.candidate.status === 'selected').map(e => e.candidate.mechanismKey)),
+      avoidedMechanismKeys: directionMemory.avoidedMechanismKeys,
+      directionMemoryIds: directionMemory.directionMemoryIds,
+      directionMemoryMatches: directionMemory.directionMemoryMatches,
       exploratoryBudget: { policy: 'controller-caps-v1', remainingCycles: Math.max(0, Math.min((ctx.deps.maxCycles ?? 10) - ctx.state.cycle, (ctx.deps.maxCycles ?? 10) - parent.budget.revisions)),
         remainingRoleCalls: ledger?.remainingRoleCalls ?? null, remainingTokens: ledger?.remainingTokens ?? null } } })
   const candidate = batch.entries.find(entry => entry.candidate.id === batch.selection.selectedId)?.revision

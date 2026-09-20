@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { RoleAgentProvider } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
-import { isEvidenceVerdict } from '../core/types.js'
+import { isEvidenceVerdict, type EvidenceVerdict } from '../core/types.js'
 import { loadCheckpoint } from '../paper/checkpoint.js'
 import { readLastRun } from '../session/last-run.js'
 import { runExperimentTask } from '../experiment/runner.js'
@@ -32,6 +32,8 @@ import {
   stringSchema,
 } from './schemas.js'
 import { toResearchRunOptions, toFailureReportImport } from './options.js'
+import { fuseActionFinish, type ActionFinishEvidence } from '../harness/action-fusion.js'
+import { packObservation } from '../harness/observation-pack.js'
 
 export interface ToolExecutionContextLike {
   signal: AbortSignal
@@ -137,6 +139,11 @@ export const researchActionFinish: ToolDefinitionLike = {
       status: { type: 'string', enum: ['completed', 'failed'], description: 'Action result status' },
       summary: stringSchema('Action result summary'),
       artifacts: stringArraySchema('Artifact paths'),
+      evidence: {
+        type: 'array',
+        description: 'Optional evidence to record atomically with action completion.',
+        items: { type: 'object', properties: { content: stringSchema('Evidence description'), verdict: evidenceVerdictSchema, artifacts: stringArraySchema('Evidence artifact paths') }, required: ['content', 'verdict'], additionalProperties: false },
+      },
     },
     required: ['runDir', 'actionId', 'status', 'summary'],
     additionalProperties: false,
@@ -144,13 +151,26 @@ export const researchActionFinish: ToolDefinitionLike = {
   output: jsonOutput,
   async execute(args) {
     const tree = await ResearchTree.load(requireRunDir(args))
-    const node = tree.update(String(args.actionId), {
-      status: String(args.status),
-      content: String(args.summary),
-      ...(strArray(args.artifacts) ? { artifacts: strArray(args.artifacts) } : {}),
-    })
+    const evidence = args.evidence === undefined ? undefined : (() => {
+      if (!Array.isArray(args.evidence)) throw new TypeError('evidence must be an array')
+      return args.evidence.map((entry): ActionFinishEvidence => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new TypeError('evidence entries must be objects')
+        const item = entry as Record<string, unknown>
+        if (typeof item.content !== 'string' || typeof item.verdict !== 'string' || !isEvidenceVerdict(item.verdict)) throw new TypeError('evidence content and verdict are required')
+        if (item.artifacts !== undefined && (!Array.isArray(item.artifacts) || item.artifacts.some((artifact) => typeof artifact !== 'string'))) throw new TypeError('evidence artifacts must be strings')
+        return { content: item.content, verdict: item.verdict as EvidenceVerdict, ...(item.artifacts ? { artifacts: [...item.artifacts] as string[] } : {}) }
+      })
+    })()
+    const artifacts = args.artifacts === undefined ? undefined : (() => {
+      if (!Array.isArray(args.artifacts) || args.artifacts.some((artifact) => typeof artifact !== 'string' || artifact.length === 0)) throw new TypeError('action artifacts must be non-empty strings')
+      return [...args.artifacts] as string[]
+    })()
+    const plan = fuseActionFinish({ actionId: String(args.actionId), status: String(args.status) as 'completed' | 'failed', summary: String(args.summary), ...(artifacts ? { artifacts } : {}), ...(evidence ? { evidence } : {}) })
+    tree.get(plan.action.id)
+    const node = tree.update(plan.action.id, plan.action)
+    const evidenceNodes = plan.evidence.map((item) => tree.add('evidence', item.content, { parent: plan.action.id, status: item.verdict, ...(item.artifacts ? { artifacts: item.artifacts } : {}) }))
     await tree.save()
-    return node
+    return evidenceNodes.length > 0 ? { action: node, evidence: evidenceNodes } : node
   },
 }
 
@@ -198,19 +218,33 @@ export const researchTreeQuery: ToolDefinitionLike = {
       kind: researchNodeKindSchema,
       status: stringSchema('Node status'),
       parent: stringSchema('Parent node id'),
+      packObservation: { type: 'boolean', description: 'Opt in to archive large read-only results and return a precise handle.' },
+      observationThresholdBytes: { type: 'number', description: 'Archive threshold in UTF-8 bytes when packObservation is true.' },
+      observationExcerptBytes: { type: 'number', description: 'UTF-8 excerpt bytes returned with an archived handle.' },
+      observationTaskId: stringSchema('Explicit source task owner for an archived observation'),
+      observationDirection: stringSchema('Explicit source direction owner for an archived observation'),
     },
     required: ['runDir'],
     additionalProperties: false,
   },
-  output: { schema: { type: 'array', items: { type: 'object', additionalProperties: true } }, render: renderJson },
+  output: { schema: { anyOf: [{ type: 'array', items: { type: 'object', additionalProperties: true } }, { type: 'object', properties: { observation: { type: 'object', additionalProperties: true }, count: { type: 'number' } }, required: ['observation', 'count'], additionalProperties: false }] }, render: renderJson },
   async execute(args) {
     const tree = await ResearchTree.load(requireRunDir(args))
-    return tree.query({
+    const result = tree.query({
       ...(typeof args.id === 'string' ? { id: args.id } : {}),
       ...(typeof args.kind === 'string' ? { kind: args.kind as 'hypothesis' | 'action' | 'evidence' } : {}),
       ...(typeof args.status === 'string' ? { status: args.status } : {}),
       ...(typeof args.parent === 'string' ? { parent: args.parent } : {}),
     })
+    if (args.packObservation !== true) return result
+    const packed = await packObservation(JSON.stringify(result), {
+      runDir: requireRunDir(args), enabled: true,
+      ...(typeof args.observationThresholdBytes === 'number' ? { thresholdBytes: args.observationThresholdBytes } : {}),
+      ...(typeof args.observationExcerptBytes === 'number' ? { excerptBytes: args.observationExcerptBytes } : {}),
+      ...(typeof args.observationTaskId === 'string' ? { taskId: args.observationTaskId } : {}),
+      ...(typeof args.observationDirection === 'string' ? { direction: args.observationDirection } : {}),
+    })
+    return packed.kind === 'inline' ? result : { observation: packed, count: result.length }
   },
 }
 
@@ -362,6 +396,8 @@ export const figureApiTest: ToolDefinitionLike = {
 }
 
 export { bindToolWorkspacePaths } from './workspace-paths.js'
+export { researchObservationRead, researchVerifiedReceipt } from './observation-tools.js'
+export { createCleanupTools } from '../cleanup/tools.js'
 
 export const paperPipelineStatus: ToolDefinitionLike = {
   name: 'paper_pipeline_status',

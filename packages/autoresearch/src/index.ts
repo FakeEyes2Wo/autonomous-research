@@ -1,6 +1,6 @@
 import { AutoResearchService } from './service/autoresearch-service.js'
 import { SubagentRoleAgentProvider } from './providers/subagent-provider.js'
-import { createExperimentRunTool, createPaperPipelineResumeTool, createResearchRunTool, createProjectPaperRunTool, figureApiTest, paperPipelineLastRun, paperPipelineStatus, projectSettingsGet, projectSettingsSave, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchTreeQuery } from './tools/index.js'
+import { createExperimentRunTool, createPaperPipelineResumeTool, createResearchRunTool, createProjectPaperRunTool, figureApiTest, paperPipelineLastRun, paperPipelineStatus, projectSettingsGet, projectSettingsSave, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchObservationRead, researchTreeQuery, researchVerifiedReceipt } from './tools/index.js'
 import { loadState } from './core/state.js'
 import { loadProjectSecrets, loadProjectSettings } from './settings/project-settings.js'
 import type { HumanOpenRequest, HumanReviewAnswer, HumanReviewer, HumanReviewRequest } from './core/human-review.js'
@@ -9,6 +9,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { installRequestAccounting } from './providers/request-accounting.js'
 import { bindToolWorkspacePaths } from './tools/workspace-paths.js'
 import { createStartupTools } from './tools/startup.js'
+import { createCleanupTools } from './cleanup/tools.js'
 import type { SessionStore } from '@deepseek-ai/dsh-session'
 import { createLocalExperimentRuntime, type LocalExperimentConfig } from './runtime/local-authority.js'
 
@@ -119,6 +120,7 @@ export function apply(ctx: {
   const experimentRuntimeForProject = localGrant ? (projectDir: string) => createLocalExperimentRuntime(localGrant, projectDir) : undefined
   const service = new AutoResearchService(provider, { reviewer, experimentRuntimeForProject })
   const startup = createStartupTools((agentId) => ctx.sessions?.get(agentId)?.header.cwd)
+  const cleanupTools = createCleanupTools()
   ctx.provide('autoresearch', service)
 
   ctx.commands.register({
@@ -190,6 +192,10 @@ export function apply(ctx: {
     researchActionFinish,
     researchEvidenceAdd,
     researchTreeQuery,
+    researchObservationRead,
+    researchVerifiedReceipt,
+    cleanupTools.status,
+    cleanupTools.abandon,
     createExperimentRunTool(provider, experimentRuntimeForProject),
     projectSettingsGet,
     projectSettingsSave,
