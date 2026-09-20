@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile, readdir, realpath } from 'node:fs/promises'
+import { lstat, mkdir, readFile, readdir, realpath, open } from 'node:fs/promises'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { atomicWriteJson, readOptionalText, safeResolve } from '../core/utils.js'
 import { loadDirectionManifest, markDirectionBoundaryCaptured, registerManagedArtifact } from './manifest.js'
@@ -8,6 +8,8 @@ import type { ResearchSnapshot, SourceRef, VersionRef } from '../research/contra
 import { hashBytes } from '../research/records.js'
 import { loadTaskGraph, type FrozenTaskGraph } from '../experiment/task-graph.js'
 import { ExperimentPauseError } from '../experiment/errors.js'
+import { canonicalRelativePath, validateWorkerResult } from '../experiment/validation.js'
+import type { ActionResult } from '../core/types.js'
 
 export interface DirectionGenerationArtifact {
   relativePath: string
@@ -108,10 +110,8 @@ async function rootFiles(runDir: string): Promise<string[]> {
 }
 
 /**
- * Worker results may name a generated file outside the conventional cycle
- * directory (for example a deterministic fixture's `work/batch-1.json`).
- * The controller event is the durable, bounded allowlist for those outputs;
- * registration still re-hashes and applies normal run-root containment.
+ * Model event paths are discovery hints only. Without a separately verified
+ * controller receipt they are registered as unknown, never as ownership proof.
  */
 async function recordedCycleArtifacts(runDir: string, cycle: number): Promise<string[]> {
   const text = await readOptionalText(join(runDir, 'events.jsonl'))
@@ -189,6 +189,58 @@ export async function registerDirectionGeneration(input: { runDir: string; manif
 
 /** Compatibility name for cleanup callers that already call the receipt API explicitly. */
 export const registerDirectionGenerationReceipt = registerDirectionGeneration
+
+/** The controller binds one exact dedicated root before publishing worker intent. */
+export async function issueWorkerRoot(runDir: string, cycle: number, workDir: string): Promise<void> {
+  const relativePath = asRelative(runDir, workDir)
+  if (![`work/cycle-${String(cycle).padStart(2, '0')}`, `work/experiment-cycle-${String(cycle).padStart(2, '0')}`].includes(relativePath)) throw new ExperimentPauseError('invalid issued worker root')
+  await mkdir(workDir, { recursive: true })
+  if (await realpath(workDir) !== join(await realpath(runDir), ...relativePath.split('/'))) throw new ExperimentPauseError('issued worker root must not redirect through symlinks')
+  const file = join(runDir, 'cycles', `cycle-${cycle}`, 'worker-root.json')
+  const value = { schema: 'autoresearch/worker-root/v1', cycle, workDir: relativePath }
+  await mkdir(dirname(file), { recursive: true })
+  try {
+    const handle = await open(file, 'wx')
+    try { await handle.writeFile(JSON.stringify(value)) } finally { await handle.close() }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+    if (JSON.stringify(JSON.parse(await readFile(file, 'utf8'))) !== JSON.stringify(value)) throw new ExperimentPauseError('issued worker root changed')
+  }
+}
+
+/** Worker strings never confer the mixed-root authority of a trusted controller receipt. */
+export async function registerWorkerDirectionArtifacts(input: { runDir: string; workDir: string; frozenManifest: Awaited<ReturnType<typeof loadDirectionManifest>>; action: ActionResult; replay?: boolean }): Promise<void> {
+  try {
+    const { runDir, workDir, frozenManifest } = input
+    const match = /^work\/(?:experiment-)?cycle-(\d+)$/u.exec(asRelative(runDir, workDir))
+    if (!match) throw new ExperimentPauseError('missing issued worker root proof')
+    const cycle = Number(match[1])
+    const issued = await readOptionalText(join(runDir, 'cycles', `cycle-${cycle}`, 'worker-root.json'))
+    if (!issued || JSON.parse(issued).workDir !== asRelative(runDir, workDir) || JSON.parse(issued).cycle !== cycle || JSON.parse(issued).schema !== 'autoresearch/worker-root/v1') throw new ExperimentPauseError('missing or mismatched issued worker root proof')
+    if (!(await boundaryMarkerExists(runDir, frozenManifest.id, cycle))) throw new ExperimentPauseError('missing frozen worker direction boundary')
+    const action = await validateWorkerResult(runDir, workDir, input.action)
+    const manifest = await currentManifest(runDir, frozenManifest.id, frozenManifest.direction)
+    const identities = await Promise.all(manifest.artifacts.map(async entry => {
+      try { return { entry, path: await canonicalRelativePath(runDir, entry.relativePath) } }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined; throw error }
+    }))
+    const entries: DirectionGenerationArtifact[] = []
+    for (const path of action.artifacts) {
+      const file = safeResolve(runDir, path), relativePath = await canonicalRelativePath(runDir, path)
+      const bytes = await readFile(file), hash = hashBytes(bytes)
+      const old = identities.filter(identity => identity?.path === relativePath).map(identity => identity!.entry)
+      if (input.replay && !old.length) throw new ExperimentPauseError(`cached worker artifact lacks registered ownership proof: ${relativePath}`)
+      if (old.some(entry => entry.ownership !== 'direction')) throw new ExperimentPauseError(`worker artifact ownership is preexisting/unknown/shared: ${relativePath}`)
+      if (old.some(entry => entry.hash !== hash)) throw new ExperimentPauseError(`worker artifact bytes changed (hash mismatch): ${relativePath}`)
+      entries.push({ relativePath: old[0]?.relativePath ?? relativePath, hash, bytes: bytes.length, kind: 'worker-output', producer: 'autoresearch-worker', ownership: 'direction' })
+    }
+    // Check every path before writing any receipt or promoting ownership.
+    await registerDirectionGeneration({ runDir, manifestId: manifest.id, receipt: { schema: 'autoresearch/direction-generation/v1', protocolHash: manifest.direction.protocolHash!, claim: manifest.direction.claim, hypothesis: manifest.direction.hypothesis, artifacts: entries } })
+  } catch (error) {
+    if (error instanceof ExperimentPauseError) throw error
+    throw new ExperimentPauseError(`worker ownership boundary rejected: ${String(error)}`)
+  }
+}
 
 function expectedJobDirectories(graph: FrozenTaskGraph | undefined): Set<string> { return new Set((graph?.tasks ?? []).map(task => hashBytes(task.job.id))) }
 function dedicated(relativePath: string, cycle: number): boolean {
@@ -340,7 +392,7 @@ export async function registerDirectionCycleArtifacts(input: RegisterDirectionCy
     await currentManifest(input.runDir, manifestId, input.direction, input.snapshot)
     await registerReceiptArtifacts(input.runDir, manifestId, sourceReceipt, true)
   }
-  await registerFiles(input.runDir, manifestId, await recordedCycleArtifacts(input.runDir, input.cycle), { kind: 'generated-output', producer: 'autoresearch-worker', ownership: 'direction', requireBoundaryInventory: true })
+  await registerFiles(input.runDir, manifestId, await recordedCycleArtifacts(input.runDir, input.cycle), { kind: 'unverified-worker-path', producer: 'autoresearch-worker', ownership: 'unknown', requireBoundaryInventory: true })
   for (const root of CYCLE_ROOTS(input.runDir, input.cycle)) {
     const files = await filesUnder(root)
     // The report is rewritten when a committed decision is materialized.  A

@@ -21,7 +21,9 @@ function resolveWorkspacePaths(
   sessionCwd: SessionCwdResolver,
 ): Record<string, unknown> {
   const relativeKeys = WORKSPACE_PATH_KEYS.filter((key) => typeof args[key] === 'string' && args[key].length > 0 && !isAbsolute(args[key]))
-  if (relativeKeys.length === 0 || !exec.agent) return args
+  const paper = args.paper && typeof args.paper === 'object' ? args.paper as Record<string, unknown> : undefined
+  const relativeTemplate = typeof paper?.templateDir === 'string' && !isAbsolute(paper.templateDir)
+  if (relativeKeys.length === 0 && !relativeTemplate || !exec.agent) return args
 
   const cwd = sessionCwd(exec.agent.id)
   if (typeof cwd !== 'string' || !isAbsolute(cwd)) {
@@ -30,5 +32,6 @@ function resolveWorkspacePaths(
 
   const resolved = { ...args }
   for (const key of relativeKeys) resolved[key] = resolve(cwd, args[key] as string)
+  if (relativeTemplate) resolved.paper = { ...paper, templateDir: resolve(cwd, paper!.templateDir as string) }
   return resolved
 }

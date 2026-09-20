@@ -1,11 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { researchActionStart, researchActionFinish, researchEvidenceAdd, researchTreeQuery } from '../../dist/tools/index.js'
 import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../../dist/agents/types.js'
 
 const toolExec = { signal: new AbortController().signal }
 
 export interface FakeAgentScript {
+  coverage?: Array<unknown> | 'explicit-artifact'
   rubric?: string
   reviewOk?: boolean
   plan?: string
@@ -24,6 +25,7 @@ export class FakeAgentProvider implements RoleAgentProvider {
   inputs: Array<{ role: RoleName; input: RoleInput }> = []
   private readonly script: FakeAgentScript
   private lastActionId: string | undefined
+  private lastArtifact: string | undefined
   constructor(script: FakeAgentScript) {
     this.script = script
   }
@@ -33,6 +35,12 @@ export class FakeAgentProvider implements RoleAgentProvider {
     this.inputs.push({ role, input: _input })
     if (this.script.throwOnRole === role) throw new Error(`fake ${role} failure`)
     switch (role) {
+      case 'coverage-reviewer': {
+        const input = JSON.parse(_input.continuation ?? '{}')
+        const scripted = Array.isArray(this.script.coverage) ? this.script.coverage.shift() : undefined
+        const explicit = this.script.coverage === 'explicit-artifact' && input.acceptance?.origin === 'explicit' && input.acceptance.criteria.every((c: any) => c.evidenceKind !== 'scientific') && input.sourceRefs?.length
+        return { text: '', stopReason: 'completed', structured: scripted ?? (explicit ? { action: 'complete', reason: 'Explicit fixture checks captured artifact criteria', criteria: input.acceptance.criteria.map((c: any) => ({ id: c.id, status: 'met', sourceRefs: input.sourceRefs })), blockers: [], unsupportedClaims: [], followups: [] } : { action: 'pause', reason: 'No scripted independent coverage evidence', criteria: [], blockers: ['goal coverage unverified'], unsupportedClaims: [], followups: [] }) }
+      }
       case 'rubric-generator':
         return { text: '', structured: { rubric: this.script.rubric ?? '# Rubric\n\n- metric: accuracy' }, stopReason: 'completed' }
       case 'idea-generator':
@@ -91,11 +99,11 @@ export class FakeAgentProvider implements RoleAgentProvider {
         const runDir = _input.runDir
         const nodes = await researchTreeQuery.execute({ runDir }, toolExec) as Array<{ id: string; kind: string }>
         const hypothesis = nodes.find((node) => node.kind === 'hypothesis')
-        const artifact = 'work/cycle-1/out.txt'
-        await mkdir(join(runDir, 'work', 'cycle-1'), { recursive: true })
+        if (!_input.workDir) throw new Error('worker fixture requires issued workDir')
+        const artifact = relative(runDir, join(_input.workDir, 'out.txt')).replaceAll('\\', '/')
+        this.lastArtifact = artifact
+        await mkdir(_input.workDir, { recursive: true })
         await writeFile(join(runDir, artifact), 'fake worker artifact\n', 'utf8')
-        await mkdir(join(runDir, 'work', 'cycle-01'), { recursive: true })
-        await writeFile(join(runDir, 'work', 'cycle-01', 'out.txt'), 'fake worker artifact\n', 'utf8')
         if (hypothesis) {
           const action = await researchActionStart.execute({ runDir, hypothesisId: hypothesis.id, content: 'fake action' }, toolExec) as { id: string }
           this.lastActionId = action.id
@@ -107,14 +115,14 @@ export class FakeAgentProvider implements RoleAgentProvider {
           structured: {
             status: this.script.workerStatus ?? 'completed',
             summary: 'worker summary',
-            artifacts: this.script.workerArtifacts ?? ['work/cycle-1/out.txt'],
+            artifacts: this.script.workerArtifacts ?? [artifact],
           },
           stopReason: 'completed',
         }
       }
       case 'evidence-agent': {
         if (this.lastActionId) {
-          await researchEvidenceAdd.execute({ runDir: _input.runDir, actionId: this.lastActionId, content: 'fake evidence', verdict: 'supports', artifacts: ['work/cycle-1/out.txt'] }, toolExec)
+          await researchEvidenceAdd.execute({ runDir: _input.runDir, actionId: this.lastActionId, content: 'fake evidence', verdict: 'supports', artifacts: this.lastArtifact ? [this.lastArtifact] : [] }, toolExec)
         }
         return { text: 'evidence checked', structured: { summary: 'evidence checked' }, stopReason: 'completed' }
       }

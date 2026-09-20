@@ -3,25 +3,25 @@ import { join } from 'node:path'
 import type { RoleExecutionContext } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { ensureDir, readOptionalText, readText, writeText } from '../core/utils.js'
-import { generatePaperPlan, runCompileLoop } from './index.js'
-import { loadCheckpoint, saveCheckpoint, type PaperCheckpoint } from './checkpoint.js'
+import { generatePaperPlan, preparePaperLayout, type PreparedPaperLayout, type PaperVenue } from './index.js'
+import { bindPaperArtifacts, deterministicPaperIssues, evaluatePaperGate, paperHash, samePaperBinding } from './review-protocol.js'
+import { paperReviewRequirements, reviewCompiledPaper } from './review-runner.js'
+import { invalidatePaperCheckpoint, loadCheckpoint, saveCheckpoint, type PaperCheckpoint } from './checkpoint.js'
 import {
   enrichReferences,
   generateFigures,
   hasStyleRef,
-  improvePaper,
   negotiateContract,
   planPaper,
   polishPaper,
   readStyleProfile,
   resolveAssurance,
   reviewPaperDraft,
-  runPaperAudits,
-  paperAuditStatus,
   writePaper,
   writePaperReport,
 } from './phases.js'
 import type { PaperContext, PaperDependencies } from './context.js'
+import { toPaperOptions } from '../tools/options.js'
 
 export type { PaperOptions } from './context.js'
 
@@ -45,25 +45,6 @@ export interface PaperPipelineRequest {
 }
 
 /**
- * Run one checkpoint phase unless it is already done. The commit callback may
- * persist phase-specific data and decide whether the phase is done or failed.
- */
-async function runCheckpointPhase<T>(input: {
-  paperDir: string
-  checkpoint: PaperCheckpoint
-  id: string
-  run: () => Promise<T>
-  commit: (value: T) => void
-}): Promise<T | undefined> {
-  const { paperDir, checkpoint, id, run, commit } = input
-  if (checkpoint.phases[id] === 'done') return undefined
-  const value = await run()
-  commit(value)
-  await saveCheckpoint(paperDir, checkpoint)
-  return value
-}
-
-/**
  * Functional paper-writing pipeline. `pipeline_checkpoint.json` doubles as the
  * todo list and resume state. Phases are stateless functions in phases.ts.
  */
@@ -72,11 +53,12 @@ export async function runPaperPipeline(
   request: PaperPipelineRequest,
 ): Promise<PaperPipelineResult> {
   const { runDir, tree, evidencePath, agentContext } = request
+  toPaperOptions(deps.options)
   const assurance = resolveAssurance(deps.options)
   const paperDir = join(runDir, 'paper')
   await ensureDir(paperDir)
-  await ensureDir(join(paperDir, '.aris'))
-  await writeText(join(paperDir, '.aris', 'assurance.txt'), `${assurance}\n`)
+  // A template entry named main.tex is an example, not a completed writer phase.
+  const hadManuscript = existsSync(join(paperDir, 'main.tex'))
 
   const cp = (await loadCheckpoint(paperDir)) ?? {
     schema: 'autoresearch/paper-pipeline-checkpoint/v1',
@@ -85,8 +67,27 @@ export async function runPaperPipeline(
     phases: {},
     data: {},
   }
+  const previousAssurance = cp.assurance
   cp.assurance = assurance
   const save = () => saveCheckpoint(paperDir, cp)
+  await save()
+  const limits = deps.options.reviewBudget
+  cp.data.reviewBudget ??= { used: 0, limit: limits?.maxRequests ?? 32, rounds: 0, maxRounds: limits?.maxRounds ?? deps.options.maxImprovementRounds ?? 3, sequence: 0 }
+  if (limits?.maxRequests !== undefined) cp.data.reviewBudget.limit = limits.maxRequests
+  if (limits?.maxRounds !== undefined) cp.data.reviewBudget.maxRounds = limits.maxRounds
+  const reviewOptionsHash = paperHash({ protocol: 'dependency-kind-v2', assurance, supportsImageInput: deps.options.supportsImageInput, layoutInspection: deps.options.layoutInspection })
+  if (cp.data.reviewOptionsHash !== reviewOptionsHash) invalidatePaperCheckpoint(cp, 'Review requirements changed')
+  cp.data.reviewOptionsHash = reviewOptionsHash
+  const layoutOptions = { venue: (deps.options.venue ?? (deps.options.templateDir ? 'custom' : 'ICLR')) as PaperVenue, templateDir: deps.options.templateDir, templateFile: deps.options.templateFile, profile: deps.options.layoutProfile }
+  const layoutOptionsHash = paperHash({ preparation: 'isolated-template-v2', ...layoutOptions })
+  let layout: PreparedPaperLayout
+  if (cp.data.layout && cp.data.layoutOptionsHash === layoutOptionsHash) layout = cp.data.layout
+  else {
+    layout = await preparePaperLayout(paperDir, layoutOptions)
+    cp.data.layout = layout
+    cp.data.layoutOptionsHash = layoutOptionsHash
+    invalidatePaperCheckpoint(cp, 'Layout options changed or first preparation')
+  }
   await save()
 
   // Plan.
@@ -111,6 +112,7 @@ export async function runPaperPipeline(
         evidencePath,
       },
       agentContext,
+      layout,
     }
     planText = await planPaper(planCtx)
     await writeText(planFile, planText)
@@ -137,6 +139,7 @@ export async function runPaperPipeline(
         evidencePath,
       },
       agentContext,
+      layout,
     }
     const [c, f] = await Promise.all([
       needContract ? negotiateContract(partialCtx) : Promise.resolve(contractFile),
@@ -165,110 +168,67 @@ export async function runPaperPipeline(
       evidencePath,
     },
     agentContext,
+    layout,
   }
 
-  // Writing is only considered done after a successful compile. Until then,
-  // resume will re-run the writer so missing sections/content can be repaired.
-  await runCheckpointPhase({ paperDir, checkpoint: cp, id: 'writing', run: () => writePaper(ctx), commit: () => {} })
+  // Existing manuscript bytes are authoritative on resume, including manual repairs.
+  if (hadManuscript && cp.data.binding) {
+    try {
+      const current = await bindPaperArtifacts(paperDir, evidencePath, layout, cp.data.compile?.inspection)
+      if (!samePaperBinding(current, cp.data.binding)) invalidatePaperCheckpoint(cp, 'Source, template, assets, evidence, PDF or page images changed')
+      else if (cp.phases.final === 'done' && cp.data.gate?.verdict === 'PASS' && previousAssurance === assurance) {
+        const { requiredRoles } = await paperReviewRequirements(paperDir)
+        const savedGate = cp.data.compile && samePaperBinding(cp.data.auditBinding, current) ? evaluatePaperGate({ assurance, binding: current, deterministic: deterministicPaperIssues(cp.data.compile, cp.data.compile.inspection), audits: cp.data.audits ?? {}, reviews: Object.values(cp.data.reviews ?? {}), requiredRoles }) : undefined
+        if (savedGate?.verdict === 'PASS') return { planFile: planFile!, matrixFile: matrixFile!, contractFile, compileOk: true, audits: cp.data.audits ?? {}, auditStatus: cp.data.auditStatus ?? 'failed', submissionReady: savedGate.submissionReady, completed: true, finalReport: cp.data.finalReport ?? '' }
+        invalidatePaperCheckpoint(cp, 'Saved gate has incomplete or stale audit/review records')
+      }
+    } catch (error) { invalidatePaperCheckpoint(cp, String(error)) }
+  }
+  if (!hadManuscript) await writePaper(ctx)
+  cp.phases.writing = 'done'
+  await save()
 
-  // Compile. Missing sections are left for the writer to fix via the compile loop.
-  const compileOk = (await runCheckpointPhase({
-    paperDir,
-    checkpoint: cp,
-    id: 'compile',
-    run: () => runCompileLoop(ctx.paths.paperDir, (feedback) => writePaper(ctx, feedback)).then((r) => r.ok),
-    commit: (ok) => {
-      cp.phases.compile = ok ? 'done' : 'failed'
-      cp.data.compileOk = ok
-    },
-  })) ?? (cp.data.compileOk === true)
-  if (compileOk) {
-    cp.phases.writing = 'done'
-    cp.data.compileOk = true
+  const runGate = async () => {
+    try { return await reviewCompiledPaper(ctx, cp) }
+    catch (error) {
+      cp.data.submissionReady = false
+      cp.data.gate = { verdict: 'BLOCKED' as const, submissionReady: false, reasons: [String(error)] }
+      await save()
+      return cp.data.gate
+    }
+  }
+  let gate = await runGate()
+  if (gate.verdict === 'PASS' && cp.phases.human_review !== 'done') {
+    invalidatePaperCheckpoint(cp, 'Human draft review may revise the manuscript')
     await save()
-  }
-  if (!compileOk) {
-    // Keep the failed checkpoint for a future resume. Never let a compile
-    // failure fall through to an apparently completed/submission-ready run.
-    throw new Error('paper compilation failed; resume is required before submission')
-  }
-
-  // Human review of the compiled paper draft. Revise loops back through the
-  // writer + compile loop; approve/skip records the phase as done.
-  if (compileOk && cp.phases.human_review !== 'done') {
     await reviewPaperDraft(ctx)
     cp.phases.human_review = 'done'
     await save()
   }
-
-  // Reference enrichment is best-effort and never blocks the pipeline.
   await enrichReferences(ctx)
-
-  // Audits (parallel inside).
-  const audits = (await runCheckpointPhase({
-    paperDir,
-    checkpoint: cp,
-    id: 'audits',
-    run: () => runPaperAudits(ctx),
-    commit: (value) => {
-      const status = paperAuditStatus(value)
-      cp.phases.audits = status === 'passed' ? 'done' : 'failed'
-      cp.data.audits = value
-      cp.data.auditStatus = status
-    },
-  })) ?? cp.data.audits ?? {}
-  const auditStatus = cp.data.auditStatus ?? paperAuditStatus(audits)
-  if (auditStatus !== 'passed') {
-    throw new Error('paper audit gate failed; resume is required after evidence or audit repair')
+  if (gate.verdict === 'PASS' && cp.phases.polish !== 'done') {
+    invalidatePaperCheckpoint(cp, 'Polisher requires a fresh final compile, inspection and review')
+    await save()
+    await polishPaper(ctx)
+    cp.phases.polish = 'done'
+    await save()
+    gate = await runGate()
+  } else if (gate.verdict === 'PASS') {
+    const afterHuman = await bindPaperArtifacts(paperDir, evidencePath, layout, cp.data.compile?.inspection)
+    if (!samePaperBinding(afterHuman, cp.data.binding) || !cp.data.gate) gate = await runGate()
   }
-
-  // Improvement.
-  await runCheckpointPhase({
-    paperDir,
-    checkpoint: cp,
-    id: 'improvement',
-    run: () => improvePaper(ctx, cp),
-    commit: () => {
-      cp.phases.improvement = 'done'
-    },
-  })
-
-  // Beautification: layout, tables, figures. Content stays unchanged.
-  await runCheckpointPhase({
-    paperDir,
-    checkpoint: cp,
-    id: 'polish',
-    run: () => polishPaper(ctx),
-    commit: () => {
-      cp.phases.polish = 'done'
-    },
-  })
-
-  // Final report.
-  const finalReport = (await runCheckpointPhase({
-    paperDir,
-    checkpoint: cp,
-    id: 'final',
-    run: () => writePaperReport(ctx, assurance, compileOk, audits, auditStatus),
-    commit: (value) => {
-      cp.phases.final = 'done'
-      cp.data.finalReport = value
-    },
-  })) ?? cp.data.finalReport ?? ''
-
-  const submissionReady = compileOk && auditStatus === 'passed'
-  cp.data.submissionReady = submissionReady
+  const audits = cp.data.audits ?? {}
+  const auditStatus = cp.data.auditStatus ?? 'failed'
+  const compileOk = cp.data.compileOk === true
+  const finalReport = await writePaperReport(ctx, assurance, compileOk, audits, auditStatus, gate, { binding: cp.data.binding, reviews: cp.data.reviews, budget: cp.data.reviewBudget, compile: cp.data.compile })
+  cp.data.finalReport = finalReport
+  cp.data.submissionReady = gate.submissionReady
+  cp.phases.final = gate.verdict === 'PASS' ? 'done' : 'failed'
+  if (gate.verdict !== 'PASS') {
+    cp.data.gate = { ...gate, verdict: 'BLOCKED', submissionReady: false }
+    cp.data.submissionReady = false
+  }
   await save()
-
-  return {
-    planFile: planFile ?? join(paperDir, 'PAPER_PLAN.md'),
-    matrixFile: matrixFile ?? join(paperDir, 'claims_evidence_matrix.json'),
-    contractFile,
-    compileOk,
-    audits,
-    auditStatus,
-    submissionReady,
-    completed: submissionReady,
-    finalReport,
-  }
+  if (assurance === 'submission' && !gate.submissionReady) throw new Error('paper final gate BLOCKED; resume required: ' + gate.reasons.join('; '))
+  return { planFile: planFile!, matrixFile: matrixFile!, contractFile, compileOk, audits, auditStatus, submissionReady: gate.submissionReady, completed: gate.verdict === 'PASS', finalReport }
 }

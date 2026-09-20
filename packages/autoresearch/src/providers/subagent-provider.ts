@@ -2,7 +2,7 @@ import { buildPrompt, outputSchemaFor } from '../agents/factory.js'
 import { roleSpecs } from '../agents/roles/index.js'
 import { parseJsonDetailed } from '../agents/json-repair.js'
 import { createLogger } from '../core/utils.js'
-import type { RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../agents/types.js'
+import type { PaperImageReceipt, RoleAgentProvider, RoleExecutionContext, RoleInput, RoleName, RoleOutput } from '../agents/types.js'
 import { resolveModelRoute, type ResolvedModelRoute } from '../policy/model-routing.js'
 import { resolveBudget } from '../policy/budget.js'
 import { clipContext } from '../policy/context.js'
@@ -24,15 +24,18 @@ import type { SessionId } from '@deepseek-ai/dsh-session'
 import { SessionId as makeSessionId } from '@deepseek-ai/dsh-session'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
-import { join } from 'node:path'
+import { basename, extname, join } from 'node:path'
 
 // TODO: 需要调查 DSH 原生 Agent 编排 vs 固定研究循环编排（RoleAgentProvider + ResearchRunner）的效果，
 // 确定是否应彻底删除本 provider 并改为 DSH Agent 直接编排 subagent。
 
 const LONG_TASK_ROLES = new Set<RoleName>(['research-worker'])
 const REGISTRY_FILE = join('.autoresearch', 'subagent-tasks.json')
+const READ_ONLY_PAPER_ROLES = new Set<RoleName>(['coverage-reviewer', 'figure-reviewer', 'paper-contract-reviewer', 'layout-reviewer', 'paper-reviewer', 'proof-checker', 'claim-auditor', 'citation-auditor', 'kill-argument-reviewer'])
 
 export interface SubagentProviderOptions {
+  attachments?: { saveImage(input: { data: Uint8Array; mediaType: string; name: string }): Promise<Extract<ContentBlock, { type: 'image' }>['attachment']> }
+  llm?: { resolveModelInfo(provider: string, model: string, signal?: AbortSignal): Promise<{ inputModalities?: readonly string[] }> }
   providerName?: string
   context?: Pick<Context, 'on'>
   /** A host-supplied, validated DSH ToolRestriction for JSON repair. */
@@ -334,6 +337,9 @@ async function updateRegistry(runDir: string, taskId: string, update: (current?:
 }
 
 export class SubagentRoleAgentProvider implements RoleAgentProvider {
+  private readonly attachments?: SubagentProviderOptions['attachments']
+  private readonly llm?: SubagentProviderOptions['llm']
+  private readonly imageReceipts = new WeakMap<RoleInput, PaperImageReceipt>()
   private readonly runtime: SubagentRuntime
   private readonly providerName: string
   private readonly eventContext?: Pick<Context, 'on'>
@@ -349,9 +355,35 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
 
   constructor(runtime: SubagentRuntime, options: SubagentProviderOptions = {}) {
     this.runtime = runtime
+    this.attachments = options.attachments
+    this.llm = options.llm
     this.providerName = options.providerName ?? 'spawn'
     this.eventContext = options.context
     this.repairToolFilter = options.repairToolFilter ?? { allow: [] }
+  }
+
+  private async nativePrompt(role: RoleName, input: RoleInput, context: RoleExecutionContext, text: string): Promise<ContentBlock[]> {
+    this.imageReceipts.delete(input)
+    const prompt: ContentBlock[] = [{ type: 'text', text }]
+    if (input.supportsImageInput === false || !input.figureImages?.length || !this.attachments || !this.llm) return prompt
+    const route = routeFor(input, role, context)
+    const provider = route?.provider ?? context.parent.options?.provider
+    const model = route?.model ?? context.parent.options?.model
+    if (!provider || !model) return prompt
+    const info = await this.llm.resolveModelInfo(provider, model, context.signal)
+    if (!info.inputModalities?.includes('image')) return prompt
+    const images: PaperImageReceipt['images'] = []
+    for (const path of input.figureImages) {
+      const bytes = await readFile(path)
+      const extension = extname(path).toLowerCase()
+      const mediaType = ({ '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' } as Record<string, string>)[extension]
+      if (!mediaType) throw new Error(`Unsupported native review image: ${path}`)
+      const attachment = await this.attachments.saveImage({ data: new Uint8Array(bytes), mediaType, name: basename(path) })
+      prompt.push({ type: 'image', attachment })
+      images.push({ attachmentId: String(attachment.attachmentId), path, hash: createHash('sha256').update(bytes).digest('hex') })
+    }
+    this.imageReceipts.set(input, { role, taskId: input.taskId ?? role, provider, model, images })
+    return prompt
   }
 
   private ensureListener(): void {
@@ -438,12 +470,13 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
         releaseOwnership = registerChild(reservedChildId)
         let started
         try {
+          const nativePrompt = await this.nativePrompt(role, input, context, promptWithFeedback)
           started = await transportWithExposure(role, input, promptWithFeedback, () => this.runtime.startContinuable!({
           provider: this.providerName,
           label: role,
           childId: reservedChildId,
           request: {
-            prompt: [{ type: 'text', text: promptWithFeedback }],
+            prompt: nativePrompt,
             parent: context.parent as Agent,
             ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
           },
@@ -506,10 +539,6 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     const route = routeFor(input, role, context)
     const promptWithFeedback = await buildBoundPrompt(role, input, route, context, feedback)
     const schema = objectOutputSchema(role)
-    const logger = createLogger(input.runDir)
-    if (input.figureImages?.length) {
-      logger.warn(`[subagent:${role}] figureImages provided; using textual path fallback until native image blocks are wired`)
-    }
     return this.runNativeAttempt(role, input, context, {
       prompt: promptWithFeedback,
       schema,
@@ -562,6 +591,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     },
   ): Promise<RoleOutput> {
     const logger = createLogger(input.runDir)
+    if (options.kind === 'repair') await context.admitPaperReviewRepair?.()
     if (options.log === 'one-shot') logger.info(`[subagent:${role}] calling ctx.subagents.start provider=${this.providerName}`)
     const started = Date.now()
     const route = routeFor(input, role, context)
@@ -569,12 +599,12 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
     const provisional = sessionBinding(role, input.taskId ?? role, (options.kind === 'repair' ? 'pending-repair-' : 'pending-') + randomUUID(), context, route, budgetFailure, options.kind)
     const startOptions = {
       label: options.label,
-      prompt: [{ type: 'text' as const, text: options.prompt }],
+      prompt: options.kind === 'repair' ? [{ type: 'text' as const, text: options.prompt }] : await this.nativePrompt(role, input, context, options.prompt),
       parent: context.parent as Agent,
       signal: context.signal,
       ...(options.schema !== undefined ? { outputSchema: options.schema } : {}),
       ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
-      ...(role === 'project-explorer' ? { toolFilter: { allow: [] } as ToolRestriction } : options.toolFilter ? { toolFilter: options.toolFilter } : {}),
+      ...(READ_ONLY_PAPER_ROLES.has(role) ? { toolFilter: { allow: options.kind === 'repair' ? [] : ['read', 'read_image', 'glob', 'grep'] } as ToolRestriction } : role === 'project-explorer' ? { toolFilter: { allow: [] } as ToolRestriction } : options.toolFilter ? { toolFilter: options.toolFilter } : {}),
     }
     const start = () => transportWithExposure(role, input, options.prompt, () => this.runtime.start(this.providerName, startOptions), options.kind === 'repair')
     const run = provisional ? await withRequestBinding(provisional, start) : await start()
@@ -670,7 +700,8 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
         : await this.runOneShotWithRetry(role, input, context)
       if (ledger) await ledger.finishRole(roleStartId, 'completed')
       const literatureSources = exposedLiteratureSources.get(input)
-      return literatureSources ? { ...output, literatureSources } : output
+      const imageReceipt = this.imageReceipts.get(input)
+      return { ...output, ...(literatureSources ? { literatureSources } : {}), ...(imageReceipt ? { imageReceipt } : {}) }
     } catch (error) {
       if (ledger) {
         try { await ledger.finishRole(roleStartId, isBudgetExhaustedError(error) || (error as { code?: unknown })?.code === 'CONTEXT_INSUFFICIENT' || (error as { name?: unknown })?.name === 'AbortError' ? 'paused' : 'failed') } catch { /* preserve the operation error */ }

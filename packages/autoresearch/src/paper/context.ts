@@ -2,6 +2,7 @@ import type { RoleAgentProvider, RoleExecutionContext } from '../agents/types.js
 import type { HumanReviewer } from '../core/human-review.js'
 import type { HumanReviewMode } from '../session/auto-mode.js'
 import type { FigureApiSettings } from '../settings/project-settings.js'
+import type { PaperLayoutGeometryInput, PreparedPaperLayout } from './index.js'
 
 export interface PaperOptions {
   venue?: string
@@ -13,6 +14,11 @@ export interface PaperOptions {
   humanReviewOverride?: HumanReviewMode
   figureApi?: FigureApiSettings
   supportsImageInput?: boolean
+  templateDir?: string
+  templateFile?: string
+  layoutProfile?: PaperLayoutGeometryInput
+  layoutInspection?: boolean
+  reviewBudget?: { maxRequests?: number; maxRounds?: number }
 }
 
 export interface PaperDependencies {
@@ -50,4 +56,5 @@ export interface PaperContext {
   readonly paths: PaperPaths
   readonly content: PaperContent
   readonly agentContext: RoleExecutionContext
+  readonly layout?: PreparedPaperLayout
 }

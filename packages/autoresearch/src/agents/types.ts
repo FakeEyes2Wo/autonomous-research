@@ -11,6 +11,8 @@ export interface ParentAgentLike {
 }
 
 export interface RoleExecutionContext {
+  /** Host admission callback; native JSON repair must share the paper request budget. */
+  readonly admitPaperReviewRepair?: () => Promise<void>
   readonly experimentRuntime?: import('../experiment/runtime-adapter.js').ExperimentRuntimeAuthority
   readonly parent: ParentAgentLike
   readonly signal: AbortSignal
@@ -41,6 +43,7 @@ export interface CommonRoleInput {
  * Research-loop input fields.
  */
 export interface ResearchRoleInput {
+  readonly continuation?: string
   readonly idea?: string
   readonly profile?: string
   readonly rubric?: string
@@ -68,6 +71,9 @@ export interface BrainstormRoleInput {
  * Paper-writing input fields.
  */
 export interface PaperRoleInput {
+  readonly paperLayout?: string
+  readonly paperReviewContext?: string
+  readonly supportsImageInput?: boolean
   readonly evidenceChainPath?: string
   readonly paperPlan?: string
   readonly paperMatrix?: string
@@ -89,11 +95,21 @@ export interface PaperRoleInput {
 export interface RoleInput extends CommonRoleInput, ResearchRoleInput, BrainstormRoleInput, PaperRoleInput {}
 
 export interface RoleOutput {
+  /** Produced by the host transport, never copied from structured model output. */
+  readonly imageReceipt?: PaperImageReceipt
   readonly literatureSources?: import('../literature/context-adapter.js').RegisteredLiteratureSource[]
   readonly text: string
   readonly structured?: unknown
   readonly stopReason: string
   readonly childId?: string
+}
+
+export interface PaperImageReceipt {
+  readonly role: RoleName
+  readonly taskId: string
+  readonly provider: string
+  readonly model: string
+  readonly images: Array<{ attachmentId: string; path: string; hash: string }>
 }
 
 export interface RoleAgentProvider {

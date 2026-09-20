@@ -24,8 +24,13 @@ import { bindRunProject } from './project-paper.js'
 import { discoverProject, validateCompletedDiscovery } from '../project/discovery.js'
 import { advanceCleanupQueue, finalizeDirectionRetirement, isDirectionRetired } from '../cleanup/index.js'
 import { ResearchStore } from '../research/store.js'
+import { readContinuation, validateRecovery, consumeRecovery, recordContinuationPause } from './continuation.js'
+import { parseAcceptance, parseRecovery, type AcceptanceInput, type RecoveryInput } from '../research/continuation.js'
+import { hashContent } from '../research/records.js'
 
 export interface ResearchRunOptions {
+  acceptance?: AcceptanceInput
+  recovery?: RecoveryInput
   failureReport?: FailureReportImport
   runDir: string
   projectDir?: string
@@ -141,15 +146,40 @@ export class AutoResearchService {
     // Generic research may inherit project-paper identity on resume, while an
     // experiment identity is exclusively owned by the experiment runner.
     const existing = await loadState(runDir)
+    if (options.acceptance) parseAcceptance(options.acceptance)
+    if (options.recovery) parseRecovery(options.recovery)
+    let continuation = await readContinuation(runDir)
+    if (continuation && options.acceptance && hashContent(parseAcceptance(options.acceptance).criteria) !== hashContent(continuation.acceptance.criteria.map(({ origin: _origin, ...criterion }) => criterion))) throw new TypeError('acceptance is immutable; create a new run')
+    if (continuation && options.maxCycles !== undefined && options.maxCycles !== continuation.control.maxCycles && !options.recovery) throw new TypeError('maxCycles change requires explicit recovery')
+    if (continuation && options.candidatePath) {
+      const local = resolve(runDir, options.candidatePath), source = existsSync(local) ? local : resolve(options.candidatePath)
+      if (await readOptionalText(source) !== continuation.acceptance.goalProfileRubric.goal) throw new TypeError('frozen acceptance goal cannot be replaced on resume')
+    }
+    if (continuation && options.profilePath && await readOptionalText(resolve(runDir, options.profilePath)) !== continuation.acceptance.goalProfileRubric.profile) throw new TypeError('frozen acceptance profile cannot be replaced on resume')
+    const continuationResume = Boolean(existing && (existing.status === 'PAUSED' || options.recovery || continuation?.recoveryTransaction?.status === 'pending' || continuation?.resumeReviewRequired || (!continuation && existing.phase !== 'intake')))
     const savedIdentity = await readOptionalText(join(runDir, '.autoresearch', 'project-identity.json'))
     const savedExperimentManifest = await readOptionalText(join(runDir, '.autoresearch', 'experiment-manifest.json'))
     const savedExperimentRequest = await readOptionalText(join(runDir, '.autoresearch', 'experiment-request.json'))
+    if (existing && (existing.status === 'COMPLETED' || existing.status === 'FAILED') && savedIdentity) {
+      const terminalIdentity = await bindRunProject(options, requestedWorkflow, true)
+      if (terminalIdentity.workflow === 'project-paper') await validateCompletedDiscovery(runDir, terminalIdentity.projectDir)
+      // Existing authorized cleanup remains independently resumable. No research
+      // role, acceptance migration, state write or historical decision is replayed.
+      try {
+        const current = await new ResearchStore(runDir).loadCurrent()
+        if (current) await finalizeDirectionRetirement({ projectDir: terminalIdentity.projectDir, runDir, cycle: existing.cycle, snapshot: current })
+        else await advanceCleanupQueue(terminalIdentity.projectDir)
+      } catch (error) { console.error(`[cleanup] terminal resume deferred: ${String(error)}`) }
+      return existing
+    }
     if (!requestedWorkflow && existing && (existing.status === 'COMPLETED' || existing.status === 'FAILED') && savedIdentity === undefined && savedExperimentManifest === undefined && savedExperimentRequest === undefined) {
       // Historical terminal runs predate identity metadata. Preserve their
       // status as a read-only compatibility view instead of rebinding them.
       return existing
     }
     const identity = await bindRunProject(options, requestedWorkflow, existing !== undefined)
+    if (options.recovery) { await validateRecovery(runDir, options.recovery, options.maxCycles); continuation = await readContinuation(runDir) }
+    if (existing?.status === 'PAUSED' && continuation && !options.recovery && continuation.recoveryTransaction?.status !== 'pending') return existing
     const logger = createLogger(runDir)
     logger.info(`AutoResearchService.run start runDir=${runDir}`)
     await ensureDir(runDir)
@@ -183,6 +213,7 @@ export class AutoResearchService {
     }
     state.status = 'RUNNING'
     await saveState(runDir, state)
+    await consumeRecovery(runDir)
     try {
       const tree = await ResearchTree.load(runDir)
       const projectDir = identity.projectDir
@@ -208,9 +239,9 @@ export class AutoResearchService {
       await requestLedger.recoverPending('interrupted')
       const projectSecrets = await loadProjectSecrets(projectDir)
       const paperOptions: PaperOptions = {
-      ...(projectPaper ? identity.options.paper : {}),
+      ...(projectPaper ? { ...identity.options.paper, reviewBudget: undefined } : {}),
       ...(options.paper ?? {}),
-      ...(projectSettings.model.supportsImageInput !== undefined
+      ...(projectSettings.model.supportsImageInput !== undefined && options.paper?.supportsImageInput === undefined && identity.options.paper?.supportsImageInput === undefined
         ? { supportsImageInput: projectSettings.model.supportsImageInput }
         : {}),
       ...(projectSettings.figureApi.enabled
@@ -224,7 +255,9 @@ export class AutoResearchService {
       }
       const runner = new ResearchRunner({
       provider: this.deps.provider,
-      maxCycles: options.maxCycles ?? (projectPaper ? identity.options.maxCycles : undefined) ?? DEFAULT_MAX_CYCLES,
+      maxCycles: continuation?.control.maxCycles ?? options.maxCycles ?? (projectPaper ? identity.options.maxCycles : undefined) ?? DEFAULT_MAX_CYCLES,
+      acceptance: options.acceptance,
+      continuationResume,
       paperOptions,
       reviewer: this.deps.options.reviewer,
       reviewGates: this.deps.options.reviewGates,
@@ -257,6 +290,7 @@ export class AutoResearchService {
       await writeLastRun(runDir)
       state.status = 'PAUSED'
       state.lastError = String(error)
+      await recordContinuationPause(runDir, state, state.lastError, isBudgetExhaustedError(error))
       await saveState(runDir, state)
       await writeFailureReport(runDir, `# PAUSED\n\n${String(error)}\n`)
       await bindResearchOutputs(runDir, state.runId)

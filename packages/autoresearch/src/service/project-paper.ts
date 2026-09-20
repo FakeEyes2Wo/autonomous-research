@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path'
 import { readOptionalText } from '../core/utils.js'
 import { artifactHash } from '../project/inventory.js'
 import type { ResearchRunOptions } from './autoresearch-service.js'
+import { toPaperOptions } from '../tools/options.js'
 
 export interface RunProjectIdentity {
   version: 1
@@ -24,6 +25,12 @@ async function validateBinding(saved: string | undefined, options: ResearchRunOp
   // separate engine and must always be resumed explicitly by that engine.
   if (!requestedWorkflow && identity.workflow === 'experiment') throw new Error('run workflow identity mismatch; experiment run requires the experiment engine')
   if (requestedWorkflow && requestedWorkflow !== identity.workflow) throw new Error('run workflow identity mismatch; choose a fresh run directory')
+  if (options.paper) {
+    const requested = toPaperOptions({ ...identity.options.paper, ...options.paper })
+    const savedPaper = toPaperOptions(identity.options.paper)
+    const intent = (paper: typeof requested) => Object.fromEntries(Object.entries(paper ?? {}).filter(([key]) => key !== 'reviewBudget' && key !== 'maxImprovementRounds'))
+    if (artifactHash(intent(requested)) !== artifactHash(intent(savedPaper))) throw new Error('paper options identity mismatch; resume with saved options or choose a fresh run directory')
+  }
   return identity
 }
 
@@ -51,7 +58,7 @@ export async function bindRunProject(options: ResearchRunOptions, requestedWorkf
     }
   }
   const projectDir = await realpath(options.projectDir ?? options.runDir)
-  const paper = options.paper ? Object.fromEntries(Object.entries(options.paper).filter(([key]) => ['venue', 'assurance', 'effort', 'styleRef', 'maxImprovementRounds'].includes(key))) : undefined
+  const paper = toPaperOptions(options.paper)
   const identity: RunProjectIdentity = { version: 1, projectDir, projectId: artifactHash({ projectDir }), workflow: requestedWorkflow ?? 'research', validation: 'bounded-supplementary', options: { ...(options.maxCycles !== undefined ? { maxCycles: options.maxCycles } : {}), ...(paper ? { paper } : {}) } }
   await mkdir(dirname(path), { recursive: true })
   const temporary = `${path}.${randomUUID()}.tmp`

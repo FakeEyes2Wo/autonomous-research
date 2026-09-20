@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { AutoResearchService } from '../../dist/service/autoresearch-service.js'
 import { runExperimentTask } from '../../dist/experiment/runner.js'
 import { FakeAgentProvider } from './fake-agent-provider.ts'
@@ -17,6 +17,7 @@ import { createLogger } from '../../dist/core/utils.js'
 import type { RoleName, RoleInput, RoleExecutionContext } from '../../dist/agents/types.js'
 
 const context = () => ({ parent: { id: 'fixture', session: { id: 'fixture' } }, signal: new AbortController().signal })
+const acceptance = { criteria: [{ id: 'formal-result', required: true, text: 'Support the scoped final paired-outcome claim', evidenceKind: 'scientific' as const }, { id: 'independent-review', required: true, text: 'Independently review scoped scientific coverage', evidenceKind: 'review' as const }] }
 
 test('B2 retains every raw proposal and selects past the third independently of arrival order', async (t) => {
   const selected: string[] = []
@@ -142,6 +143,12 @@ class EvidenceProvider extends FakeAgentProvider {
   readonly invalid: boolean | 'split' | 'null' | 'treatment'
   constructor(invalid: boolean | 'split' | 'null' | 'treatment' = false) { super({ decisions: ['revise', 'finish'] }); this.invalid = invalid }
   override async run(role: RoleName, input: RoleInput, ctx: RoleExecutionContext) {
+    if (role === 'coverage-reviewer') {
+      this.calls.push(role)
+      const review = JSON.parse(input.continuation!)
+      const scientificRefs = review.assessmentAndEvidence.evidence?.filter((e: any) => review.assessmentAndEvidence.assessment?.admissible_evidence_ids.includes(e.id)).flatMap((e: any) => e.artifacts) ?? []
+      return { text: '', stopReason: 'completed', structured: review.assessmentAndEvidence.scientificSupported ? { action: 'complete', reason: 'Fixture independently verifies the explicit scoped result and formal evidence', criteria: review.acceptance.criteria.map((c: any) => ({ id: c.id, status: 'met', sourceRefs: c.evidenceKind === 'scientific' ? scientificRefs : review.sourceRefs })), blockers: [], unsupportedClaims: [], followups: [] } : { action: 'pause', reason: 'Fixture has no further scientifically admitted goal follow-up', criteria: [], blockers: ['scientific claim remains unsupported'], unsupportedClaims: [], followups: [] } }
+    }
     if (role === 'planner') {
       this.calls.push(role)
       this.plannedIdeas.push(input.idea ?? '')
@@ -158,7 +165,7 @@ class EvidenceProvider extends FakeAgentProvider {
       this.calls.push(role)
       this.workerExecutions++
       const protocol = JSON.parse(await readFile(join(input.runDir, 'cycles', `cycle-${input.cycle}`, 'protocol.json'), 'utf8'))
-      const path = `work/batch-${input.cycle}.json`
+      const path = relative(input.runDir, join(input.workDir!, `batch-${input.cycle}.json`)).replaceAll('\\', '/')
       await mkdir(join(input.runDir, 'work'), { recursive: true })
       await writeFile(join(input.runDir, path), JSON.stringify({ schema: 'autoresearch/paired-outcomes/v1', protocol_hash: protocol.content_hash,
         fingerprints: this.invalid === 'treatment' ? { ...protocol.fingerprints, treatment: 'contaminated' } : protocol.fingerprints,
@@ -186,18 +193,41 @@ class EvidenceProvider extends FakeAgentProvider {
   }
 }
 
+test('independent replicate follow-up reaches the next planner and executes a fresh formal protocol', async t => {
+  const dir = await setup('minimal')
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const provider = new EvidenceProvider()
+  const original = provider.run.bind(provider)
+  let replicationRequested = false
+  provider.run = async (role, input, ctx) => {
+    if (role === 'coverage-reviewer' && !replicationRequested) {
+      replicationRequested = true
+      provider.calls.push(role)
+      const m = JSON.parse(input.continuation!)
+      return { text: '', stopReason: 'completed', structured: { action: 'followup', reason: 'Independently replicate the supported scoped claim', criteria: [], blockers: ['replication required'], unsupportedClaims: [], followups: [{ kind: 'replicate', criterionIds: ['formal-result'], task: 'Replicate on another independently sampled batch', changedCondition: 'First formal support is now available for independent replication', sourceRefs: m.sourceRefs }] } }
+    }
+    return original(role, input, ctx)
+  }
+  const result = await new AutoResearchService(provider).run({ runDir: dir, acceptance, maxCycles: 3, brainstorm: 'off', humanReview: 'off' }, context())
+  assert.equal(result.status, 'COMPLETED')
+  assert.equal(result.cycle, 3)
+  assert.match(provider.plannedIdeas[2], /Replicate on another independently sampled batch/)
+  assert.equal(provider.workerExecutions, 3)
+  assert.equal((await new ResearchStore(dir).loadCurrent())?.assessment?.category, 'supported')
+})
+
 for (const mode of ['minimal', 'legacy']) for (const entry of ['research', 'experiment']) {
   test(`${entry} ${mode}: raw refutation selects a new hypothesis and executes fresh protocol`, async (t) => {
     const dir = await setup(mode)
     t.after(() => rm(dir, { recursive: true, force: true }))
     const provider = new EvidenceProvider()
     const result = entry === 'research'
-      ? await new AutoResearchService(provider).run({ runDir: dir, maxCycles: 2, brainstorm: 'off', humanReview: 'off' }, context())
+      ? await new AutoResearchService(provider).run({ runDir: dir, acceptance, maxCycles: 2, brainstorm: 'off', humanReview: 'off' }, context())
       : await runExperimentTask({ provider }, { runDir: dir, task: 'Treatment improves success.', maxRounds: 2, agentContext: context() })
     assert.equal(result.status.toLowerCase(), 'completed')
     const store = new ResearchStore(dir)
     const parent = await store.loadSnapshot('cycle-1-assessment')
-    const successor = await store.loadSnapshot('snapshot-decision-1')
+    const successor = await store.loadSnapshot(`snapshot-decision-1${entry === 'research' ? '-r0' : ''}`)
     assert.equal(await enqueueRefutedDirection({ projectDir: dir, runDir: dir, snapshot: successor }), undefined)
     assert.notEqual(successor.active_hypothesis.version, parent.active_hypothesis.version)
     assert.ok(successor.hypotheses.some(h => h.id === parent.active_hypothesis.id && h.version === parent.active_hypothesis.version))
@@ -211,9 +241,9 @@ for (const mode of ['minimal', 'legacy']) for (const entry of ['research', 'expe
     assert.notEqual(second.split, 'fresh-1')
     assert.match(await readFile(join(dir, 'RESEARCH_REPORT.md'), 'utf8'), /snapshot-decision-2/)
     const chain = JSON.parse(await readFile(join(dir, 'evidence_chain.json'), 'utf8'))
-    assert.equal(chain.snapshot_id, 'snapshot-decision-2')
+    assert.equal(chain.snapshot_id, `snapshot-decision-2${entry === 'research' ? '-r0' : ''}`)
     assert.match(await readFile(join(dir, 'HANDOFF.md'), 'utf8'), /snapshot-decision-2/)
-    if (mode === 'minimal') assert.deepEqual(provider.calls, ['planner', 'research-worker', 'supervisor', 'planner', 'research-worker', 'supervisor'])
+    if (mode === 'minimal') assert.deepEqual(provider.calls, ['planner', 'research-worker', 'supervisor', 'planner', 'research-worker', 'supervisor', ...(entry === 'research' ? ['coverage-reviewer'] : [])])
   })
 }
 
@@ -232,13 +262,13 @@ test('fresh research refutation creates cleanup memory and PAUSED resume removes
   assert.equal(refuted.claims.find(claim => claim.id === refuted.active_claim.id && claim.version === refuted.active_claim.version)?.status, 'refuted')
   const firstTasks = (await listCleanupTasks(dir)).filter(task => task.disposition === 'refuted')
   assert.equal(firstTasks.length, 1)
-  await assert.rejects(() => readFile(join(dir, 'work', 'batch-1.json'), 'utf8'), /ENOENT/)
+  await assert.rejects(() => readFile(join(dir, 'work', 'cycle-01', 'batch-1.json'), 'utf8'), /ENOENT/)
   assert.equal(firstTasks[0].state, 'completed')
   const callsBeforeResume = provider.calls.length
   const resumed = await service.resume({ runDir: dir, maxCycles: 1, brainstorm: 'off', humanReview: 'off' }, context())
   assert.equal(resumed.status, 'PAUSED')
   assert.equal(provider.calls.length, callsBeforeResume)
-  await assert.rejects(() => readFile(join(dir, 'work', 'batch-1.json'), 'utf8'), /ENOENT/)
+  await assert.rejects(() => readFile(join(dir, 'work', 'cycle-01', 'batch-1.json'), 'utf8'), /ENOENT/)
   const tasks = await listCleanupTasks(dir)
   assert.equal(tasks.length, 1)
   assert.equal(tasks[0].state, 'completed')
@@ -299,7 +329,8 @@ for (const mode of ['minimal', 'legacy']) for (const entry of ['research', 'expe
     assert.equal(result.status.toLowerCase(), 'paused')
     assert.equal(second.calls.includes('research-worker'), false)
     const state = JSON.parse(await readFile(join(dir, 'state.json'), 'utf8'))
-    assert.match(state.lastError, /unknown.*receipt|outcome is unknown/)
+    assert.match(state.lastError, entry === 'research' ? /fake research-worker failure/ : /unknown.*receipt|outcome is unknown/)
+    if (entry === 'research') assert.deepEqual(second.calls, [])
     assert.equal(JSON.parse(await readFile(join(dir, 'cycles/cycle-1/attempt.json'), 'utf8')).status, 'unknown')
   })
 
@@ -311,7 +342,8 @@ for (const mode of ['minimal', 'legacy']) for (const entry of ['research', 'expe
     const before = await readFile(join(dir, 'cycles/cycle-1/assessment.json'), 'utf8')
     const second = new FakeAgentProvider({ decisions: ['finish'] })
     const result = await execute(dir, second)
-    assert.equal(result.status.toLowerCase(), 'completed')
+    assert.equal(result.status.toLowerCase(), entry === 'research' ? 'paused' : 'completed')
+    if (entry === 'research') assert.deepEqual(second.calls, [])
     assert.equal(second.calls.includes('research-worker'), false)
     assert.equal(await readFile(join(dir, 'cycles/cycle-1/assessment.json'), 'utf8'), before)
   })
@@ -388,18 +420,19 @@ test('experiment rejects supervisor output when CURRENT changed after its input 
   assert.match(result.reason!, /snapshot changed/)
 })
 
-test('research enabled paper consumes the final committed scientific snapshot', async (t) => {
+test('research paper consumes the scientific assessment before final goal acceptance commits', async (t) => {
   const dir = await setup('minimal')
   t.after(() => rm(dir, { recursive: true, force: true }))
   const settingsFile = join(dir, '.autoresearch', 'project-settings.yaml')
   await writeFile(settingsFile, (await readFile(settingsFile, 'utf8')).replace('paper: never', 'paper: enabled'))
   const provider = new EvidenceProvider()
-  const result = await new AutoResearchService(provider).run({ runDir: dir, maxCycles: 2, humanReview: 'off' }, context())
+  const result = await new AutoResearchService(provider).run({ runDir: dir, acceptance, maxCycles: 2, humanReview: 'off' }, context())
   assert.equal(result.status, 'COMPLETED')
   assert.ok(provider.calls.includes('writer'))
   const writer = provider.inputs.find(i => i.role === 'writer')
-  assert.equal(writer?.input.researchContext?.snapshot?.id, 'snapshot-decision-2')
-  assert.match(await readFile(join(dir, 'FINAL_REPORT.md'), 'utf8'), /snapshot-decision-2/)
+  assert.equal(writer?.input.researchContext?.snapshot?.id, 'cycle-2-assessment')
+  assert.match(await readFile(join(dir, 'FINAL_REPORT.md'), 'utf8'), /snapshot-decision-2-r0/)
+  assert.equal((await new ResearchStore(dir).loadCurrent())?.decision?.id, 'decision-2-r0')
 })
 
 for (const checkpointGap of [false, true]) test(`known null finish uses canonical replication and budget pause${checkpointGap ? ' across a decision checkpoint gap' : ''}`, async (t) => {
@@ -462,7 +495,7 @@ test('review regression: assessment uses archived bytes when a producer changes 
   const captureSource = ResearchStore.prototype.captureSource
   t.mock.method(ResearchStore.prototype, 'captureSource', async function(path: string, sourceId?: string) {
     const captured = await captureSource.call(this, path, sourceId)
-    if (path === 'work/batch-1.json') {
+    if (path === 'work/experiment-cycle-01/batch-1.json') {
       const live = JSON.parse(await readFile(join(dir, path), 'utf8'))
       live.units = live.units.map(unit => ({ ...unit, control: 0, treatment: 1 }))
       await writeFile(join(dir, path), JSON.stringify(live))
@@ -477,7 +510,7 @@ test('review regression: assessment uses archived bytes when a producer changes 
   assert.equal(archived.units[0].treatment, 0)
   assert.equal(evidence.polarity, 'opposes')
   assert.equal(snapshot!.assessment!.claim_status, 'refuted')
-  assert.equal(JSON.parse(await readFile(join(dir, 'work/batch-1.json'), 'utf8')).units[0].treatment, 1)
+  assert.equal(JSON.parse(await readFile(join(dir, 'work/experiment-cycle-01/batch-1.json'), 'utf8')).units[0].treatment, 1)
 })
 
 test('review regression: derived views preserve historical judgments and evidence lineage across revision', async (t) => {
@@ -532,6 +565,6 @@ for (const mode of ['minimal', 'legacy']) for (const entry of ['research', 'expe
     const report = await readFile(join(dir, 'RESEARCH_REPORT.md'), 'utf8')
     assert.match(report, /unknown|insufficient_evidence/)
     assert.doesNotMatch(report, /claim status: supported/)
-    if (mode === 'minimal') assert.deepEqual(provider.calls, ['planner', 'research-worker', 'supervisor'])
+    if (mode === 'minimal') assert.deepEqual(provider.calls, ['planner', 'research-worker', 'supervisor', ...(entry === 'research' ? ['coverage-reviewer', 'coverage-reviewer', 'coverage-reviewer'] : [])])
   })
 }

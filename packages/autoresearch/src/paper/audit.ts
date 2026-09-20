@@ -1,5 +1,6 @@
-import { readFile, readdir } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { resolvePaperSources, type PaperSourceDependency } from './sources.js'
 import { atomicWriteJson } from '../core/utils.js'
 import { evidenceIdsFromChain, loadEvidenceChain, type EvidenceChain } from '../export/evidence-chain.js'
 
@@ -23,23 +24,7 @@ async function readTextSafe(file: string): Promise<string> {
   }
 }
 
-async function readPaperSources(paperDir: string): Promise<string[]> {
-  const files: string[] = []
-  const entries = await readdir(paperDir, { withFileTypes: true }).catch(() => [])
-  for (const entry of entries) {
-    if (entry.isFile() && (entry.name.endsWith('.tex') || entry.name.endsWith('.bib'))) {
-      files.push(join(paperDir, entry.name))
-    } else if (entry.isDirectory()) {
-      const sub = await readdir(join(paperDir, entry.name), { withFileTypes: true }).catch(() => [])
-      for (const subEntry of sub) {
-        if (subEntry.isFile() && (subEntry.name.endsWith('.tex') || subEntry.name.endsWith('.bib'))) {
-          files.push(join(paperDir, entry.name, subEntry.name))
-        }
-      }
-    }
-  }
-  return files
-}
+export { readPaperSources } from './sources.js'
 
 function numericClaimAudit(text: string, knownEvidenceIds: Set<string>): AuditResult {
   // The known-evidence set now comes from the structured evidence_chain.json
@@ -110,9 +95,15 @@ export async function auditPaper(inputOrRunDir: AuditPaperInput | string, knownE
     ? { runDir: inputOrRunDir, knownEvidenceIds }
     : inputOrRunDir
   const paperDir = join(input.runDir, 'paper')
-  const sources = await readPaperSources(paperDir)
-  const texTexts = await Promise.all(sources.filter((f) => f.endsWith('.tex')).map((f) => readTextSafe(f)))
-  const bibTexts = await Promise.all(sources.filter((f) => f.endsWith('.bib')).map((f) => readTextSafe(f)))
+  let sources: PaperSourceDependency[]
+  try { sources = await resolvePaperSources(paperDir) } catch (error) {
+    const failed = { ok: false, errors: [String(error)], warnings: [] }
+    const result = { numeric: failed, citation: failed }
+    await atomicWriteJson(join(paperDir, 'paper_audit.json'), result)
+    return result
+  }
+  const texTexts = await Promise.all(sources.filter(f => f.kind === 'manuscript').map(f => readTextSafe(f.path)))
+  const bibTexts = await Promise.all(sources.filter(f => f.kind === 'bibliography').map(f => readTextSafe(f.path)))
   const allTex = texTexts.join('\n')
   const allBib = bibTexts.join('\n')
   const known = await resolveKnownEvidenceIds(input.runDir, input.chain, input.knownEvidenceIds)

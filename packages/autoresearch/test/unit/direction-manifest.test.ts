@@ -5,8 +5,19 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { directionId } from '../../dist/cleanup/direction-id.js'
 import { loadDirectionManifest, openDirectionManifest, registerManagedArtifact } from '../../dist/cleanup/manifest.js'
+import { reserveDirectionCycleBoundary, issueWorkerRoot, registerWorkerDirectionArtifacts } from '../../dist/cleanup/registration.js'
 
 const makeDirection = (projectId: string) => ({ projectId, branchId: 'branch', claim: { id: 'claim', version: 1 }, hypothesis: { id: 'hypothesis', version: 1 }, protocolHash: 'protocol' })
+
+for (const ownership of ['unknown', 'shared', 'user'] as const) test(`worker cannot elevate manifest ownership ${ownership}`, async () => workspace(async runDir => {
+  const manifest = await openDirectionManifest(runDir, makeDirection(runDir)), workDir = join(runDir, 'work/cycle-01')
+  await reserveDirectionCycleBoundary({ runDir, cycle: 1, manifestId: manifest.id })
+  await issueWorkerRoot(runDir, 1, workDir)
+  await writeFile(join(workDir, 'user.json'), '{}')
+  await registerManagedArtifact(runDir, manifest.id, { relativePath: 'work/cycle-01/user.json', kind: 'result', producer: 'trusted-worker', ownership })
+  await assert.rejects(registerWorkerDirectionArtifacts({ runDir, workDir, frozenManifest: manifest, action: { status: 'completed', summary: 'reuse user file', artifacts: ['work/cycle-01/user.json'] } }), /ownership/)
+  assert.equal((await loadDirectionManifest(runDir, manifest.id)).artifacts[0].ownership, ownership)
+}))
 
 async function workspace(fn: (runDir: string) => Promise<void>) {
   const runDir = await mkdtemp(join(tmpdir(), 'ar-direction-manifest-'))

@@ -13,7 +13,7 @@ function parseArgs(argv) {
     runDir: undefined,
     candidate: undefined,
     profileFile: undefined,
-    maxCycles: 5,
+    maxCycles: undefined,
     paper: undefined,
   }
   for (let i = 0; i < argv.length; i += 1) {
@@ -252,9 +252,9 @@ function buildPrompt(runDir, maxCycles, paper, hasCandidate) {
     'Run the autonomous research loop in the directory below.',
     '',
     `runDir: ${absolute}`,
-    `maxCycles: ${maxCycles}`,
+    ...(maxCycles !== undefined ? [`maxCycles: ${maxCycles}`] : []),
     '',
-    'Call the `research_run` tool with `runDir` set to that absolute path and `maxCycles` set to the value above.',
+    'Call the `research_run` tool with `runDir` set to that absolute path. Pass maxCycles only when explicitly shown above; omission inherits the frozen resume cap.',
   ]
   if (!hasCandidate) lines.push('Do not create candidate.md yourself: research_run will run the brainstorm pre-phase automatically.')
   if (paper && Object.keys(paper).length > 0) {

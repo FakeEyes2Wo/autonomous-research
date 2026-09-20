@@ -2,6 +2,7 @@ import type { HumanReviewMode } from '../session/auto-mode.js'
 import type { PaperOptions } from '../paper/pipeline.js'
 import type { ResearchRunOptions } from '../service/autoresearch-service.js'
 import type { FailureReportImport } from '../service/failure-import.js'
+import { parseAcceptance, parseRecovery } from '../research/continuation.js'
 
 export function toFailureReportImport(value: unknown): FailureReportImport | undefined {
   if (value === undefined) return undefined
@@ -16,6 +17,12 @@ export function toFailureReportImport(value: unknown): FailureReportImport | und
  * those unknown fields into the service layer.
  */
 export interface PaperToolOptions {
+  templateDir?: string
+  templateFile?: string
+  layoutProfile?: PaperOptions['layoutProfile']
+  layoutInspection?: boolean
+  supportsImageInput?: boolean
+  reviewBudget?: PaperOptions['reviewBudget']
   venue?: string
   assurance?: 'draft' | 'submission'
   effort?: 'lite' | 'balanced' | 'max' | 'beast'
@@ -47,6 +54,47 @@ export function toPaperToolOptions(value: unknown): PaperToolOptions | undefined
 
   const raw = value as Record<string, unknown>
   const paper: PaperToolOptions = {}
+  for (const key of ['templateDir', 'templateFile'] as const) {
+    if (raw[key] !== undefined) {
+      if (typeof raw[key] !== 'string' || !raw[key].trim()) throw new TypeError(`paper ${key} must be a nonempty path`)
+      paper[key] = raw[key]
+    }
+  }
+  for (const key of ['layoutInspection', 'supportsImageInput'] as const) {
+    if (raw[key] !== undefined) {
+      if (typeof raw[key] !== 'boolean') throw new TypeError(`paper ${key} must be boolean`)
+      paper[key] = raw[key]
+    }
+  }
+  if (raw.reviewBudget !== undefined) {
+    if (!raw.reviewBudget || typeof raw.reviewBudget !== 'object' || Array.isArray(raw.reviewBudget)) throw new TypeError('paper reviewBudget must be an object')
+    const budget = raw.reviewBudget as Record<string, unknown>
+    paper.reviewBudget = {}
+    for (const key of ['maxRequests', 'maxRounds'] as const) if (budget[key] !== undefined) {
+      if (!Number.isSafeInteger(budget[key]) || Number(budget[key]) < (key === 'maxRequests' ? 1 : 0) || Number(budget[key]) > (key === 'maxRequests' ? 1000 : 50)) throw new TypeError(`paper reviewBudget.${key} is invalid`)
+      paper.reviewBudget[key] = Number(budget[key])
+    }
+  }
+  if (raw.layoutProfile !== undefined) {
+    if (!raw.layoutProfile || typeof raw.layoutProfile !== 'object' || Array.isArray(raw.layoutProfile)) throw new TypeError('paper layoutProfile must be an object')
+    const profile = raw.layoutProfile as Record<string, unknown>
+    const numeric = (value: unknown, keys: string[]): Record<string, number> => {
+      if (!value || typeof value !== 'object') throw new TypeError('paper layoutProfile has missing geometry')
+      return Object.fromEntries(keys.map(key => {
+        const n = (value as Record<string, unknown>)[key]
+        if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) throw new TypeError('paper layoutProfile has invalid geometry')
+        return [key, n]
+      }))
+    }
+    const page = profile.page as Record<string, unknown> | undefined
+    const clean = { page: { ...numeric(page, ['widthPt', 'heightPt']), marginPt: numeric(page?.marginPt, ['top', 'right', 'bottom', 'left']) }, columns: numeric(profile.columns, ['count', 'widthPt', 'gutterPt']), ...(profile.typography ? { typography: numeric(profile.typography, ['bodyPt', 'captionPt', ...(typeof (profile.typography as Record<string, unknown>).lineHeightPt === 'number' ? ['lineHeightPt'] : [])]) } : {}) } as unknown as NonNullable<PaperOptions['layoutProfile']>
+    if (profile.figure !== undefined) {
+      const figure = profile.figure as Record<string, unknown>
+      if (!figure || !Array.isArray(figure.allowedFormats) || !figure.allowedFormats.every(f => typeof f === 'string')) throw new TypeError('paper layoutProfile has invalid figure formats')
+      clean.figure = { ...numeric(figure, ['maxWidthPt', 'captionWidthPt', ...(figure.maxHeightPt !== undefined ? ['maxHeightPt'] : [])]), allowedFormats: [...figure.allowedFormats] } as NonNullable<typeof clean.figure>
+    }
+    paper.layoutProfile = clean
+  }
   const venue = asString(raw.venue)
   const assurance = asString(raw.assurance)
   const effort = asString(raw.effort)
@@ -68,11 +116,14 @@ export function toPaperToolOptions(value: unknown): PaperToolOptions | undefined
   return Object.keys(paper).length > 0 ? paper : undefined
 }
 
-function toPaperOptions(value: unknown): PaperOptions | undefined {
+export function toPaperOptions(value: unknown): PaperOptions | undefined {
   const toolOptions = toPaperToolOptions(value)
   if (!toolOptions) return undefined
 
   const paper: PaperOptions = {}
+  for (const key of ['templateDir', 'templateFile', 'layoutProfile', 'layoutInspection', 'supportsImageInput', 'reviewBudget'] as const) {
+    if (toolOptions[key] !== undefined) Object.assign(paper, { [key]: toolOptions[key] })
+  }
   if (toolOptions.venue !== undefined) paper.venue = toolOptions.venue
   if (toolOptions.assurance !== undefined) paper.assurance = toolOptions.assurance
   if (toolOptions.effort !== undefined) paper.effort = toolOptions.effort
@@ -84,6 +135,8 @@ function toPaperOptions(value: unknown): PaperOptions | undefined {
 
 export function toResearchRunOptions(args: Record<string, unknown>): ResearchRunOptions {
   return {
+    ...(args.acceptance !== undefined ? { acceptance: parseAcceptance(args.acceptance) } : {}),
+    ...(args.recovery !== undefined ? { recovery: parseRecovery(args.recovery) } : {}),
     runDir: String(args.runDir),
     projectDir: asString(args.projectDir),
     candidatePath: asString(args.candidatePath),

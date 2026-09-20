@@ -6,6 +6,21 @@ import { join } from 'node:path'
 import { runExperimentTask } from '../../dist/experiment/runner.js'
 import { FakeAgentProvider } from '../integration/fake-agent-provider.ts'
 
+for (const mode of ['minimal', 'legacy']) for (const metadata of ['attempt.json', 'frozen.json', 'worker-root.json']) test(`round1 standalone ${mode} persists PAUSED for corrupt cached ${metadata}`, async t => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-corrupt-ownership-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  await mkdir(join(runDir, '.autoresearch'), { recursive: true })
+  await writeFile(join(runDir, '.autoresearch/project-settings.yaml'), `version: 2\nworkflow:\n  mode: ${mode}\n  experimentReview: never\n  paper: never\n`)
+  const request = { runDir, task: 'Cached ownership metadata', maxRounds: 1, agentContext: { parent: { id: 'test', session: { id: 'test' } }, signal: new AbortController().signal } }
+  await assert.rejects(runExperimentTask({ provider: new FakeAgentProvider({ decisions: ['finish'], throwOnRole: 'supervisor' }) }, request))
+  await writeFile(join(runDir, 'cycles/cycle-1', metadata), '{broken')
+  const provider = new FakeAgentProvider({ decisions: ['finish'] })
+  assert.equal((await runExperimentTask({ provider }, request)).status, 'paused')
+  assert.equal(JSON.parse(await readFile(join(runDir, 'state.json'), 'utf8')).status, 'PAUSED')
+  assert.equal(provider.calls.includes('research-worker'), false)
+  assert.equal(provider.calls.includes('supervisor'), false)
+})
+
 test('legacy experiment resume keeps literature off despite lexical current project settings', async (t) => {
   for (const missingSnapshot of [false, true]) {
     const runDir = await mkdtemp(join(tmpdir(), 'ar-literature-policy-'))
@@ -220,7 +235,7 @@ test('standalone minimal resume validates cached artifacts before a decision', a
     runDir, task: 'Validate cached evidence', maxRounds: 1,
     agentContext: { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal },
   }))
-  await rm(join(runDir, 'work', 'cycle-1', 'out.txt'))
+  await rm(join(runDir, 'work', 'experiment-cycle-01', 'out.txt'))
   const second = new FakeAgentProvider({ decisions: ['finish'] })
   const result = await runExperimentTask({ provider: second }, {
     runDir, task: 'Validate cached evidence', maxRounds: 1,

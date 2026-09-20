@@ -38,6 +38,7 @@ export const RUN_PHASES = [
 export type RunPhase = typeof RUN_PHASES[number]
 
 export interface RunState {
+  continuationStop?: import('../research/continuation.js').ContinuationStop
   schema: 'autoresearch/run-state/v1'
   runId: string
   runDir: string

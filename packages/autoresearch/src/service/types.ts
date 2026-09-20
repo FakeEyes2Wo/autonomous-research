@@ -6,6 +6,8 @@ import type { ProjectSettings } from '../settings/project-settings.js'
 import type { RoleExecutionContext } from '../agents/types.js'
 
 export interface ResearchRunnerOptions {
+  acceptance?: import('../research/continuation.js').AcceptanceInput
+  continuationResume?: boolean
   provider: RoleAgentProvider
   maxCycles?: number
   paperOptions?: PaperOptions

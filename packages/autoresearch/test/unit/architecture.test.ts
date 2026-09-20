@@ -48,7 +48,12 @@ test('paper pipeline is a functional checkpoint orchestrator', async () => {
   const source = await readFile(join(process.cwd(), 'src/paper/pipeline.ts'), 'utf8')
   assert.doesNotMatch(source, /export class PaperPipeline/)
   assert.match(source, /export async function runPaperPipeline/)
-  assert.match(source, /async function runCheckpointPhase/)
+  const { invalidatePaperCheckpoint } = await import('../../dist/paper/checkpoint.js')
+  const checkpoint = { schema: 'autoresearch/paper-pipeline-checkpoint/v1', updated_at: '', assurance: 'submission', phases: { writing: 'done', final: 'done' }, data: { submissionReady: true } }
+  invalidatePaperCheckpoint(checkpoint as never, 'current manuscript changed')
+  assert.equal(checkpoint.phases.writing, 'done')
+  assert.equal(checkpoint.phases.final, 'pending')
+  assert.equal(checkpoint.data.submissionReady, false)
 })
 
 test('brainstorm orchestration and ranking do not hold dependency attrs', async () => {

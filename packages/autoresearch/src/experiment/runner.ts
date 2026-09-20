@@ -15,7 +15,6 @@ import { createPolicySnapshot, frozenLiteratureSettings } from '../policy/model-
 import { openRequestLedger } from '../policy/request-ledger.js'
 import type { ProjectSettings } from '../settings/schema.js'
 import { isExperimentPauseError, DurableExperimentWaitingError } from './errors.js'
-import { validateWorkerResult } from './validation.js'
 import { assertFailureImportTarget, importResearchFailure, type FailureReportImport } from '../service/failure-import.js'
 import { bindResearchOutputs } from '../service/research-outputs.js'
 import { bindRunProject } from '../service/project-paper.js'
@@ -475,10 +474,7 @@ async function executeExperimentTask(
     const workDir = safeResolve(runDir, 'work', `experiment-cycle-${String(cycle).padStart(2, '0')}`)
     await ensureDir(workDir)
     const cachedWork = await readStage<unknown>(stageFile(runDir, cycle, 'work'))
-    const rawActionResult = cachedWork === undefined
-      ? await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification })
-      : cachedActionResult(cachedWork)
-    const actionResult = await validateWorkerResult(runDir, rawActionResult)
+    const actionResult = await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification, ...(cachedWork === undefined ? {} : { cachedStage: { result: cachedActionResult(cachedWork) } }) })
     if (cachedWork === undefined) {
       await recordResult(state, `experiment-work-${cycle}`, actionResult as unknown as Record<string, unknown>)
       await writeStage(runDir, cycle, 'work', { actionResult })
@@ -613,14 +609,13 @@ async function runMinimalExperiment(
       const workDir = safeResolve(ctx.runDir, 'work', `experiment-cycle-${String(cycle).padStart(2, '0')}`)
       await ensureDir(workDir)
       const cachedWork = await readStage<unknown>(stageFile(ctx.runDir, cycle, 'work'))
-      const rawActionResult = cachedWork === undefined ? await (async () => {
+      const actionResult = cachedWork === undefined ? await (async () => {
         await transition(ctx.state, 'work', `experiment-minimal-work-${cycle}`)
         const result = await runWorker(ctx, { workDir, planText, experimentDesign: planText, minimalVerification: 'minimal plan is the verification basis' })
         await writeStage(ctx.runDir, cycle, 'work', { actionResult: result })
         await recordResult(ctx.state, `experiment-minimal-work-${cycle}`, result as unknown as Record<string, unknown>)
         return result
-      })() : cachedActionResult(cachedWork)
-      const actionResult = await validateWorkerResult(ctx.runDir, rawActionResult)
+      })() : await runWorker(ctx, { workDir, planText, experimentDesign: planText, minimalVerification: 'minimal plan is the verification basis', cachedStage: { result: cachedActionResult(cachedWork) } })
 
       if (!(await readStage(stageFile(ctx.runDir, cycle, 'evidence')))) {
         await transition(ctx.state, 'evidence', `experiment-minimal-evidence-${cycle}`)

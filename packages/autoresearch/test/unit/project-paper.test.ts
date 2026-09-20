@@ -86,7 +86,7 @@ test('project-paper service freezes intent, restores scope on resume and rejects
   const service = new AutoResearchService(provider)
   const context = { parent: { id: 'parent', session: { id: 'parent' } }, signal: new AbortController().signal }
   await assert.rejects(() => service.runProjectPaper({ projectDir, runDir, maxCycles: 1 }, context), /validation-stop/)
-  await assert.rejects(() => service.resume({ runDir }, context), /validation-stop/)
+  assert.equal((await service.resume({ runDir }, context)).status, 'PAUSED')
   assert.equal(calls.filter(r => r === 'project-explorer').length, 1)
   await assert.rejects(() => service.resume({ runDir, projectDir: root }, context), /project identity/)
   assert.match(await readFile(join(runDir, 'input', 'candidate.md'), 'utf8'), /fresh held-out/)
@@ -190,7 +190,8 @@ test('project workflow reaches the ordinary paper pipeline and resumes with sour
   assert.equal((await service.status(runDir))?.phase, 'paper')
   const checkpoint = JSON.parse(await readFile(join(runDir, 'paper', 'pipeline_checkpoint.json'), 'utf8'))
   assert.equal(checkpoint.schema, 'autoresearch/paper-pipeline-checkpoint/v1')
-  await assert.rejects(() => service.resume({ runDir, humanReview: 'off' }, context), /fake paper-planner failure/)
+  assert.equal((await service.resume({ runDir, humanReview: 'off' }, context)).status, 'PAUSED')
+  await assert.rejects(() => service.resume({ runDir, humanReview: 'off', maxCycles: 2, recovery: { changedCondition: 'Authorize one additional cumulative cycle for delivery recovery' } }, context), /fake paper-planner failure/)
   assert.equal(discoveries, 1)
   assert.equal(fake.calls.filter(role => role === 'research-worker').length, 1)
   assert.equal(fake.calls.filter(role => role === 'supervisor').length, 1)

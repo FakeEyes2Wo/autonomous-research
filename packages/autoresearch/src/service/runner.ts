@@ -29,8 +29,10 @@ import {
 import { runPaper } from './steps/paper.js'
 import type { ResearchRunnerOptions } from './types.js'
 import { isExperimentPauseError, DurableExperimentWaitingError } from '../experiment/errors.js'
-import { validateWorkerResult } from '../experiment/validation.js'
 import { loadTaskGraph } from '../experiment/task-graph.js'
+import { initializeContinuation, readContinuation, loadOrReviewContinuation, runContinuationTasks, addContinuationEvidence, recordContinuationPause, bindScientificFollowup } from './continuation.js'
+import { ResearchStore } from '../research/store.js'
+import { commitResearchDecision } from './research-cycle.js'
 
 export type { ResearchRunnerOptions } from './types.js'
 
@@ -45,29 +47,50 @@ export class ResearchRunner {
 
   async run(runDir: string, state: RunState, tree: ResearchTree, context: RoleExecutionContext): Promise<RunState> {
     const ctx = createRunContext(this.deps, runDir, state, tree, context)
-    const resumingDurable = Boolean(await loadTaskGraph(runDir, `cycle-${state.cycle}`))
+    if (state.status === 'COMPLETED' || state.status === 'FAILED') return state
+    if (state.status === 'PAUSED' && !this.deps.continuationResume) return state
+    const savedContinuation = await readContinuation(runDir)
+    const assigned = savedContinuation?.queue.find(item => item.status === 'running' && item.execution)?.execution
+    if (assigned) {
+      if (state.cycle > assigned.cycle || state.planVersion > assigned.planVersion || assigned.graphId !== `cycle-${assigned.cycle}`) throw new Error('scientific follow-up execution assignment mismatch')
+      if (state.cycle < assigned.cycle) state.phase = 'plan'
+      state.cycle = assigned.cycle
+      state.planVersion = assigned.planVersion
+      await saveState(runDir, state)
+    }
+    const pendingReviewed = savedContinuation?.lastReview?.action === 'followup' && savedContinuation.queue.some(item => item.status === 'pending')
+    const resumingDurable = Boolean(assigned || pendingReviewed || this.deps.continuationResume || await loadTaskGraph(runDir, `cycle-${state.cycle}`))
     ctx.logger.info(`run started runDir=${runDir} runId=${state.runId} status=${state.status} cycle=${state.cycle}`)
 
     // A paper checkpoint owns the remaining work. Prelude roles are paid work
     // and must not be dispatched again when resuming either workflow mode.
     if (state.phase === 'paper') {
       ctx.logger.info(`resuming at paper phase cycle=${state.cycle}`)
+      await initializeContinuation(ctx, this.deps.continuationResume)
       await runPaper(ctx)
-      state.status = 'COMPLETED'
-      await saveState(runDir, state)
-      return state
+      return this.finishGoal(ctx)
+    }
+
+    if (savedContinuation?.resumeReviewRequired || !assigned && (pendingReviewed || this.deps.continuationResume && (!savedContinuation || savedContinuation.stop?.inputHash || savedContinuation.lastReview))) {
+      await initializeContinuation(ctx, true)
+      let reviewed = pendingReviewed && !savedContinuation?.resumeReviewRequired ? await runContinuationTasks(ctx) : await loadOrReviewContinuation(ctx)
+      if (reviewed.action === 'followup') reviewed = await runContinuationTasks(ctx)
+      if (reviewed.action === 'complete') return this.finishGoal(ctx)
+      if (reviewed.action !== 'followup') return this.pauseRun(ctx, `${reviewed.action}: ${reviewed.reason}`)
+      await this.advanceCycle(ctx, true)
     }
 
     // Minimal mode is an intentionally small path.  Keep it before the
     // legacy brainstorm/deep-dive gates so optional roles cannot leak into a
     // run whose settings explicitly disabled them.
     if (ctx.policySnapshot.workflow.mode === 'minimal') {
+      await initializeContinuation(ctx)
       let candidate = await readCandidate(runDir)
       const profile = await this.readProfile(runDir)
       // Minimal mode skips optional prelude work for auto/never.  An explicit
       // enabled setting is honored so the UI never stores a silently ignored
       // switch; its output is folded into the single minimal plan input.
-      if (ctx.policySnapshot.workflow.brainstorm === 'enabled') {
+      if (!resumingDurable && ctx.policySnapshot.workflow.brainstorm === 'enabled') {
         const brainstormOptions = this.deps.projectSettings ? {
           surveyMinSurveys: this.deps.projectSettings.paperExploration.minSurveys,
           surveyMinClusters: this.deps.projectSettings.paperExploration.minClusters,
@@ -78,7 +101,7 @@ export class ResearchRunner {
         await runBrainstorm({ provider: this.deps.provider, options: brainstormOptions }, { runDir, agentContext: context })
         candidate = await readCandidate(runDir)
       }
-      if (ctx.policySnapshot.workflow.deepDive === 'enabled') {
+      if (!resumingDurable && ctx.policySnapshot.workflow.deepDive === 'enabled') {
         const deepDive = await runInitialDeepDive(
           { provider: this.deps.provider, topN: this.deps.deepDiveTopN },
           { runDir, idea: candidate.raw, profile, agentContext: context },
@@ -170,6 +193,7 @@ export class ResearchRunner {
       await ensureRubric(ctx, { idea: candidate.raw, profile, feedback: rubricVerdict.feedback })
     }
 
+    await initializeContinuation(ctx)
     while (state.status === 'RUNNING' && state.cycle <= (this.deps.maxCycles ?? DEFAULT_MAX_CYCLES)) {
       const cycle = state.cycle
       const planVersion = state.planVersion
@@ -239,7 +263,7 @@ export class ResearchRunner {
       await ensureDir(workDir)
       let actionResult
       try {
-        actionResult = await validateWorkerResult(runDir, await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification }))
+        actionResult = await runWorker(ctx, { workDir, planText, experimentDesign, minimalVerification })
       } catch (error) {
         if (isExperimentPauseError(error)) return this.pauseRun(ctx, error.message, error instanceof DurableExperimentWaitingError)
         throw error
@@ -293,26 +317,20 @@ export class ResearchRunner {
 
       if (decision.action === 'continue') {
         ctx.logger.info(`cycle ${cycle} -> continue to cycle ${cycle + 1}`)
-        state.cycle += 1
-        state.phase = 'work'
-        await saveState(runDir, state)
+        const queued = (await readContinuation(runDir))?.queue.some(item => item.status !== 'completed')
+        await this.advanceCycle(ctx, Boolean(queued))
         continue
       }
 
       if (decision.action === 'revise') {
         ctx.logger.info(`cycle ${cycle} -> revise to plan v${state.planVersion + 1}`)
-        state.planVersion += 1
-        state.cycle += 1
-        state.phase = 'plan'
-        await saveState(runDir, state)
+        await this.advanceCycle(ctx, true)
         continue
       }
 
       if (decision.action === 'finish') {
         if (ctx.policySnapshot.workflow.paper === 'never') {
-          state.status = 'COMPLETED'
-          await saveState(runDir, state)
-          return state
+          return this.finishGoal(ctx)
         }
         ctx.logger.info(`cycle ${cycle} -> finish, entering paper phase`)
         state.status = 'RUNNING'
@@ -320,11 +338,7 @@ export class ResearchRunner {
         await saveState(runDir, state)
         await reloadTree(ctx)
         await runPaper(ctx)
-        state.status = 'COMPLETED'
-        state.phase = 'paper'
-        await saveState(runDir, state)
-        ctx.logger.info('run completed')
-        return state
+        return this.finishGoal(ctx)
       }
 
       ctx.logger.warn(`cycle ${cycle} -> fail: ${decision.reason}`)
@@ -335,6 +349,8 @@ export class ResearchRunner {
       return state
     }
 
+    const atCap = await loadOrReviewContinuation(ctx)
+    if (atCap.action === 'complete') return this.finishGoal(ctx)
     state.status = 'PAUSED'
     state.lastError = `max cycles reached (${this.deps.maxCycles ?? DEFAULT_MAX_CYCLES})`
     await saveState(runDir, state)
@@ -356,8 +372,26 @@ export class ResearchRunner {
     ctx.logger.warn(`run paused: ${reason}`)
     ctx.state.status = waiting ? 'WAITING' : 'PAUSED'
     ctx.state.lastError = reason
+    if (!waiting) await recordContinuationPause(ctx.runDir, ctx.state, reason)
     await saveState(ctx.runDir, ctx.state)
     await writeFailureReport(ctx.runDir, `# PAUSED\n\n${reason}\n`)
+    return ctx.state
+  }
+
+  private async finishGoal(ctx: RunContext): Promise<RunState> {
+    const store = new ResearchStore(ctx.runDir)
+    const refs = []
+    for (const path of ['paper/main.tex', 'paper/main.pdf']) if (await readOptionalText(join(ctx.runDir, path)) !== undefined) refs.push(await store.captureSource(path))
+    await addContinuationEvidence(ctx, refs)
+    const decision = await commitResearchDecision(ctx, { action: 'finish', reason: 'Delivery phase ready; verify full goal coverage', candidates: [] }, { action: 'finish', reason: 'Verify full goal coverage after delivery' }, undefined, { deliveryReady: true })
+    if (decision.action !== 'finish') {
+      ctx.state.phase = 'decide'
+      await saveState(ctx.runDir, ctx.state)
+      return new ResearchRunner({ ...this.deps, continuationResume: true }).run(ctx.runDir, ctx.state, ctx.tree, ctx.context)
+    }
+    ctx.state.status = 'COMPLETED'
+    ctx.state.continuationStop = undefined
+    await saveState(ctx.runDir, ctx.state)
     return ctx.state
   }
 
@@ -408,6 +442,7 @@ export class ResearchRunner {
     const pauseForEvidence = async (reason = 'worker evidence is insufficient or unsafe; supervisor cannot override the evidence gate', waiting = false): Promise<RunState> => {
       ctx.state.status = waiting ? 'WAITING' : 'PAUSED'
       ctx.state.lastError = reason
+      if (!waiting) await recordContinuationPause(ctx.runDir, ctx.state, reason)
       await saveState(ctx.runDir, ctx.state)
       await writeFailureReport(ctx.runDir, `# PAUSED\n\n${ctx.state.lastError}.\n`)
       return ctx.state
@@ -422,17 +457,17 @@ export class ResearchRunner {
       if (savedWork) {
         let value: unknown
         try { value = JSON.parse(savedWork) } catch { throw new Error(`invalid JSON in cached work result: ${workMarker}`) }
-        actionResult = await validateWorkerResult(ctx.runDir, value)
+        actionResult = await runWorker(ctx, { workDir: safeResolve(ctx.runDir, WORK_DIR, `cycle-${String(cycle).padStart(2, '0')}`), planText: plan.plan, experimentDesign: plan.plan, minimalVerification: '', cachedStage: { result: value } })
       } else {
         await transition(ctx.state, 'work', `minimal-work-${cycle}`)
         const workDir = safeResolve(ctx.runDir, WORK_DIR, `cycle-${String(cycle).padStart(2, '0')}`)
         await ensureDir(workDir)
-        actionResult = await validateWorkerResult(ctx.runDir, await runWorker(ctx, {
+        actionResult = await runWorker(ctx, {
           workDir,
           planText: plan.plan,
           experimentDesign: plan.plan,
           minimalVerification: '',
-        }))
+        })
         await writeText(workMarker, JSON.stringify(actionResult, null, 2))
         await recordResult(ctx.state, `minimal-work-${cycle}`, actionResult)
       }
@@ -493,10 +528,9 @@ export class ResearchRunner {
         ctx.state.phase = 'paper'
         await saveState(ctx.runDir, ctx.state)
         await runPaper(ctx)
+        return this.finishGoal(ctx)
       }
-      ctx.state.status = 'COMPLETED'
-      await saveState(ctx.runDir, ctx.state)
-      return ctx.state
+      return this.finishGoal(ctx)
     }
     if (decision.action === 'fail') {
       ctx.state.status = 'FAILED'
@@ -509,21 +543,30 @@ export class ResearchRunner {
     const maxCycles = this.deps.maxCycles ?? DEFAULT_MAX_CYCLES
     if (ctx.context.signal.aborted || ctx.state.status !== 'RUNNING') return ctx.state
     if (ctx.state.cycle >= maxCycles) {
+      const atCap = await loadOrReviewContinuation(ctx)
+      if (atCap.action === 'complete') return this.finishGoal(ctx)
       ctx.state.status = 'PAUSED'
       ctx.state.lastError = `max cycles reached (${maxCycles})`
       await saveState(ctx.runDir, ctx.state)
       await writeFailureReport(ctx.runDir, `# FAILURE_REPORT\n\n${ctx.state.lastError}.\n`)
       return ctx.state
     }
-    ctx.state.cycle += 1
-    ctx.state.planVersion += decision.action === 'revise' ? 1 : 0
-    ctx.state.phase = decision.action === 'revise' ? 'plan' : 'work'
-    await saveState(ctx.runDir, ctx.state)
+    const queued = (await readContinuation(ctx.runDir))?.queue.some(item => item.status !== 'completed')
+    await this.advanceCycle(ctx, Boolean(decision.action === 'revise' || queued))
     return this.runMinimal(ctx, idea, profile)
   }
 
   private async readProfile(runDir: string): Promise<string> {
     return (await readOptionalText(safeResolve(runDir, 'PROFILE.md'))) ?? ''
+  }
+
+  private async advanceCycle(ctx: RunContext, revise: boolean): Promise<void> {
+    const next = { cycle: ctx.state.cycle + 1, planVersion: ctx.state.planVersion + (revise ? 1 : 0), graphId: `cycle-${ctx.state.cycle + 1}` }
+    const assigned = await bindScientificFollowup(ctx, next)
+    ctx.state.cycle = assigned?.cycle ?? next.cycle
+    ctx.state.planVersion = assigned?.planVersion ?? next.planVersion
+    ctx.state.phase = assigned || revise ? 'plan' : 'work'
+    await saveState(ctx.runDir, ctx.state)
   }
 
   private async readPlanText(runDir: string, version: number): Promise<string> {

@@ -3,6 +3,8 @@ import type { ToolDefinitionLike } from './index.js'
 import type { SessionCwdResolver } from './workspace-paths.js'
 import { jsonOutput, stringSchema } from './schemas.js'
 import { prepareStartup, type StartupIntent } from '../startup/prepare.js'
+import { recoverySchema } from './continuation-schemas.js'
+import { parseRecovery } from '../research/continuation.js'
 
 const EXECUTION_TOOLS = new Set(['research_run', 'project_paper_run', 'experiment_run', 'paper_pipeline_resume'])
 
@@ -22,6 +24,8 @@ export function createStartupTools(sessionCwd: SessionCwdResolver): {
         projectDir: stringSchema('Project root; defaults to the calling session workspace. Relative paths resolve from that workspace.'),
         runDir: stringSchema('Explicit output directory for a new task, or selected existing run for resume. Choose a new directory once; never change it to bypass a pause.'),
         task: stringSchema('Exact user task for a new standalone experiment. Resume uses the saved experiment inputs.'),
+        recovery: recoverySchema,
+        maxCycles: { type: 'integer', description: 'Explicit increased cumulative cap, only with recovery.' },
       },
       required: ['intent'],
       additionalProperties: false,
@@ -40,7 +44,7 @@ export function createStartupTools(sessionCwd: SessionCwdResolver): {
       const projectDir = path(args.projectDir, 'projectDir', true)!
       const runDir = path(args.runDir, 'runDir')
       if (args.task !== undefined && typeof args.task !== 'string') throw new TypeError('task must be a string')
-      return prepareStartup({ intent: args.intent as StartupIntent, projectDir, runDir, task: args.task as string | undefined }, {
+      return prepareStartup({ intent: args.intent as StartupIntent, projectDir, runDir, task: args.task as string | undefined, ...(args.recovery !== undefined ? { recovery: parseRecovery(args.recovery) } : {}), ...(args.maxCycles !== undefined ? { maxCycles: args.maxCycles as number } : {}) }, {
         sessionRunDir: sessionRuns.get(exec.agent.id),
       })
     },

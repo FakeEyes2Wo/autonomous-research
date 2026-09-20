@@ -70,6 +70,7 @@ test('auditPaper accepts a macro-definition file without treating arity as a cla
   try {
     await mkdir(join(dir, 'paper'), { recursive: true })
     await writeFile(join(dir, 'paper', 'math_commands.tex'), '\\newcommand{\\norm}[1]{\\left\\|#1\\right\\|}\n\\newcommand{\\inner}[2]{\\langle #1,#2\\rangle}\n')
+    await writeFile(join(dir, 'paper', 'main.tex'), '\\input{math_commands}\nScientific manuscript.\n')
     const result = await auditPaper(dir, ['E1'])
     assert.equal(result.numeric.ok, true)
   } finally {

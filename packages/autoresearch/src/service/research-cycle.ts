@@ -1,5 +1,5 @@
-import { readFile, open, stat } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { readFile, open } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { ActionResult, ResearchDecision } from '../core/types.js'
 import { atomicWriteJson, readOptionalText, safeResolve, writeText } from '../core/utils.js'
 import { ResearchStore, sealRecord, hashContent, assessEvidence, createRevision } from '../research/index.js'
@@ -13,9 +13,9 @@ import { selectionHintsForMechanisms } from '../memory/direction-memory.js'
 import type { RegisteredLiteratureSource } from '../literature/context-adapter.js'
 import { openDirectionManifest } from '../cleanup/manifest.js'
 import type { DirectionRef } from '../cleanup/direction-id.js'
-import { reserveDirectionCycleBoundary } from '../cleanup/registration.js'
-import { advanceCleanupQueue, enqueueRefutedDirection, registerDirectionCycleArtifacts, refreshRunCleanupTargets, loadDirectionManifest, directionId, registerDirectionGeneration } from '../cleanup/index.js'
-import { hashBytes } from '../research/records.js'
+import { reserveDirectionCycleBoundary, registerWorkerDirectionArtifacts } from '../cleanup/registration.js'
+import { advanceCleanupQueue, enqueueRefutedDirection, registerDirectionCycleArtifacts, refreshRunCleanupTargets, loadDirectionManifest, directionId } from '../cleanup/index.js'
+import { readContinuation, loadOrReviewContinuation, runContinuationTasks, currentCoverageBinding, completeScientificFollowup, continuationDecisionRefs } from './continuation.js'
 
 export const cyclePath = (ctx: RunContext, name: string) => safeResolve(ctx.runDir, 'cycles', `cycle-${ctx.state.cycle}`, name)
 const unknownFingerprints = { code: 'unknown', data: 'unknown', treatment: 'unknown', model: 'unknown' }
@@ -156,12 +156,26 @@ export async function registerResearchAttempt(ctx: RunContext, status: string, r
   await atomicWriteJson(cyclePath(ctx, 'attempt.json'), { status, attemptId: `attempt-${ctx.state.cycle}`, ...(result ? { result } : {}) })
 }
 
-export async function assessResearchCycle(ctx: RunContext, action: ActionResult, error?: string, executionUnknown = false): Promise<ResearchSnapshot> {
+export async function assessResearchCycle(ctx: RunContext, action: ActionResult, error?: string, executionUnknown = false, replay = false): Promise<ResearchSnapshot> {
+  if (action.artifacts.length) {
+    try {
+      const frozenText = await readOptionalText(cyclePath(ctx, 'frozen.json'))
+      const issued = await readOptionalText(cyclePath(ctx, 'worker-root.json'))
+      if (!frozenText || !issued) throw new ExperimentPauseError('worker artifact proof missing frozen boundary or issued root')
+      const frozen = await new ResearchStore(ctx.runDir).loadSnapshot(JSON.parse(frozenText).snapshotId)
+      const direction = { projectId: ctx.projectDir, branchId: frozen.branch_id, claim: frozen.active_claim, hypothesis: frozen.active_hypothesis, protocolHash: frozen.protocol.content_hash }
+      await registerWorkerDirectionArtifacts({ runDir: ctx.runDir, workDir: safeResolve(ctx.runDir, JSON.parse(issued).workDir), frozenManifest: await loadDirectionManifest(ctx.runDir, directionId(direction)), action, replay })
+    } catch (error) {
+      if (error instanceof ExperimentPauseError) throw error
+      throw new ExperimentPauseError(`worker ownership proof rejected: ${String(error)}`)
+    }
+  }
   const store = new ResearchStore(ctx.runDir)
   const saved = await readOptionalText(cyclePath(ctx, 'assessed.json'))
   if (saved) {
     const snapshot = await store.loadSnapshot(JSON.parse(saved).snapshotId)
     await writeResearchReport(ctx, snapshot)
+    await completeScientificFollowup(ctx, snapshot.evidence.filter(e => e.protocol_hash === snapshot.protocol.content_hash).flatMap(e => e.artifacts))
     return snapshot
   }
   const orphan = await readOptionalText(safeResolve(ctx.runDir, 'research', 'snapshots', `cycle-${ctx.state.cycle}-assessment`, 'manifest.json'))
@@ -170,21 +184,10 @@ export async function assessResearchCycle(ctx: RunContext, action: ActionResult,
     await atomicWriteJson(cyclePath(ctx, 'assessment.json'), recovered.assessment)
     await atomicWriteJson(cyclePath(ctx, 'assessed.json'), { snapshotId: recovered.id })
     await writeResearchReport(ctx, recovered)
+    await completeScientificFollowup(ctx, recovered.evidence.filter(e => e.protocol_hash === recovered.protocol.content_hash).flatMap(e => e.artifacts))
     return recovered
   }
   const frozen = await freezeResearchCycle(ctx, '', '')
-  if (!error && !executionUnknown && action.artifacts.length) {
-    try {
-      const artifacts = []
-      for (const artifact of action.artifacts) {
-        const file = safeResolve(ctx.runDir, artifact)
-        const bytes = await readFile(file)
-        const relativePath = relative(ctx.runDir, file).replaceAll('\\', '/')
-        artifacts.push({ relativePath, sourceId: artifact, hash: hashBytes(bytes), bytes: (await stat(file)).size, kind: 'worker-output', producer: 'trusted-worker', ownership: 'direction' as const })
-      }
-      await registerDirectionGeneration({ runDir: ctx.runDir, manifestId: directionId({ projectId: ctx.projectDir, branchId: frozen.branch_id, claim: frozen.active_claim, hypothesis: frozen.active_hypothesis, protocolHash: frozen.protocol.content_hash }), direction: { projectId: ctx.projectDir, branchId: frozen.branch_id, claim: frozen.active_claim, hypothesis: frozen.active_hypothesis, protocolHash: frozen.protocol.content_hash }, snapshot: frozen, receipt: { schema: 'autoresearch/direction-generation/v1', protocolHash: frozen.protocol.content_hash, claim: frozen.active_claim, hypothesis: frozen.active_hypothesis, artifacts } })
-    } catch (registrationError) { ctx.logger.warn(`direction output registration deferred: ${String(registrationError)}`) }
-  }
   const artifacts = []
   for (const path of action.artifacts) artifacts.push(await store.captureSource(path))
   let raw: unknown
@@ -223,6 +226,7 @@ export async function assessResearchCycle(ctx: RunContext, action: ActionResult,
   await atomicWriteJson(cyclePath(ctx, 'assessment.json'), assessment)
   await atomicWriteJson(cyclePath(ctx, 'assessed.json'), { snapshotId: committed.id })
   await writeResearchReport(ctx, committed)
+  await completeScientificFollowup(ctx, artifacts)
   return committed
 }
 
@@ -252,8 +256,25 @@ export async function writeResearchReport(ctx: RunContext, snapshot: ResearchSna
 
 export async function committedDecision(ctx: RunContext): Promise<ResearchDecision | undefined> {
   const current = await new ResearchStore(ctx.runDir).loadCurrent()
-  if (current?.decision?.id !== `decision-${ctx.state.cycle}`) return undefined
+  if (!current?.decision) return undefined
+  if (await readContinuation(ctx.runDir)) {
+    if (!current.decision.id.startsWith(`decision-${ctx.state.cycle}-r`) || !await matchesCoverageDecision(ctx, current)) return undefined
+  } else if (current.decision.id !== `decision-${ctx.state.cycle}`) return undefined
   return materializeCommittedDecision(ctx, current)
+}
+
+async function matchesCoverageDecision(ctx: RunContext, snapshot: ResearchSnapshot): Promise<boolean> {
+  const binding = await currentCoverageBinding(ctx)
+  if (!binding || !snapshot.decision?.source_refs.some(ref => ref.id === `coverage-input:${binding.inputHash}`)) return false
+  const expected = binding.action === 'complete' ? 'finish' : binding.action === 'followup' ? 'replicate' : 'pause'
+  return snapshot.decision.action === expected
+}
+
+function decisionIdentity(parent: ResearchSnapshot, cycle: number, continuation: boolean) {
+  const prefix = `candidate-batch-${cycle}-r`
+  const revisions = (parent.candidate_batches ?? []).filter(batch => batch.id.startsWith(prefix)).map(batch => Number(batch.id.slice(prefix.length))).filter(Number.isSafeInteger)
+  const suffix = continuation ? `-r${Math.max(-1, ...revisions) + 1}` : ''
+  return { decisionId: `decision-${cycle}${suffix}`, batchId: `candidate-batch-${cycle}${suffix}` }
 }
 
 /** CURRENT is authoritative; this checkpoint is only a rebuildable runtime view. */
@@ -266,13 +287,27 @@ async function materializeCommittedDecision(ctx: RunContext, snapshot: ResearchS
   return { action, reason: decision.reason }
 }
 
-export async function commitResearchDecision(ctx: RunContext, output: unknown, legacy: ResearchDecision, expectedSnapshot?: { id: string; hash: string }, admission: { registeredSpans?: SourceRef[]; remainingCostMicros?: number } = {}): Promise<ResearchDecision> {
+export async function commitResearchDecision(ctx: RunContext, output: unknown, legacy: ResearchDecision, expectedSnapshot?: { id: string; hash: string }, admission: { registeredSpans?: SourceRef[]; remainingCostMicros?: number; deliveryReady?: boolean } = {}): Promise<ResearchDecision> {
   if (ctx.context.signal.aborted) throw new ExperimentPauseError('research cancelled before scientific revision')
+  const continuation = await readContinuation(ctx.runDir)
+  // Delivering an authorized paper is a phase transition, never acceptance.
+  // The runner reviews the complete goal after capturing the actual paper bytes.
+  if (continuation && legacy.action === 'finish' && !admission.deliveryReady && ctx.state.phase !== 'paper' && ctx.policySnapshot.workflow.paper !== 'never') return { action: 'finish', reason: 'Research phase ready for paper delivery; final goal acceptance remains pending.' }
+  const proposals = record(output)
+  let goalAction: 'complete' | 'followup' | 'pause' | 'budget_exhausted' | undefined
+  let goalReason: string | undefined
+  if (continuation && (legacy.action === 'finish' || !Array.isArray(proposals.candidates) || !proposals.candidates.length)) {
+    let reviewed = await loadOrReviewContinuation(ctx)
+    if (reviewed.action === 'followup') reviewed = await runContinuationTasks(ctx)
+    goalAction = reviewed.action
+    goalReason = reviewed.reason
+  }
   const store = new ResearchStore(ctx.runDir)
   const initial = await store.loadCurrent()
   if (!initial?.assessment) {
     if (expectedSnapshot && initial?.content_hash !== expectedSnapshot.hash) throw new ExperimentPauseError('research snapshot changed after supervisor input; reassessment is required')
-    return legacy
+    if (goalAction === 'pause' || goalAction === 'budget_exhausted') throw new ExperimentPauseError(`${goalAction}: ${goalReason}`)
+    return goalAction === 'complete' ? { action: 'finish', reason: 'Independent goal coverage verified' } : goalAction === 'followup' ? { action: 'revise', reason: 'Execute admitted scientific follow-up under a new frozen protocol' } : legacy
   }
   const proposalSnapshot = expectedSnapshot ? await store.loadSnapshot(expectedSnapshot.id) : initial
   if (expectedSnapshot && proposalSnapshot.content_hash !== expectedSnapshot.hash) throw new ExperimentPauseError('research proposal snapshot hash mismatch')
@@ -296,10 +331,11 @@ export async function commitResearchDecision(ctx: RunContext, output: unknown, l
     await enqueueRefutedDirection({ projectDir: ctx.projectDir, runDir: ctx.runDir, snapshot: parent })
     await advanceCleanupQueue(ctx.projectDir)
   }
-  if (parent.decision?.id === `decision-${ctx.state.cycle}`) return materializeCommittedDecision(ctx, parent)
+  let { decisionId, batchId } = decisionIdentity(parent, ctx.state.cycle, !!continuation)
+  if (continuation ? parent.decision?.id.startsWith(`decision-${ctx.state.cycle}-r`) && await matchesCoverageDecision(ctx, parent) : parent.decision?.id === decisionId) return materializeCommittedDecision(ctx, parent)
   const ledger = await ctx.context.requestLedger?.snapshot()
   const directionMemory = await selectionHintsForMechanisms(ctx.projectDir)
-  let batch = buildCandidateBatch({ id: `candidate-batch-${ctx.state.cycle}`, parent, proposalParent: proposalSnapshot.active_hypothesis,
+  let batch = buildCandidateBatch({ id: batchId, parent, proposalParent: proposalSnapshot.active_hypothesis,
     proposalSnapshotHash: proposalSnapshot.content_hash, rawCandidates: Array.isArray(raw.candidates) ? raw.candidates : [], rawSource,
     registeredSpans: admission.registeredSpans, selectionInput: { snapshotHash: parent.content_hash, remainingCost: admission.remainingCostMicros ?? null,
       registeredAlternatives: [...new Set(parent.hypotheses.flatMap(h => h.alternatives))],
@@ -310,8 +346,23 @@ export async function commitResearchDecision(ctx: RunContext, output: unknown, l
       exploratoryBudget: { policy: 'controller-caps-v1', remainingCycles: Math.max(0, Math.min((ctx.deps.maxCycles ?? 10) - ctx.state.cycle, (ctx.deps.maxCycles ?? 10) - parent.budget.revisions)),
         remainingRoleCalls: ledger?.remainingRoleCalls ?? null, remainingTokens: ledger?.remainingTokens ?? null } } })
   const candidate = batch.entries.find(entry => entry.candidate.id === batch.selection.selectedId)?.revision
+  if (continuation && goalAction === undefined && (!candidate || batch.selection.stopReason === 'budget' || ctx.state.cycle >= (ctx.deps.maxCycles ?? 10))) {
+    let reviewed = await loadOrReviewContinuation(ctx)
+    if (reviewed.action === 'followup') reviewed = await runContinuationTasks(ctx)
+    goalAction = reviewed.action
+    goalReason = reviewed.reason
+    ;({ decisionId, batchId } = decisionIdentity(parent, ctx.state.cycle, true))
+    batch = sealRecord({ ...batch, id: batchId })
+  }
   const strict = parent.protocol.provenance === 'known'
-  const taskFinished = legacy.action === 'finish' && ((!strict && !candidate) || parent.assessment.category === 'supported')
+  // A CAS retry may have a different assessment/evidence basis. Revalidate the
+  // content-bound receipt against CURRENT rather than carrying an old verdict.
+  if (continuation && goalAction === 'complete') {
+    const fresh = await loadOrReviewContinuation(ctx)
+    goalAction = fresh.action
+    goalReason = fresh.reason
+  }
+  const taskFinished = continuation ? goalAction === 'complete' : legacy.action === 'finish' && ((!strict && !candidate) || parent.assessment.category === 'supported')
   const atLimit = !taskFinished && (batch.selection.stopReason === 'budget' || ctx.state.cycle >= (ctx.deps.maxCycles ?? 10) || (ledger !== undefined && (ledger.remainingRoleCalls === 0 || ledger.remainingTokens === 0)))
   const limitReason = `budget_exhausted: maxCycles/maxRounds, role/token caps, or monetary admission limit reached; ${parent.assessment.reason}`
   const nextProtocol = candidate ? sealRecord({ ...parent.protocol, id: `pending-protocol-${ctx.state.cycle + 1}`, version: 1,
@@ -319,11 +370,12 @@ export async function commitResearchDecision(ctx: RunContext, output: unknown, l
     allowed_literature_span_ids: undefined,
     provenance: 'unknown' as const, fingerprints: { ...unknownFingerprints }, split: 'requires fresh validation data',
   }) : undefined
-  const revised = createRevision({ decisionId: `decision-${ctx.state.cycle}`, parentSnapshot: parent, assessment: parent.assessment,
-    ...(candidate && !atLimit && !taskFinished ? { candidate, nextProtocol } : {}), reason: atLimit ? limitReason : strict && !taskFinished ? parent.assessment.reason : legacy.reason, maxRevisions: ctx.deps.maxCycles ?? 10 })
-  const shouldPause = atLimit || (legacy.action === 'fail' && !candidate)
+  const revised = createRevision({ decisionId, parentSnapshot: parent, assessment: parent.assessment,
+    ...(candidate && !atLimit && !taskFinished && goalAction !== 'pause' && goalAction !== 'budget_exhausted' ? { candidate, nextProtocol } : {}), reason: goalReason ? `${goalAction}: ${goalReason}` : atLimit ? limitReason : strict && !taskFinished ? parent.assessment.reason : legacy.reason, maxRevisions: ctx.deps.maxCycles ?? 10 })
+  const shouldPause = atLimit || goalAction === 'pause' || goalAction === 'budget_exhausted' || (legacy.action === 'fail' && !candidate && !taskFinished && goalAction !== 'followup')
   const finalAction = shouldPause ? sealRecord({ ...revised, decision: sealRecord({ ...revised.decision!, action: 'pause' as const }) }) : taskFinished
-    ? sealRecord({ ...revised, decision: sealRecord({ ...revised.decision!, action: 'finish' as const }) }) : revised
+    ? sealRecord({ ...revised, decision: sealRecord({ ...revised.decision!, action: 'finish' as const }) }) : goalAction === 'followup'
+    ? sealRecord({ ...revised, decision: sealRecord({ ...revised.decision!, action: 'replicate' as const }) }) : revised
   if (batch.selection.selectedId && finalAction.decision!.action !== 'revise') {
     const id = batch.selection.selectedId
     const reason = `deferred_controller_action:${finalAction.decision!.action}`
@@ -333,7 +385,7 @@ export async function commitResearchDecision(ctx: RunContext, output: unknown, l
   }
   if (Array.isArray(ideaCapture.source_refs)) batch = sealRecord({ ...batch, source_refs: [...batch.source_refs, ...ideaCapture.source_refs as SourceRef[]] })
   const finalSnapshot = sealRecord({ ...finalAction, candidate_batches: [...(parent.candidate_batches ?? []), batch],
-    decision: sealRecord({ ...finalAction.decision!, candidate_batch_id: batch.id, source_refs: [...finalAction.decision!.source_refs, { id: batch.id, hash: batch.content_hash }] }) })
+    decision: sealRecord({ ...finalAction.decision!, candidate_batch_id: batch.id, source_refs: [...finalAction.decision!.source_refs, { id: batch.id, hash: batch.content_hash }, ...(continuation ? await continuationDecisionRefs(ctx) : [])] }) })
   let committed: ResearchSnapshot
   try { committed = await store.commit(finalSnapshot, parent.content_hash) }
   catch (error) { if (/stale snapshot/.test(String(error)) && retry < 2) continue; throw error }
@@ -348,10 +400,12 @@ export async function commitResearchDecision(ctx: RunContext, output: unknown, l
 }
 
 export async function researchPlanInput(ctx: RunContext, idea: string): Promise<string> {
+  const continuation = await readContinuation(ctx.runDir)
+  const followup = continuation?.queue.find(item => item.status !== 'completed')
   const current = await new ResearchStore(ctx.runDir).loadCurrent()
   const next = current?.decision?.candidate ? JSON.stringify({ hypothesis: current.decision.candidate, evidence_snapshot: current.decision.parent_snapshot_id,
     constraints: 'Exploratory hypothesis; validate on fresh data under a newly frozen protocol.' }) :
     current?.decision?.action === 'repair' ? `Repair the measurement/execution: ${current.decision.reason}` : undefined
   const imported = await readOptionalText(join(ctx.runDir, 'research', 'imported-failure.json'))
-  return [idea, next ? `## Committed next research action\n${next}` : '', imported ? `## Recover and verify imported failure sources\n${imported}\nThis is unknown historical provenance, not formal evidence or an established refutation.` : ''].filter(Boolean).join('\n\n')
+  return [idea, followup ? `## Admitted goal follow-up\n${JSON.stringify(followup)}\nStay inside its frozen criteria; scientific work requires a newly frozen protocol. A proposed revision still requires strict candidate admission.` : '', next ? `## Committed next research action\n${next}` : '', imported ? `## Recover and verify imported failure sources\n${imported}\nThis is unknown historical provenance, not formal evidence or an established refutation.` : ''].filter(Boolean).join('\n\n')
 }

@@ -25,6 +25,27 @@ export const researchSectionTitles = {
  * Research-loop roles: idea/rubric/experiment/reflect.
  */
 export const researchRoleSpecs = {
+  'coverage-reviewer': {
+    sections: ['continuation'],
+    outputSchema: objectSchema({
+      action: { type: 'string', enum: ['complete', 'followup', 'pause', 'budget_exhausted'], required: true },
+      reason: { type: 'string', required: true },
+      criteria: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
+        id: { type: 'string', required: true }, status: { type: 'string', enum: ['met', 'unmet', 'unknown', 'not_applicable'], required: true },
+        rationale: { type: 'string' },
+        sourceRefs: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: { id: { type: 'string', required: true }, path: { type: 'string', required: true }, hash: { type: 'string', required: true } } } },
+      } } },
+      blockers: { type: 'array', required: true, items: { type: 'string' } },
+      unsupportedClaims: { type: 'array', required: true, items: { type: 'string' } },
+      followups: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
+        kind: { type: 'string', enum: ['investigate', 'repair', 'replicate'], required: true },
+        mechanismKey: { type: 'string' },
+        retryOf: { type: 'string' },
+        criterionIds: { type: 'array', required: true, items: { type: 'string' } }, task: { type: 'string', required: true }, changedCondition: { type: 'string', required: true },
+        sourceRefs: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: { id: { type: 'string', required: true }, path: { type: 'string', required: true }, hash: { type: 'string', required: true } } } },
+      } } },
+    }),
+  },
   'rubric-generator': {
     sections: ['idea', 'profile', 'plan', 'treeSummary'],
     outputSchema: objectSchema({ rubric: { type: 'string', required: true } }),

@@ -37,13 +37,13 @@ test('brainstorm pre-phase surveys field, selects directions, mines latest, writ
   const dir = await mkdtemp(join(tmpdir(), 'ar-brainstorm-'))
   try {
     const provider = new FakeAgentProvider({
-      decisions: ['finish'],
+      decisions: ['finish'], coverage: 'explicit-artifact',
       writerText: '\\documentclass{article}\n\\begin{document}\nBrainstorm Paper.\n\\end{document}',
     })
     const service = new AutoResearchService(provider)
     const context = { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }
 
-    const state = await service.run({ runDir: dir }, context)
+    const state = await service.run({ runDir: dir, acceptance: { criteria: [{ id: 'survey-output', required: true, text: 'Deliver the survey and engineering artifacts', evidenceKind: 'artifact' }] } }, context)
 
     assert.equal(state.status, 'COMPLETED')
     assert.equal(provider.calls.includes('paper-survey'), true)

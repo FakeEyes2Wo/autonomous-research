@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import os from 'node:os'
+import fsPromises from 'node:fs/promises'
 import { syncBuiltinESMExports } from 'node:module'
 import { ResearchStore, sealRecord } from '../../dist/research/index.js'
 import { freezeTaskGraph } from '../../dist/experiment/task-graph.js'
@@ -38,6 +39,173 @@ function runtime(raw: unknown, counts: Record<string, number>, status = 'succeed
     }, async inspect(id: string) { return (await store.get(id)).receipt }, async collect(id: string) { return (await store.get(id)).receipt }, async cancel(id: string) { return (await store.get(id)).receipt },
   }) }
 }
+
+for (const cached of [false, true]) test(`final verified durable replication acknowledges its queued followup once: cached=${cached}`, async t => {
+  const api = await import('../../dist/experiment/runtime-adapter.js')
+  const continuation = await import('../../dist/service/continuation.js')
+  const { mergeFollowups } = await import('../../dist/research/continuation.js')
+  const { runWorker } = await import('../../dist/experiment/steps.js')
+  const { createRunContext } = await import('../../dist/service/context.js')
+  const { createInitialState } = await import('../../dist/core/state.js')
+  const { ResearchTree } = await import('../../dist/core/research-tree.js')
+  const f = await fixture(t, 2), counts = {}, authority = runtime(f.raw, counts)
+  const graph = await freezeTaskGraph({ ...f, id: 'cycle-1', goal: 'Replication' })
+  await api.advanceExperimentGraph({ runDir: f.runDir, graph, runtime: authority })
+  if (cached) await api.advanceExperimentGraph({ runDir: f.runDir, graph, runtime: authority })
+  await mkdir(join(f.runDir, 'cycles/cycle-1'), { recursive: true })
+  await writeFile(join(f.runDir, 'cycles/cycle-1/frozen.json'), JSON.stringify({ snapshotId: f.snapshot.id }))
+  const ctx = createRunContext({ provider: { run: async () => { throw new Error('no model dispatch') } }, maxCycles: 1, acceptance: { criteria: ['science', 'science-later'].map(id => ({ id, required: true, text: 'Replicate', evidenceKind: 'scientific' })) } }, f.runDir, await createInitialState(f.runDir), await ResearchTree.load(f.runDir), { parent: { id: 'test', session: { id: 'test' } }, signal: new AbortController().signal, experimentRuntime: authority })
+  const saved = await continuation.initializeContinuation(ctx)
+  const ref = await new ResearchStore(f.runDir).captureBytes('external replication request', 'request')
+  saved.evidence = [ref]
+  saved.queue = mergeFollowups([], ['science', 'science-later'].map(id => ({ kind: 'replicate', criterionIds: [id], task: 'Replicate once', changedCondition: '', sourceRefs: [ref] })), saved.acceptance, [ref])
+  saved.queue[0].status = 'running'; saved.queue[0].cycle = 1
+  await writeFile(join(f.runDir, 'continuation/state.json'), JSON.stringify(saved))
+  const args = { workDir: join(f.runDir, 'work/cycle-01'), planText: 'Replication', experimentDesign: '', minimalVerification: '', ...(cached ? { cachedStage: { result: { status: 'completed', summary: 'forged', artifacts: ['untrusted.json'] } } } : {}) }
+  const action = await runWorker(ctx, args)
+  const after = await continuation.readContinuation(f.runDir)
+  assert.equal(after.queue[0].status, 'completed')
+  const snapshot = await new ResearchStore(f.runDir).loadCurrent()
+  assert.deepEqual(after.queue[0].resultRefs, snapshot.evidence.flatMap(e => e.artifacts).filter(ref => action.artifacts.includes(ref.path)))
+  assert.ok(after.queue[0].resultRefs.length > 0)
+  const beforeReplay = await readFile(join(f.runDir, 'continuation/state.json'), 'utf8')
+  await runWorker(ctx, args)
+  assert.equal(await readFile(join(f.runDir, 'continuation/state.json'), 'utf8'), beforeReplay)
+  assert.equal((await continuation.readContinuation(f.runDir)).queue[1].status, 'pending', 'cached completion cannot consume another queued replication')
+  assert.equal((await new ResearchStore(f.runDir).loadCurrent()).content_hash, snapshot.content_hash)
+  assert.deepEqual(Object.values(counts), [1, 1])
+})
+
+for (const { crashAt, mode, cap } of [
+  ...['none', 'review-receipt-publication', 'review-publication', 'assignment-before-publication', 'assignment-publication', 'run-publication', 'graph-publication'].map(crashAt => ({ crashAt, mode: 'legacy', cap: 2 })),
+  { crashAt: 'none', mode: 'minimal', cap: 2 }, { crashAt: 'none', mode: 'minimal', cap: 3 }, { crashAt: 'none', mode: 'legacy', cap: 3 },
+]) test(`final recovery durable WAITING ordinary resume reconciles the assigned graph: ${mode}/cap-${cap}/${crashAt}`, async t => {
+  const continuation = await import('../../dist/service/continuation.js')
+  const { createRunContext } = await import('../../dist/service/context.js')
+  const { createInitialState, saveState } = await import('../../dist/core/state.js')
+  const { ResearchTree } = await import('../../dist/core/research-tree.js')
+  const { bindRunProject } = await import('../../dist/service/project-paper.js')
+  const f = await fixture(t), counts = {}, authority = runtime({ ...f.raw, units: f.raw.units.map(u => ({ ...u, treatment: 1, control: 0 })) }, counts)
+  t.mock.method(os, 'homedir', () => f.runDir); syncBuiltinESMExports()
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports() })
+  await mkdir(join(f.runDir, '.autoresearch'), { recursive: true }); await mkdir(join(f.runDir, 'input'), { recursive: true })
+  await writeFile(join(f.runDir, 'input/idea.md'), 'Replicate the checked finding')
+  await writeFile(join(f.runDir, 'RUBRIC.md'), 'Check paired replication')
+  await writeFile(join(f.runDir, '.autoresearch/project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  brainstorm: never\n  deepDive: never\n  experimentReview: never\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n')
+  if (mode === 'minimal') {
+    const { loadProjectSettings } = await import('../../dist/settings/project-settings.js')
+    const { createPolicySnapshot } = await import('../../dist/policy/model-routing.js')
+    const settings = await loadProjectSettings(f.runDir)
+    await writeFile(join(f.runDir, '.autoresearch/policy-snapshot.json'), JSON.stringify({ ...createPolicySnapshot(settings), model: settings.model }))
+  }
+  const provider = new FakeAgentProvider({ decisions: ['finish'], minimalRisk: 'low' }), original = provider.run.bind(provider)
+  let planners = 0, reviews = 0
+  provider.run = async (role, input, ctx) => {
+    if (role === 'coverage-reviewer') {
+      reviews++
+      const m = JSON.parse(input.continuation)
+      return { text: '', stopReason: 'completed', structured: m.queue.some(q => q.status === 'completed')
+        ? { action: 'complete', reason: 'Replication checked', criteria: [{ id: 'artifact', status: 'met', sourceRefs: m.sourceRefs }], blockers: [], unsupportedClaims: [], followups: [] }
+        : { action: 'followup', reason: 'Replicate', criteria: [], blockers: [], unsupportedClaims: [], followups: [{ kind: 'replicate', criterionIds: ['artifact'], task: 'Replicate once', changedCondition: '', sourceRefs: m.sourceRefs }] } }
+    }
+    const output = await original(role, input, ctx)
+    if (role === 'planner') { planners++; output.structured = { ...output.structured, protocol: f.snapshot.protocol, taskGraph: { tasks: f.tasks.map(task => ({ id: task.id, dependsOn: task.dependsOn, stage: task.stage, command: task.job.executable, argv: task.job.args, cwd: '.', env: {}, budget: task.job.budget, inputs: task.inputs, outputs: task.outputs, validatorId: task.validatorId, split: task.split, exposure: task.exposure })) } } }
+    return output
+  }
+  const context = { parent: { id: 'test', session: { id: 'test' } }, signal: new AbortController().signal, experimentRuntime: authority }
+  const state = await createInitialState(f.runDir)
+  await bindRunProject({ runDir: f.runDir }, undefined, true)
+  const ctx = createRunContext({ provider, maxCycles: cap, acceptance: { criteria: [{ id: 'artifact', required: true, text: 'Check replication', evidenceKind: 'artifact' }] } }, f.runDir, state, await ResearchTree.load(f.runDir), context)
+  await continuation.initializeContinuation(ctx)
+  state.status = 'PAUSED'; state.phase = 'decide'; await saveState(f.runDir, state)
+  await writeFile(join(f.runDir, 'external.txt'), 'External replication review')
+  const service = new AutoResearchService(provider)
+  const rename = fsPromises.rename
+  const link = fsPromises.link
+  let crashed = false
+  if (crashAt !== 'none') {
+    t.mock.method(fsPromises, 'link', async (from, to) => {
+      await link(from, to)
+      if (crashAt === 'graph-publication' && String(to).replaceAll('\\', '/').endsWith('/runtime/graphs/cycle-2/graph.json')) { crashed = true; throw new Error('injected publication interruption') }
+    })
+    t.mock.method(fsPromises, 'rename', async (from, to) => {
+      if (crashed) throw new Error('injected publication interruption')
+      if (crashAt === 'assignment-before-publication' && String(to).replaceAll('\\', '/').endsWith('/continuation/state.json')) {
+        const value = JSON.parse(await readFile(from, 'utf8'))
+        if (value.queue?.some(q => q.status === 'running' && q.cycle === 2)) { crashed = true; throw new Error('injected publication interruption') }
+      }
+      await rename(from, to)
+      const path = String(to).replaceAll('\\', '/')
+      if (!path.startsWith(f.runDir.replaceAll('\\', '/') + '/')) return
+      const value = JSON.parse(await readFile(to, 'utf8'))
+      const hit = crashAt === 'review-receipt-publication' && path.includes('/continuation/reviews/') && value.decisionHash
+        || crashAt === 'review-publication' && path.endsWith('/continuation/state.json') && value.resumeReviewRequired === false && value.queue?.some(q => q.status === 'pending')
+        || crashAt === 'assignment-publication' && path.endsWith('/continuation/state.json') && value.queue?.some(q => q.status === 'running' && q.cycle === 2)
+        || crashAt === 'run-publication' && path === f.runDir.replaceAll('\\', '/') + '/state.json' && value.cycle === 2
+        || crashAt === 'graph-publication' && path.endsWith('/runtime/graphs/cycle-2/graph.json')
+      if (hit) { crashed = true; throw new Error('injected publication interruption') }
+    }); syncBuiltinESMExports()
+  }
+  const options = { runDir: f.runDir, humanReview: 'off', recovery: { changedCondition: 'External review', criterionIds: ['artifact'], newEvidencePaths: ['external.txt'] } }
+  let first
+  if (crashAt === 'none') first = await service.run(options, context)
+  else {
+    await assert.rejects(service.run(options, context), /injected publication interruption/)
+    assert.equal(crashed, true)
+    t.mock.restoreAll(); syncBuiltinESMExports()
+    t.mock.method(os, 'homedir', () => f.runDir); syncBuiltinESMExports()
+    first = await service.run({ runDir: f.runDir, humanReview: 'off' }, context)
+  }
+  assert.equal(first.status, 'WAITING'); assert.equal(first.cycle, 2)
+  const graphBefore = await readFile(join(f.runDir, 'runtime/graphs/cycle-2/graph.json'), 'utf8')
+  const assignment = (await continuation.readContinuation(f.runDir)).queue[0].execution
+  assert.deepEqual(assignment, { cycle: 2, planVersion: 2, graphId: 'cycle-2' })
+  const { readExperimentGraphState } = await import('../../dist/experiment/runtime-adapter.js')
+  const firstBudget = (await readExperimentGraphState(f.runDir, JSON.parse(graphBefore))).budget
+  const second = await service.run({ runDir: f.runDir, humanReview: 'off' }, context)
+  assert.equal(second.cycle, 2, 'ordinary WAITING resume must not allocate another cycle')
+  assert.equal(second.planVersion, first.planVersion); assert.equal(second.status, 'WAITING')
+  assert.equal(reviews, 1, 'consumed recovery review is not rerun during graph reconciliation')
+  assert.deepEqual((await continuation.readContinuation(f.runDir)).queue[0].execution, assignment)
+  const secondBudget = (await readExperimentGraphState(f.runDir, JSON.parse(graphBefore))).budget
+  assert.ok(secondBudget.settledWallMs >= firstBudget.settledWallMs)
+  assert.equal((await continuation.readContinuation(f.runDir)).resumeReviewRequired, false)
+  const final = await service.run({ runDir: f.runDir, humanReview: 'off' }, context)
+  assert.equal(final.status, 'COMPLETED'); assert.equal(final.cycle, 2)
+  assert.equal(planners, 1); assert.deepEqual(Object.values(counts), [1, 1, 1])
+  assert.equal(await readFile(join(f.runDir, 'runtime/graphs/cycle-2/graph.json'), 'utf8'), graphBefore)
+  assert.equal((await continuation.readContinuation(f.runDir)).queue[0].status, 'completed')
+  assert.equal((await continuation.readContinuation(f.runDir)).control.maxCycles, cap)
+})
+
+for (const mutation of ['none', 'collection', 'source']) test(`durable cached action rehydrates canonical host artifacts: ${mutation}`, async t => {
+  const api = await import('../../dist/experiment/runtime-adapter.js')
+  const { runWorker } = await import('../../dist/experiment/steps.js')
+  const { createRunContext } = await import('../../dist/service/context.js')
+  const { createInitialState } = await import('../../dist/core/state.js')
+  const { ResearchTree } = await import('../../dist/core/research-tree.js')
+  const f = await fixture(t, 2), counts = {}
+  const graph = await freezeTaskGraph({ ...f, id: 'cycle-1', goal: 'Canonical proof' })
+  await api.advanceExperimentGraph({ runDir: f.runDir, graph, runtime: runtime(f.raw, counts) })
+  const first = await api.advanceExperimentGraph({ runDir: f.runDir, graph, runtime: runtime(f.raw, counts) })
+  assert.equal(first.status, 'completed')
+  await mkdir(join(f.runDir, 'cycles/cycle-1'), { recursive: true })
+  await writeFile(join(f.runDir, 'cycles/cycle-1/frozen.json'), JSON.stringify({ snapshotId: f.snapshot.id }))
+  const ctx = createRunContext({ provider: { run: async () => { throw new Error('must not dispatch') } } }, f.runDir, await createInitialState(f.runDir), await ResearchTree.load(f.runDir), { parent: { id: 'test', session: { id: 'test' } }, signal: new AbortController().signal })
+  if (mutation === 'collection') {
+    const path = join(f.runDir, 'runtime/graphs/cycle-1/collections/t0.json')
+    const c = JSON.parse(await readFile(path, 'utf8')); c.artifacts = []
+    await writeFile(path, JSON.stringify(c))
+  }
+  if (mutation === 'source') await writeFile(join(f.runDir, first.artifacts[0]), 'tampered source')
+  const replay = () => runWorker(ctx, { workDir: join(f.runDir, 'work/experiment-cycle-01'), planText: 'test', experimentDesign: '', minimalVerification: '', cachedStage: { result: { status: 'completed', summary: 'forged stage', artifacts: ['raw/user.json'] } } } as any)
+  if (mutation === 'none') {
+    const action = await replay()
+    assert.deepEqual(action.artifacts, first.artifacts)
+    assert.ok(action.artifacts.every(p => p.startsWith('research/sources/')))
+  } else await assert.rejects(replay(), /COLLECTION.*HASH|source hash mismatch/)
+  assert.deepEqual(Object.values(counts), [1, 1])
+})
 test('durable graph resumes after node seven, admits negative evidence once, and rebuilds handoff', async t => {
   const api = await import('../../dist/experiment/runtime-adapter.js').catch(() => undefined)
   assert.ok(api, 'durable runtime adapter is implemented')

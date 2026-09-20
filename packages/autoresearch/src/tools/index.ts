@@ -460,6 +460,8 @@ export function createPaperPipelineResumeTool(service: AutoResearchService): Too
   }
 }
 
+import { acceptanceSchema, recoverySchema } from './continuation-schemas.js'
+
 export function createResearchRunTool(service: AutoResearchService): ToolDefinitionLike {
   return {
     name: 'research_run',
@@ -471,7 +473,9 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
         projectDir: stringSchema('Optional project root containing .autoresearch/project-settings.yaml'),
         candidatePath: stringSchema('Optional external idea file; copied into input/idea.md'),
         profilePath: stringSchema('Optional PROFILE.md path relative to runDir'),
-        maxCycles: { type: 'number', description: 'Optional max research cycles' },
+        maxCycles: { type: 'integer', description: 'Frozen cumulative cycle cap. Omit on resume to inherit; explicit increases require recovery.' },
+        acceptance: acceptanceSchema,
+        recovery: recoverySchema,
         failureReport: failureReportSchema,
         humanReview: { ...humanReviewModeSchema, description: 'auto follows /auto command, on forces human gates, off skips them' },
         brainstorm: { ...humanReviewModeSchema, description: 'auto runs brainstorm when no candidate.md exists' },
@@ -479,7 +483,13 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
           type: 'object',
           description: 'Paper writing pipeline options',
           properties: {
-            venue: stringSchema('Target venue, e.g. ICLR, NeurIPS, ICML'),
+            venue: { type: 'string', enum: ['ICLR', 'USENIX', 'custom'], description: 'Built-in ICLR or generic USENIX, or custom template' },
+            templateDir: stringSchema('Custom template asset directory'),
+            templateFile: stringSchema('Template entry file, relative to templateDir'),
+            layoutProfile: { type: 'object', description: 'Explicit custom PDF-point page, columns, typography and figure geometry', properties: { page: { type: 'object' }, columns: { type: 'object' }, typography: { type: 'object' }, figure: { type: 'object' } }, required: ['page', 'columns'], additionalProperties: false },
+            layoutInspection: { type: 'boolean', description: 'Render and inspect all PDF pages; disabling prevents submission readiness' },
+            supportsImageInput: { type: 'boolean', description: 'False disables native image delivery; omit for model metadata auto-detection' },
+            reviewBudget: { type: 'object', properties: { maxRequests: { type: 'integer', minimum: 1, maximum: 1000 }, maxRounds: { type: 'integer', minimum: 0, maximum: 50 } }, additionalProperties: false },
             assurance: { type: 'string', enum: ['draft', 'submission'] },
             effort: { type: 'string', enum: ['lite', 'balanced', 'max', 'beast'] },
             illustration: { type: 'string', enum: ['figurespec', 'gemini', 'codex-image2', 'mermaid', 'false'] },
@@ -508,7 +518,7 @@ export function createResearchRunTool(service: AutoResearchService): ToolDefinit
 
 export function createProjectPaperRunTool(service: AutoResearchService): ToolDefinitionLike {
   const research = createResearchRunTool(service)
-  const { candidatePath: _candidate, failureReport: _failure, brainstorm: _brainstorm, ...properties } = research.parameters.properties as Record<string, unknown>
+  const { candidatePath: _candidate, failureReport: _failure, brainstorm: _brainstorm, acceptance: _acceptance, recovery: _recovery, ...properties } = research.parameters.properties as Record<string, unknown>
   return {
     ...research,
     name: 'project_paper_run',

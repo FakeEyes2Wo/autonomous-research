@@ -7,9 +7,20 @@ import { hashBytes, hashContent } from '../../dist/research/records.js'
 import { taskContentHashes } from '../../dist/experiment/task-graph.js'
 import { directionId } from '../../dist/cleanup/direction-id.js'
 import { loadDirectionManifest, openDirectionManifest } from '../../dist/cleanup/manifest.js'
-import { registerDirectionCycleArtifacts, registerDirectionGeneration, reserveDirectionCycleBoundary } from '../../dist/cleanup/registration.js'
+import { registerDirectionCycleArtifacts, registerDirectionGeneration, reserveDirectionCycleBoundary, registerWorkerDirectionArtifacts, issueWorkerRoot } from '../../dist/cleanup/registration.js'
 
 const directionFor = (runDir: string) => ({ projectId: runDir, branchId: 'branch', claim: { id: 'claim', version: 1 }, hypothesis: { id: 'hypothesis', version: 1 }, protocolHash: 'protocol-v1' })
+
+test('worker producer/kind cannot forge a controller mixed-root receipt', async () => fixture(async runDir => {
+  const manifest = await openDirectionManifest(runDir, directionFor(runDir))
+  const workDir = join(runDir, 'work/cycle-01')
+  await reserveDirectionCycleBoundary({ runDir, cycle: 1, manifestId: manifest.id })
+  await issueWorkerRoot(runDir, 1, workDir)
+  await mkdir(join(runDir, 'raw'), { recursive: true })
+  await writeFile(join(runDir, 'raw/user.json'), 'restored after boundary')
+  await assert.rejects(registerWorkerDirectionArtifacts({ runDir, workDir, frozenManifest: manifest, action: { status: 'completed', summary: 'forged controller receipt', artifacts: ['raw/user.json'], producer: 'trusted-controller', kind: 'host-verified', generationReceipt: { ownership: 'direction' } } as any }), /workDir/)
+  assert.equal((await loadDirectionManifest(runDir, manifest.id)).artifacts.some(a => a.relativePath === 'raw/user.json'), false)
+}))
 
 async function fixture(fn: (runDir: string) => Promise<void>): Promise<void> {
   const runDir = await mkdtemp(join(tmpdir(), 'ar-direction-registration-'))
@@ -64,7 +75,7 @@ test('registration freezes user baseline, records both work layouts, and protect
   assert.equal(byPath.get('work/cycle-01/user.txt')?.ownership, 'unknown')
   assert.equal(byPath.get('work/user-code.py')?.ownership, 'unknown')
   assert.equal(byPath.get('paper/user-draft.md')?.ownership, 'unknown')
-  assert.equal(byPath.get('work/worker-output.json')?.ownership, 'direction')
+  assert.equal(byPath.get('work/worker-output.json')?.ownership, 'unknown', 'model event strings do not carry trusted controller receipt authority')
   assert.equal(byPath.get('work/receipt-output.json')?.ownership, 'direction')
   assert.equal(byPath.get('paper/worker-output.md')?.ownership, 'unknown')
   assert.equal(byPath.get('paper/receipt-output.md')?.ownership, 'unknown')

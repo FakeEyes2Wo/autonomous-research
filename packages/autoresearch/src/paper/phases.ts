@@ -1,34 +1,22 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { copyFile, readFile, readdir, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import type { RoleInput, RoleName } from '../agents/types.js'
 import { ResearchTree } from '../core/research-tree.js'
 import { ensureDir, FAILURE_REPORT_FILE, readOptionalText, readText, writeText } from '../core/utils.js'
 import { appendHumanReview, type HumanReviewAnswer } from '../core/human-review.js'
 import { humanReviewEnabled } from '../session/auto-mode.js'
-import { auditPaper, compilePaper, downloadReferencePdfs, runCompileLoop } from './index.js'
-import { runReflexion } from '../service/agent-loop.js'
+import { auditPaper, downloadReferencePdfs, runCompileLoop } from './index.js'
 import { writeFailureReflexion } from '../core/failure-reflexion.js'
-import type { PaperCheckpoint } from './checkpoint.js'
-import { saveCheckpoint } from './checkpoint.js'
 import { collectEvidenceIds, loadEvidenceChain, type EvidenceChain } from '../export/evidence-chain.js'
 import type { PaperContext, PaperOptions } from './context.js'
+import { readPaperSources } from './audit.js'
 
 export type { PaperOptions } from './context.js'
 
 export const DEFAULT_VENUE = 'ICLR'
 const MAX_FIGURE_RETRIES = 2
-
-const RASTER_RE = /\.(png|jpe?g|webp|gif)$/i
-
-async function collectFigureImages(paperDir: string): Promise<string[]> {
-  const figuresDir = join(paperDir, 'figures')
-  const entries = await readdir(figuresDir, { withFileTypes: true }).catch(() => [])
-  return entries
-    .filter((entry) => entry.isFile() && RASTER_RE.test(entry.name))
-    .map((entry) => join(figuresDir, entry.name))
-}
 
 export const PAPER_AUDITS = [
   { name: 'proof', role: 'proof-checker', file: 'PROOF_AUDIT.json' },
@@ -77,6 +65,7 @@ export async function planPaper(ctx: PaperContext): Promise<string> {
     evidenceChainPath: evidencePath,
     paperMatrix: matrixText,
     venue: options.venue ?? DEFAULT_VENUE,
+    paperLayout: ctx.layout ? JSON.stringify(ctx.layout.profile) : undefined,
     styleProfile: options.styleRef ? await readStyleProfile(runDir).catch(() => undefined) : undefined,
     assurance: resolveAssurance(options),
   }, ctx.agentContext)
@@ -86,40 +75,16 @@ export async function planPaper(ctx: PaperContext): Promise<string> {
 }
 
 export async function negotiateContract(ctx: PaperContext): Promise<string> {
-  const { runDir, paperDir } = ctx.paths
-  const { planText, matrixText, evidencePath } = ctx.content
-  const file = join(paperDir, 'PAPER_ACCEPTANCE_CONTRACT.md')
-  const base = { runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText }
-
-  await runReflexion<string>(
-    (role, input) => ctx.deps.provider.run(role, input, ctx.agentContext),
-    'contract-negotiator',
-    {
-      reflexion: (contract, round) =>
-        `Self-reflexion round ${round}: review the contract below. Fix untestable assertions, missing evidence coverage, and overclaim risks. Return only the improved contract.\n\nCurrent contract:\n${contract}`,
-      buildInput: (current, _round, reflexion) => ({
-        ...base,
-        ...(current ? { paperContract: current, plan: reflexion } : {}),
-      }),
-      parse: (result) => (result.structured as { contract?: string } | undefined)?.contract ?? result.text,
-      apply: async (contract) => {
-        await writeText(file, contract)
-      },
-      onAbnormalExit: async (info) => {
-        await writeFailureReflexion(runDir, {
-          role: info.role,
-          stage: 'paper-contract',
-          round: info.round,
-          stopReason: info.stopReason,
-          error: info.error instanceof Error ? info.error.message : info.error === undefined ? undefined : String(info.error),
-          context: { runDir, planText, matrixText, evidencePath },
-          result: info.result,
-        })
-      },
-      rounds: ctx.agentContext.policySnapshot?.workflow.reflexionRounds ?? 1,
-    },
-  )
-
+  const file = join(ctx.paths.paperDir, 'PAPER_ACCEPTANCE_CONTRACT.md')
+  const result = await ctx.deps.provider.run('contract-negotiator', {
+    runDir: ctx.paths.runDir, evidenceChainPath: ctx.content.evidencePath,
+    paperPlan: ctx.content.planText, paperMatrix: ctx.content.matrixText,
+    paperLayout: ctx.layout ? JSON.stringify(ctx.layout.profile) : undefined,
+    venue: ctx.deps.options.venue ?? DEFAULT_VENUE,
+  }, ctx.agentContext)
+  const contract = (result.structured as { contract?: string })?.contract
+  if (!contract) throw new Error('contract-negotiator did not return contract')
+  await writeText(file, contract)
   return file
 }
 
@@ -163,44 +128,17 @@ export async function generateFigures(ctx: PaperContext): Promise<string> {
 
   for (let attempt = 0; attempt <= MAX_FIGURE_RETRIES; attempt += 1) {
     const result = await runFigure({
-      runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText, plan: feedback,
+      runDir, evidenceChainPath: evidencePath, paperPlan: planText, paperMatrix: matrixText, plan: feedback, paperLayout: ctx.layout ? JSON.stringify(ctx.layout.profile) : undefined,
     })
     const structured = result.structured as { scripts?: Record<string, string>; latexIncludes?: string } | undefined
     latexIncludes = structured?.latexIncludes ?? ''
     const errors = await writeAndRun(structured?.scripts ?? {})
     if (errors.length > 0) {
       feedback = `Fix figure errors:\n${errors.join('\n')}`
+      if (attempt === MAX_FIGURE_RETRIES) throw new Error(feedback)
       continue
     }
 
-    const figureImages = ctx.deps.options.supportsImageInput
-      ? await collectFigureImages(paperDir)
-      : []
-
-    let retry = false
-    for (let round = 1; round <= 3; round += 1) {
-      const reflex = await runFigure({
-        runDir,
-        evidenceChainPath: evidencePath,
-        paperPlan: planText,
-        paperMatrix: matrixText,
-        paperFigures: latexIncludes,
-        ...(figureImages.length > 0 ? { figureImages } : {}),
-        plan: `Self-reflexion round ${round}: check textOverload, elementOverload, elementOverlap, and embedded main title. Return improved scripts and latexIncludes.\n\nCurrent latexIncludes:\n${latexIncludes}`,
-      })
-      const improved = reflex.structured as { scripts?: Record<string, string>; latexIncludes?: string } | undefined
-      if (!improved?.scripts && !improved?.latexIncludes) break
-      const reflexErrors = await writeAndRun(improved.scripts ?? {})
-      if (reflexErrors.length > 0) {
-        feedback = `Fix figure errors after self-reflexion:\n${reflexErrors.join('\n')}`
-        retry = true
-        break
-      }
-      const nextLatex = improved.latexIncludes ?? ''
-      if (!nextLatex || nextLatex === latexIncludes) break
-      latexIncludes = nextLatex
-    }
-    if (retry) continue
     break
   }
 
@@ -226,7 +164,8 @@ export async function writePaper(ctx: PaperContext, feedback?: string): Promise<
     paperContract: contractText || undefined,
     paperFigures: figuresLatex || undefined,
     styleProfile,
-    paperTemplate: await readTemplate(runDir, 'iclr2026.tex'),
+    paperTemplate: ctx.layout ? await readText(ctx.layout.templateFile) : await readTemplate(runDir, 'iclr2026.tex'),
+    paperLayout: ctx.layout ? JSON.stringify(ctx.layout.profile) : undefined,
     plan: feedback,
     ...(experimentDesign ? { experimentDesign } : {}),
     ...(reflexion ? { reflexion } : {}),
@@ -242,7 +181,7 @@ export async function writePaper(ctx: PaperContext, feedback?: string): Promise<
   if (value.failureReport?.trim()) {
     await writeText(join(runDir, FAILURE_REPORT_FILE), `# FAILURE_REPORT — 人类完善笔记\n\n${value.failureReport.trim()}\n`)
   }
-  await Promise.all([
+  if (!ctx.layout) await Promise.all([
     writeFile(join(paperDir, 'math_commands.tex'), await readTemplate(runDir, 'math_commands.tex'), 'utf8'),
     writeFile(join(paperDir, 'iclr2026_conference.sty'), await readTemplate(runDir, 'iclr2026_conference.sty'), 'utf8'),
     writeFile(join(paperDir, 'iclr2026_conference.bst'), await readTemplate(runDir, 'iclr2026_conference.bst'), 'utf8'),
@@ -298,11 +237,12 @@ export async function enrichReferences(ctx: PaperContext): Promise<void> {
   }
 }
 
-export async function runPaperAudits(ctx: PaperContext): Promise<Record<string, unknown>> {
+export async function runPaperAudits(ctx: PaperContext, revision?: string): Promise<Record<string, unknown>> {
   const { runDir, paperDir } = ctx.paths
   const { evidencePath } = ctx.content
   const base: RoleInput = {
     runDir, paperPath: paperDir, evidenceChainPath: evidencePath, assurance: resolveAssurance(ctx.deps.options),
+    paperReviewContext: JSON.stringify({ manuscriptSources: await readPaperSources(paperDir), instruction: 'Audit these actual manuscript dependencies; unused venue example documents are not manuscript content.' }),
   }
 
   const audits: Record<string, unknown> = {}
@@ -310,13 +250,14 @@ export async function runPaperAudits(ctx: PaperContext): Promise<Record<string, 
   for (const spec of PAPER_AUDITS) {
     const { name, file } = spec
     try {
+      if (revision) throw new Error('version-bound audit refresh')
       audits[name] = JSON.parse(await readText(join(paperDir, file)))
     } catch {
       missing.push(spec)
     }
   }
 
-  const settled = await Promise.allSettled(missing.map(({ role }) => ctx.deps.provider.run(role, { ...base }, ctx.agentContext)))
+  const settled = await Promise.allSettled(missing.map(({ role }) => ctx.deps.provider.run(role, { ...base, ...(revision ? { taskId: `paper-audit:${role}:${revision}` } : {}) }, ctx.agentContext)))
   await Promise.all(settled.map(async (result, i) => {
     const spec = missing[i]
     if (!spec) return
@@ -363,40 +304,14 @@ export function paperAuditStatus(audits: Record<string, unknown>): 'passed' | 'f
   return result.numeric?.ok === true && result.citation?.ok === true ? 'passed' : 'failed'
 }
 
-export async function improvePaper(ctx: PaperContext, cp: PaperCheckpoint): Promise<void> {
-  const { runDir, paperDir } = ctx.paths
-  const { evidencePath } = ctx.content
-  const total = ctx.deps.options.maxImprovementRounds ?? ctx.agentContext.policySnapshot?.workflow.paperImprovementRounds ?? 0
-  const log: string[] = []
-  for (let round = (cp.data.improvementRounds ?? 0) + 1; round <= total; round += 1) {
-    const review = await ctx.deps.provider.run('paper-reviewer', {
-      runDir, paperPath: paperDir, evidenceChainPath: evidencePath,
-    }, ctx.agentContext)
-    const r = review.structured as { score?: number; critical?: string[]; major?: string[]; minor?: string[] } | undefined
-    const feedback = [
-      ...(r?.critical ?? []).map((x) => `CRITICAL: ${x}`),
-      ...(r?.major ?? []).map((x) => `MAJOR: ${x}`),
-      ...(r?.minor ?? []).map((x) => `MINOR: ${x}`),
-    ].join('\n')
-    await writePaper(ctx, feedback)
-    const compile = await compilePaper(paperDir)
-    if (!compile.ok) throw new Error(`paper improvement round ${round} failed to compile`)
-    if (compile.ok && existsSync(join(paperDir, 'main.pdf'))) {
-      await copyFile(join(paperDir, 'main.pdf'), join(paperDir, `main_round${round}.pdf`))
-    }
-    log.push(`## Round ${round}\n\nScore: ${r?.score ?? 'N/A'}\n\n${feedback}\n`)
-    cp.data.improvementRounds = round
-    await saveCheckpoint(paperDir, cp)
-  }
-  const existing = (await readOptionalText(join(paperDir, 'PAPER_IMPROVEMENT_LOG.md'))) ?? ''
-  await writeText(join(paperDir, 'PAPER_IMPROVEMENT_LOG.md'), `${existing}${log.join('\n')}`)
-}
 
-export async function polishPaper(ctx: PaperContext): Promise<void> {
+export async function polishPaper(ctx: PaperContext, feedback?: string): Promise<void> {
   const { runDir, paperDir } = ctx.paths
   const { evidencePath } = ctx.content
   const result = await ctx.deps.provider.run('paper-polisher', {
     runDir,
+    plan: feedback,
+    paperLayout: ctx.layout ? JSON.stringify(ctx.layout.profile) : undefined,
     paperPath: paperDir,
     evidenceChainPath: evidencePath,
   }, ctx.agentContext)
@@ -405,11 +320,7 @@ export async function polishPaper(ctx: PaperContext): Promise<void> {
   await writeFile(join(paperDir, 'main.tex'), value.mainTex, 'utf8')
   await writePaperSections(paperDir, value.sections)
   await writeText(join(paperDir, 'PAPER_POLISH_LOG.md'), `# Paper Polish Log\n\n${(value.changes ?? []).map((x) => `- ${x}`).join('\n')}\n`)
-  const compile = await compilePaper(paperDir)
-  if (!compile.ok) throw new Error('paper polish failed to compile')
-  if (compile.ok && existsSync(join(paperDir, 'main.pdf'))) {
-    await copyFile(join(paperDir, 'main.pdf'), join(paperDir, 'main_polished.pdf'))
-  }
+
 }
 
 export async function writePaperReport(
@@ -418,6 +329,8 @@ export async function writePaperReport(
   compileOk: boolean,
   audits: Record<string, unknown>,
   auditStatus = paperAuditStatus(audits),
+  gate?: import('./review-protocol.js').PaperFinalGate,
+  reviewDetails?: unknown,
 ): Promise<string> {
   const { runDir } = ctx.paths
   const report = `# FINAL_REPORT — Paper Writing Pipeline Report
@@ -425,7 +338,7 @@ export async function writePaperReport(
 **Input**: ${runDir}
 **Venue**: ${ctx.deps.options.venue ?? DEFAULT_VENUE}
 **Assurance**: ${assurance}
-**Submission-ready**: ${compileOk && auditStatus === 'passed' ? 'yes' : 'no'}
+**Submission-ready**: ${gate?.submissionReady === true ? 'yes' : 'no'}
 **Audit gate**: ${auditStatus}
 **Forensics**: ${assurance === 'submission' ? 'WARN' : 'skipped (draft)'}
 **Date**: ${new Date().toISOString()}
@@ -434,7 +347,7 @@ export async function writePaperReport(
 
 | Phase | Status | Output |
 |-------|--------|--------|
-| 0. Assurance Setup | ✅ | paper/.aris/assurance.txt |
+| 0. Assurance State | ✅ | paper/pipeline_checkpoint.json |
 | 1. Paper Plan | ✅ | PAPER_PLAN.md |
 | 1.5 Acceptance Contract | ✅ | PAPER_ACCEPTANCE_CONTRACT.md |
 | 2. Figures | ✅ | paper/figures/ |
@@ -447,6 +360,16 @@ export async function writePaperReport(
 \`\`\`json
 ${JSON.stringify(audits, null, 2)}
 \`\`\`
+
+## Current Version Review Gate
+
+\`\`\`json
+${JSON.stringify({ gate, reviewDetails }, null, 2)}
+\`\`\`
+
+Deterministic overfull threshold: greater than 5 PDF points (TeX points converted by 72/72.27) requests repair. Smaller warnings remain review evidence. Bounding boxes cannot establish all visual overlaps; complete native page image delivery and an independent visual verdict remain required.
+
+The persisted paper request budget covers independent reviews, writer repairs and their JSON repairs. Academic proof/claim/citation/kill audits retain the global request ledger limits. Academic source resolution follows literal input/include/subfile and bibliography dependencies; unsupported dynamic/import dependencies block the audit instead of silently omitting content.
 
 ## Deliverables
 

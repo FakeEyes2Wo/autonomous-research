@@ -1,5 +1,5 @@
 import { AutoResearchService } from './service/autoresearch-service.js'
-import { SubagentRoleAgentProvider } from './providers/subagent-provider.js'
+import { SubagentRoleAgentProvider, type SubagentProviderOptions } from './providers/subagent-provider.js'
 import { createExperimentRunTool, createPaperPipelineResumeTool, createResearchRunTool, createProjectPaperRunTool, figureApiTest, paperPipelineLastRun, paperPipelineStatus, projectSettingsGet, projectSettingsSave, researchActionFinish, researchActionStart, researchEvidenceAdd, researchHypothesisAdd, researchObservationRead, researchTreeQuery, researchVerifiedReceipt } from './tools/index.js'
 import { loadState } from './core/state.js'
 import { loadProjectSecrets, loadProjectSettings } from './settings/project-settings.js'
@@ -14,9 +14,14 @@ import type { SessionStore } from '@deepseek-ai/dsh-session'
 import { createLocalExperimentRuntime, type LocalExperimentConfig } from './runtime/local-authority.js'
 
 export interface AutoResearchPluginConfig { localExperiments?: LocalExperimentConfig }
+export type { PaperOptions } from './paper/context.js'
+export type { PaperArtifactBinding, PaperReviewResult, PaperReviewVerdict, PaperReviewBudget, PaperFinalGate } from './paper/review-protocol.js'
+export { runPaperPipeline } from './paper/pipeline.js'
+export { preparePaperLayout, inspectPaperPdf, compilePaper } from './paper/index.js'
+export type { PaperLayoutProfile, PaperLayoutGeometryInput, PreparedPaperLayout, PaperPdfInspection, CompileResult } from './paper/index.js'
 
 export const name = 'autoresearch'
-export const inject = ['tools', 'subagents', 'commands', 'userQuestions', 'llm']
+export const inject = ['tools', 'subagents', 'commands', 'userQuestions', 'llm', 'attachments']
 
 interface DshCommandInvocation {
   readonly rawInput: string
@@ -62,6 +67,7 @@ export function apply(ctx: {
   userQuestions: DshUserQuestions
   on: Context['on']
   llm: unknown
+  attachments?: SubagentProviderOptions['attachments']
   sessions?: Pick<SessionStore, 'get'>
   provide(name: string, service: unknown): unknown
 }, config: AutoResearchPluginConfig = {}): void {
@@ -69,6 +75,8 @@ export function apply(ctx: {
   const provider = new SubagentRoleAgentProvider(ctx.subagents as never, {
     context: ctx as unknown as Pick<Context, 'on'>,
     repairToolFilter: { allow: [] },
+    attachments: ctx.attachments,
+    llm: ctx.llm as SubagentProviderOptions['llm'],
   })
 
   const reviewer: HumanReviewer = {

@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import { issueWorkerRoot } from '../cleanup/registration.js'
 import { AutoResearchError, DEFAULT_MAX_CYCLES, readOptionalText, writeText } from '../core/utils.js'
 import { recordResult } from '../core/state.js'
 import type { ActionResult, ResearchDecision } from '../core/types.js'
@@ -14,9 +15,10 @@ import { captureResearchPlan, freezeResearchCycle, readResearchAttempt, register
 import { runtimeCapabilities } from '../service/runtime-capabilities.js'
 import { ResearchStore } from '../research/index.js'
 import { freezeTaskGraph, loadTaskGraph, tasksFromExecutionPlan } from './task-graph.js'
-import { advanceExperimentGraph, writeRuntimeHandoff } from './runtime-adapter.js'
+import { advanceExperimentGraph, writeRuntimeHandoff, rehydrateVerifiedCompletedGraphAction } from './runtime-adapter.js'
 import { cyclePath, writeResearchReport } from '../service/research-cycle.js'
 import { synchronizeResearchViews } from '../service/research-outputs.js'
+import { bindScientificFollowup, completeScientificFollowup } from '../service/continuation.js'
 
 function plannerRuntimeConstraints(ctx: RunContext): string {
   const policy = ctx.policySnapshot
@@ -268,21 +270,40 @@ export async function runInsightAbstractor(
 
 export async function runWorker(
   ctx: RunContext,
-  { workDir, planText, experimentDesign, minimalVerification }: {
+  { workDir, planText, experimentDesign, minimalVerification, cachedStage }: {
     workDir: string
+    cachedStage?: { result: unknown }
     planText: string
     experimentDesign: string
     minimalVerification: string
   },
 ): Promise<ActionResult> {
   if (ctx.context.signal.aborted) throw new ExperimentPauseError('execution cancelled before worker dispatch')
-  const frozen = await freezeResearchCycle(ctx, planText, experimentDesign)
+  const assignment = await bindScientificFollowup(ctx, { cycle: ctx.state.cycle, planVersion: ctx.state.planVersion, graphId: `cycle-${ctx.state.cycle}` })
+  if (assignment && (assignment.cycle !== ctx.state.cycle || assignment.planVersion !== ctx.state.planVersion || assignment.graphId !== `cycle-${ctx.state.cycle}`)) throw new ExperimentPauseError('scientific follow-up execution assignment mismatch')
+  const { cached, frozen } = await (async () => {
+    try {
+      const cached = await readResearchAttempt(ctx)
+      const frozenMarker = await readOptionalText(cyclePath(ctx, 'frozen.json'))
+      if ((cached || cachedStage) && !frozenMarker) throw new ExperimentPauseError('cached worker missing frozen boundary proof; no redispatch')
+      const frozen = (cached || cachedStage) && frozenMarker
+        ? await new ResearchStore(ctx.runDir).loadSnapshot(JSON.parse(frozenMarker).snapshotId)
+        : await freezeResearchCycle(ctx, planText, experimentDesign)
+      return { cached, frozen }
+    } catch (error) {
+      if (error instanceof ExperimentPauseError) throw error
+      throw new ExperimentPauseError(`worker ownership proof unreadable; no redispatch: ${String(error)}`)
+    }
+  })()
   const graphId = `cycle-${ctx.state.cycle}`
   let graph = await loadTaskGraph(ctx.runDir, graphId)
   const planner = JSON.parse((await readOptionalText(cyclePath(ctx, 'planner-output.json'))) ?? '{}')
   if (graph || planner.taskGraph !== undefined) {
     try {
       graph ??= await freezeTaskGraph({ runDir: ctx.runDir, id: graphId, goal: planText, snapshot: frozen, tasks: tasksFromExecutionPlan(planner.taskGraph, ctx.runDir, graphId, frozen) })
+      const verified = await rehydrateVerifiedCompletedGraphAction(ctx.runDir, graph)
+      if (verified) { await acknowledgeDurableFollowup(ctx, verified, graph.protocolHash); return verified }
+      if (cachedStage) throw new ExperimentPauseError('cached durable stage lacks completed host proof')
       if (!ctx.context.experimentRuntime) { await writeRuntimeHandoff(ctx.runDir, graph); throw new ExperimentPauseError('DURABLE_AUTHORITY_REQUIRED: configure the trusted host localExperiments project/executable permissions before resuming; no job dispatched.') }
       const result = await advanceExperimentGraph({ runDir: ctx.runDir, graph, runtime: ctx.context.experimentRuntime })
       const snapshot = (await new ResearchStore(ctx.runDir).loadCurrent())!
@@ -290,21 +311,24 @@ export async function runWorker(
       ctx.tree = await synchronizeResearchViews(ctx.runDir, snapshot)
       if (result.status === 'waiting') throw new DurableExperimentWaitingError(result.reason)
       if (result.status === 'paused') throw new ExperimentPauseError(result.reason)
-      const action: ActionResult = { status: 'completed', summary: result.reason, artifacts: result.artifacts }
+      const action = await rehydrateVerifiedCompletedGraphAction(ctx.runDir, graph)
+      if (!action) throw new ExperimentPauseError('completed graph lacks verified host proof')
       await registerResearchAttempt(ctx, 'completed', action)
+      await acknowledgeDurableFollowup(ctx, action, graph.protocolHash)
       return action
     } catch (error) {
       if (error instanceof ExperimentPauseError) throw error
       throw new ExperimentPauseError(`durable graph paused: ${String(error)}`)
     }
   }
-  const cached = await readResearchAttempt(ctx)
-  if (cached?.status === 'completed' && cached.result) {
-    const result = await validateWorkerResult(ctx.runDir, cached.result)
-    await assessResearchCycle(ctx, result)
+  if (cached?.status === 'unknown') throw new ExperimentPauseError('worker execution outcome is unknown; verify backend receipt before redispatch')
+  if (cachedStage && cached?.status !== 'completed') throw new ExperimentPauseError('cached worker stage lacks completed attempt ownership proof; no redispatch')
+  if (cachedStage || cached?.status === 'completed' && cached.result) {
+    const result = await validateWorkerResult(ctx.runDir, workDir, cachedStage ? cachedStage.result : cached!.result)
+    await assessResearchCycle(ctx, result, undefined, false, true)
     return result
   }
-  if (cached?.status === 'unknown') throw new ExperimentPauseError('worker execution outcome is unknown; verify backend receipt before redispatch')
+  await issueWorkerRoot(ctx.runDir, ctx.state.cycle, workDir)
   await registerResearchAttempt(ctx, 'unknown')
   try {
   const result = await runAgent(ctx, {
@@ -320,11 +344,11 @@ export async function runWorker(
     },
     label: `work cycle ${ctx.state.cycle}`,
   })
-  // Save the returned receipt before validation; failed execution is still an observation.
-  const action = await validateWorkerResult(ctx.runDir, result.structured)
+  // Only validated ownership may be captured or published as a completed attempt.
+  const action = await validateWorkerResult(ctx.runDir, workDir, result.structured)
+  await assessResearchCycle(ctx, action)
   await registerResearchAttempt(ctx, 'completed', action)
   await runtimeCapabilities(ctx, 'passed')
-  await assessResearchCycle(ctx, action)
   return action
   } catch (error) {
     await runtimeCapabilities(ctx, error instanceof ExperimentPauseError ? 'failed' : 'unknown')
@@ -336,6 +360,14 @@ export async function runWorker(
     }
     throw error
   }
+}
+
+async function acknowledgeDurableFollowup(ctx: RunContext, action: ActionResult, protocolHash: string): Promise<void> {
+  const snapshot = await new ResearchStore(ctx.runDir).loadCurrent()
+  const refs = snapshot?.evidence.filter(e => e.protocol_hash === protocolHash).flatMap(e => e.artifacts).filter(ref => ref.path && action.artifacts.includes(ref.path)) ?? []
+  // Only evidence already admitted by the verified host graph participates.
+  // The runtime owns scientific assessment; this acknowledges execution only.
+  await completeScientificFollowup(ctx, refs)
 }
 
 export async function runEvidenceAgent(

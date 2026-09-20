@@ -257,6 +257,27 @@ export async function readExperimentGraphState(runDir: string, graph: FrozenTask
   } finally { await store.close() }
 }
 
+/** Reconstruct from host state; no model/stage artifact path participates in admission. */
+export async function rehydrateVerifiedCompletedGraphAction(runDir: string, graph: FrozenTaskGraph): Promise<import('../core/types.js').ActionResult | undefined> {
+  const frozen = await loadTaskGraph(runDir, graph.id)
+  if (!frozen || frozen.hash !== graph.hash) throw new Error('RUNTIME_GRAPH_HASH_MISMATCH')
+  const state = await readExperimentGraphState(runDir, frozen)
+  if (state.status !== 'completed') return undefined
+  const stale = await graphStaleness(runDir, frozen)
+  if (stale) throw new Error(stale)
+  const store = await openJobStore(join(runDir, 'runtime', 'jobs'))
+  try {
+    const jobs = await store.list()
+    for (const task of frozen.tasks) {
+      const job = jobs.find(job => job.spec.id === task.job.id)
+      const collection = await readCollection(runDir, frozen, task)
+      if (!job || !collection?.completed || job.specHash !== jobSpecHash(task.job) || jobSpecHash(job.spec) !== jobSpecHash(task.job) || hashContent(job.receipt) !== hashContent(collection.receipt) || job.receipt.status !== 'succeeded' || collection.receipt.protocolHash !== frozen.protocolHash || collection.receipt.inputHash !== task.inputHash || !collection.manifest || hashContent(collection.manifest) !== collection.manifestHash || hashBytes(JSON.stringify(collection.manifest.artifacts.map(file => ({ path: file.relativePath, bytes: file.bytes, hash: file.sha256 })))) !== job.receipt.artifactManifestHash) throw new Error('RUNTIME_COMPLETED_HOST_PROOF_MISMATCH')
+      if (collection.artifacts.some(ref => !ref.path?.startsWith('research/sources/'))) throw new Error('RUNTIME_CAPTURED_SOURCE_REQUIRED')
+    }
+    return { status: 'completed', summary: state.reason, artifacts: state.artifacts }
+  } finally { await store.close() }
+}
+
 export async function projectRuntimeTasks(runDir: string, tree: ResearchTree): Promise<void> {
   for (const graph of await listFrozenTaskGraphs(runDir)) {
     const snapshot = await new ResearchStore(runDir).loadSnapshot(graph.snapshotId)

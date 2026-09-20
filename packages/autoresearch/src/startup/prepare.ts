@@ -3,6 +3,8 @@ import { lstat, readdir, realpath, readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { artifactHash } from '../project/inventory.js'
 import { RUN_PHASES, RUN_STATUSES, type RunPhase, type RunState, type RunStatus } from '../core/types.js'
+import { parseRecovery, type RecoveryInput } from '../research/continuation.js'
+import { inspectRecovery } from '../service/continuation.js'
 
 export type StartupIntent = 'project-paper' | 'research' | 'experiment' | 'resume' | 'ambiguous'
 export type StartupWorkflow = Exclude<StartupIntent, 'resume' | 'ambiguous'>
@@ -12,6 +14,8 @@ export interface StartupInput {
   projectDir: string
   runDir?: string
   task?: string
+  recovery?: RecoveryInput
+  maxCycles?: number
 }
 
 export interface StartupContext {
@@ -91,6 +95,8 @@ function validateInput(input: StartupInput, context: StartupContext | undefined)
   if (typeof input.projectDir !== 'string' || input.projectDir.trim().length === 0 || !isAbsolute(input.projectDir)) invalidInput('projectDir must be an absolute path')
   if (input.runDir !== undefined && (typeof input.runDir !== 'string' || input.runDir.trim().length === 0 || !isAbsolute(input.runDir))) invalidInput('runDir must be an absolute path')
   if (input.task !== undefined && (typeof input.task !== 'string' || input.task.trim().length === 0)) invalidInput('task must be a non-empty string')
+  if (input.recovery !== undefined) parseRecovery(input.recovery)
+  if (input.maxCycles !== undefined && (!Number.isSafeInteger(input.maxCycles) || input.maxCycles < 1)) invalidInput('maxCycles must be a positive integer')
   if (context !== undefined && !isRecord(context)) invalidInput('startup context must be an object')
   if (context?.sessionRunDir !== undefined && (typeof context.sessionRunDir !== 'string' || context.sessionRunDir.trim().length === 0 || !isAbsolute(context.sessionRunDir))) invalidInput('sessionRunDir must be an absolute path')
   return { input: { ...input, projectDir: resolve(input.projectDir), ...(input.runDir ? { runDir: resolve(input.runDir) } : {}) }, context: context ?? {} }
@@ -284,6 +290,12 @@ async function safeNewRun(runDir: string, projectDir: string): Promise<StartupRe
 }
 
 async function resumeStartup(input: StartupInput, context: StartupContext, projectDir: string): Promise<StartupResult> {
+  const recoveryAction = async (result: StartupResult): Promise<StartupResult> => {
+    if (!input.recovery || result.runStatus !== 'PAUSED' || !result.runDir || result.workflow === 'experiment') return result
+    try { await inspectRecovery(result.runDir, input.recovery, input.maxCycles) }
+    catch (error) { return { ...result, status: 'blocked', reason: String(error), nextAction: undefined } }
+    return { ...result, status: 'resumable', reason: 'Explicit recovery has new captured-source input or a monotonic cap increase; execution revalidates it and independently reviews relevance.', nextAction: { tool: 'research_run', args: { runDir: result.runDir, projectDir, recovery: input.recovery, ...(input.maxCycles !== undefined ? { maxCycles: input.maxCycles } : {}) } } }
+  }
   let local: Awaited<ReturnType<typeof localCandidates>> | undefined
   const discoverLocal = async () => local ??= await localCandidates(projectDir)
   if (input.runDir) {
@@ -295,7 +307,7 @@ async function resumeStartup(input: StartupInput, context: StartupContext, proje
         if ('error' in frozen) return { status: 'blocked', reason: frozen.error, workflow: inspected.identity.workflow, runDir: inspected.runDir, runStatus: inspected.state.status, phase: inspected.state.phase }
         result.nextAction = actionFor('experiment', inspected.runDir, projectDir, frozen.task, frozen)
       }
-      return result
+      return recoveryAction(result)
     }
     if (inspected.kind === 'foreign') return { status: 'blocked', reason: 'project identity mismatch; choose a run belonging to this project', runDir: inspected.runDir }
     return { status: inspected.kind === 'missing' ? 'needs-input' : 'blocked', reason: inspected.kind === 'missing' ? 'resume runDir does not exist' : inspected.reason, runDir: inspected.runDir }
@@ -309,7 +321,7 @@ async function resumeStartup(input: StartupInput, context: StartupContext, proje
         if ('error' in frozen) return { status: 'blocked', reason: frozen.error, workflow: hinted.identity.workflow, runDir: hinted.runDir, runStatus: hinted.state.status, phase: hinted.state.phase }
         result.nextAction = actionFor('experiment', hinted.runDir, projectDir, frozen.task, frozen)
       }
-      return result
+      return recoveryAction(result)
     }
     // A session hint is an explicit host binding. A valid foreign binding is
     // safely ignored, but malformed metadata cannot be disambiguated as
@@ -333,7 +345,7 @@ async function resumeStartup(input: StartupInput, context: StartupContext, proje
       if ('error' in frozen) return { status: 'blocked', reason: frozen.error, workflow: selected.identity.workflow, runDir: selected.runDir, runStatus: selected.state.status, phase: selected.state.phase, candidates }
       result.nextAction = actionFor('experiment', selected.runDir, projectDir, frozen.task, frozen)
     }
-    return result
+    return recoveryAction(result)
   }
   const terminal = inspected.filter((item): item is Extract<Inspection, { kind: 'valid' }> => item.kind === 'valid' && (item.state.status === 'COMPLETED' || item.state.status === 'FAILED'))
   if (terminal.length === 1) {

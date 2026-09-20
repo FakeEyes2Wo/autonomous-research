@@ -12,6 +12,66 @@ import { FileMemoryStore } from '../../dist/memory/index.js'
 
 const parent = { id: 'parent', session: { id: 'parent-session' } }
 
+test('coverage reviewer has read-only native tools and JSON repair cannot gain write tools', async t => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-coverage-readonly-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  const requests: any[] = []
+  const runtime = { async start(_provider: string, request: any) {
+    requests.push(request)
+    return { id: `coverage-${requests.length}`, result: Promise.resolve({ output: [{ type: 'text', text: requests.length === 1 ? 'invalid' : JSON.stringify({ action: 'pause', reason: 'No evidence', criteria: [], blockers: [], unsupportedClaims: [], followups: [] }) }], stopReason: 'completed' }), async dispose() {} }
+  } }
+  const provider = new SubagentRoleAgentProvider(runtime as never, { repairToolFilter: { allow: ['write'] } } as never)
+  await provider.run('coverage-reviewer', { runDir, taskId: 'coverage-review:fixture', continuation: '{}' }, context(runDir))
+  assert.deepEqual(requests[0].toolFilter, { allow: ['read', 'read_image', 'glob', 'grep'] })
+  assert.deepEqual(requests[1].toolFilter, { allow: [] })
+})
+
+test('paper reviewer delivers native images with host receipts and restricts tools including JSON repair', async t => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-review-images-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  const path = join(runDir, 'page.png')
+  await writeFile(path, Buffer.from('image-bytes'))
+  const requests: any[] = []
+  const runtime = { async start(_provider: string, request: any) {
+    requests.push(request)
+    return { id: 'native-' + requests.length, result: Promise.resolve({ output: [{ type: 'text', text: requests.length === 1 ? 'invalid' : '{"verdict":"PASS","issues":[]}' }], stopReason: 'completed' }), async dispose() {} }
+  } }
+  let saves = 0, repairs = 0
+  const provider = new SubagentRoleAgentProvider(runtime as never, { attachments: { async saveImage(input: any) { saves++; assert.equal(input.mediaType, 'image/png'); return { attachmentId: 'image-attachment' } } }, llm: { async resolveModelInfo() { return { inputModalities: ['text', 'image'] } } }, repairToolFilter: { allow: ['write'] } } as never)
+  const output = await provider.run('layout-reviewer', { runDir, taskId: 'layout-1', figureImages: [path] }, { ...context(runDir), admitPaperReviewRepair: async () => { repairs++ } } as never)
+  assert.equal(saves, 1)
+  assert.equal(repairs, 1)
+  assert.deepEqual(requests[0].prompt[1], { type: 'image', attachment: { attachmentId: 'image-attachment' } })
+  assert.deepEqual(requests[0].toolFilter, { allow: ['read', 'read_image', 'glob', 'grep'] })
+  assert.deepEqual(requests[1].toolFilter, { allow: [] })
+  assert.equal(output.imageReceipt?.images[0].path, path)
+  assert.match(output.imageReceipt?.images[0].hash ?? '', /^[a-f0-9]{64}$/)
+  assert.equal(output.imageReceipt?.taskId, 'layout-1')
+})
+
+test('explicit disabled image input never creates attachments despite image model metadata', async t => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-review-no-images-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  let prompt: any[] = []
+  const runtime = { async start(_provider: string, request: any) { prompt = request.prompt; return { id: 'disabled', result: Promise.resolve({ structured: { verdict: 'PASS', issues: [] }, stopReason: 'completed' }), async dispose() {} } } }
+  const provider = new SubagentRoleAgentProvider(runtime as never, { attachments: { async saveImage() { throw new Error('must not attach') } }, llm: { async resolveModelInfo() { return { inputModalities: ['image'] } } } } as never)
+  const output = await provider.run('layout-reviewer', { runDir, figureImages: ['/missing.png'], supportsImageInput: false }, context(runDir))
+  assert.equal(prompt.length, 1)
+  assert.equal(output.imageReceipt, undefined)
+})
+
+test('reusing an input object after disabling images cannot reuse a prior receipt', async t => {
+  const runDir = await mkdtemp(join(tmpdir(), 'ar-receipt-reset-'))
+  t.after(() => rm(runDir, { recursive: true, force: true }))
+  const path = join(runDir, 'page.png'); await writeFile(path, 'image')
+  const runtime = { async start() { return { id: 'reset', result: Promise.resolve({ structured: { verdict: 'PASS', issues: [] }, stopReason: 'completed' }), async dispose() {} } } }
+  const provider = new SubagentRoleAgentProvider(runtime as never, { attachments: { async saveImage() { return { attachmentId: 'image' } } }, llm: { async resolveModelInfo() { return { inputModalities: ['image'] } } } } as never)
+  const input = { runDir, figureImages: [path], supportsImageInput: true }
+  assert.ok((await provider.run('layout-reviewer', input, context(runDir))).imageReceipt)
+  input.supportsImageInput = false
+  assert.equal((await provider.run('layout-reviewer', input, context(runDir))).imageReceipt, undefined)
+})
+
 function policy(overrides: Record<string, unknown> = {}) {
   return {
     version: 2,

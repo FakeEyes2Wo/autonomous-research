@@ -4,9 +4,11 @@ import { mkdtemp, rm, writeFile, readFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { AutoResearchService } from '../../dist/service/autoresearch-service.js'
+import { loadState, saveState } from '../../dist/core/state.js'
 import { FakeAgentProvider } from './fake-agent-provider.ts'
+const artifactAcceptance = { criteria: [{ id: 'artifact', required: true, text: 'Produce a captured engineering artifact', evidenceKind: 'artifact' as const }] }
 
-test('minimal loop runs revise then finish and produces paper', async () => {
+test('legacy loop delivers paper and completes only after explicit artifact coverage', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-loop-'))
   try {
     await mkdir(join(dir, 'input'), { recursive: true })
@@ -14,19 +16,20 @@ test('minimal loop runs revise then finish and produces paper', async () => {
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n\n- Allowed: local analysis\n', 'utf8')
 
     const provider = new FakeAgentProvider({
-      decisions: ['revise', 'finish'],
+      decisions: ['finish'], coverage: 'explicit-artifact',
       writerText: '\\documentclass{article}\n\\begin{document}\nPaper Draft Result.\n\\end{document}',
     })
     const service = new AutoResearchService(provider)
     const context = { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }
 
-    const state = await service.run({ runDir: dir }, context)
+    const state = await service.run({ runDir: dir, acceptance: artifactAcceptance }, context)
 
     assert.equal(state.status, 'COMPLETED')
     assert.equal(state.phase, 'paper')
     assert.equal(provider.calls.includes('rubric-generator'), true)
     assert.equal(provider.calls.includes('supervisor'), true)
-    assert.equal(provider.calls.filter((r) => r === 'supervisor').length, 2)
+    assert.equal(provider.calls.filter((r) => r === 'supervisor').length, 1)
+    assert.ok(provider.calls.indexOf('coverage-reviewer') > provider.calls.indexOf('paper-writer'))
 
     const paper = await readFile(join(dir, 'paper', 'main.tex'), 'utf8')
     assert.match(paper, /Paper Draft Result/)
@@ -80,11 +83,11 @@ test('minimal mode uses plan, worker, local evidence, and supervisor without opt
       '  maxInputTokens: 1000',
       '  maxRoleCalls: 10',
     ].join('\n') + '\n', 'utf8')
-    const provider = new FakeAgentProvider({ decisions: ['finish'] })
+    const provider = new FakeAgentProvider({ decisions: ['finish'], coverage: 'explicit-artifact' })
     const service = new AutoResearchService(provider)
-    const state = await service.run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
+    const state = await service.run({ runDir: dir, acceptance: artifactAcceptance }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
     assert.equal(state.status, 'COMPLETED')
-    assert.deepEqual(provider.calls, ['planner', 'research-worker', 'supervisor'])
+    assert.deepEqual(provider.calls, ['planner', 'research-worker', 'supervisor', 'coverage-reviewer'])
     assert.equal(await readFile(join(dir, 'MINIMAL_EVIDENCE-1.md'), 'utf8').then((value) => value.includes('local evidence')), true)
     assert.equal(await import('node:fs/promises').then(({ access }) => access(join(dir, 'paper')).then(() => true, () => false)), false)
   } finally {
@@ -100,8 +103,8 @@ test('minimal mode honors explicitly enabled deep-dive prelude instead of silent
     await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nUse an explicit deep-dive prelude.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
     await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  brainstorm: never\n  deepDive: enabled\n  experimentReview: never\n  paper: never\n', 'utf8')
-    const provider = new FakeAgentProvider({ decisions: ['finish'] })
-    const state = await new AutoResearchService(provider).run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
+    const provider = new FakeAgentProvider({ decisions: ['finish'], coverage: 'explicit-artifact' })
+    const state = await new AutoResearchService(provider).run({ runDir: dir, acceptance: artifactAcceptance }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
     assert.equal(state.status, 'COMPLETED')
     assert.equal(provider.calls.includes('paper-survey'), true)
     assert.equal(provider.calls.includes('paper-frontier-miner'), true)
@@ -175,7 +178,7 @@ test('minimal mode gates a non-low-risk plan before starting the worker when rev
   }
 })
 
-test('minimal resume reuses completed plan and worker checkpoints', async () => {
+test('minimal RUNNING crash replay reuses completed plan and worker checkpoints', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-minimal-resume-'))
   try {
     await mkdir(join(dir, 'input'), { recursive: true })
@@ -184,11 +187,12 @@ test('minimal resume reuses completed plan and worker checkpoints', async () => 
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
     await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n  paper: never\n', 'utf8')
     const first = new FakeAgentProvider({ decisions: ['finish'], throwOnRole: 'supervisor' })
-    await assert.rejects(() => new AutoResearchService(first).run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }))
-    const second = new FakeAgentProvider({ decisions: ['finish'] })
+    await assert.rejects(() => new AutoResearchService(first).run({ runDir: dir, acceptance: artifactAcceptance }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }))
+    const interrupted = (await loadState(dir))!; interrupted.status = 'RUNNING'; await saveState(dir, interrupted)
+    const second = new FakeAgentProvider({ decisions: ['finish'], coverage: 'explicit-artifact' })
     const state = await new AutoResearchService(second).run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
     assert.equal(state.status, 'COMPLETED')
-    assert.deepEqual(second.calls, ['supervisor'])
+    assert.deepEqual(second.calls, ['supervisor', 'coverage-reviewer'])
     const evidenceResults = (await readFile(join(dir, 'events.jsonl'), 'utf8'))
       .trim().split('\n').filter(Boolean).map((line) => JSON.parse(line) as { type?: string; stepId?: string })
       .filter((event) => event.type === 'result' && event.stepId === 'minimal-evidence-1')
@@ -198,7 +202,7 @@ test('minimal resume reuses completed plan and worker checkpoints', async () => 
   }
 })
 
-test('minimal resume repairs missing checkpoint result events without rerunning work', async () => {
+test('minimal RUNNING crash replay repairs missing checkpoint result events without rerunning work', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-minimal-checkpoint-results-'))
   try {
     await mkdir(join(dir, 'input'), { recursive: true })
@@ -208,7 +212,8 @@ test('minimal resume repairs missing checkpoint result events without rerunning 
     await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n  paper: never\n', 'utf8')
 
     const first = new FakeAgentProvider({ decisions: ['finish'], throwOnRole: 'supervisor' })
-    await assert.rejects(() => new AutoResearchService(first).run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }))
+    await assert.rejects(() => new AutoResearchService(first).run({ runDir: dir, acceptance: artifactAcceptance }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }))
+    const interrupted = (await loadState(dir))!; interrupted.status = 'RUNNING'; await saveState(dir, interrupted)
     const eventLines = (await readFile(join(dir, 'events.jsonl'), 'utf8')).trim().split('\n').filter(Boolean)
     const keptEvents = eventLines.filter((line) => {
       const event = JSON.parse(line) as { type?: string; stepId?: string }
@@ -216,10 +221,10 @@ test('minimal resume repairs missing checkpoint result events without rerunning 
     })
     await writeFile(join(dir, 'events.jsonl'), `${keptEvents.join('\n')}\n`, 'utf8')
 
-    const second = new FakeAgentProvider({ decisions: ['finish'] })
+    const second = new FakeAgentProvider({ decisions: ['finish'], coverage: 'explicit-artifact' })
     const state = await new AutoResearchService(second).run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
     assert.equal(state.status, 'COMPLETED')
-    assert.deepEqual(second.calls, ['supervisor'])
+    assert.deepEqual(second.calls, ['supervisor', 'coverage-reviewer'])
     const results = (await readFile(join(dir, 'events.jsonl'), 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as { type?: string; stepId?: string })
       .filter((event) => event.type === 'result')
@@ -231,7 +236,7 @@ test('minimal resume repairs missing checkpoint result events without rerunning 
   }
 })
 
-test('minimal post-work review pauses on revise and resume reuses the worker checkpoint', async (t) => {
+test('minimal post-work review pause cannot be retried unchanged', async (t) => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-minimal-post-work-review-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
   await mkdir(join(dir, 'input'), { recursive: true })
@@ -253,9 +258,9 @@ test('minimal post-work review pauses on revise and resume reuses the worker che
   const completed = await new AutoResearchService(second).resume({ runDir: dir }, {
     parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal,
   })
-  assert.equal(completed.status, 'COMPLETED')
+  assert.equal(completed.status, 'PAUSED')
   assert.equal(second.calls.includes('research-worker'), false)
-  assert.deepEqual(second.calls, ['experiment-reflexion', 'supervisor'])
+  assert.deepEqual(second.calls, [])
 })
 
 test('legacy research pauses before work when automatic design review is unresolved', async (t) => {

@@ -69,7 +69,7 @@ export function buildSessionPrompt({ projectDir, runDir, intent = 'ambiguous', p
     'On the first task turn, identify exactly one intent: `project-paper`, `research`, `experiment`, or `resume`; use `ambiguous` when the request is unclear.',
     'Call `research_prepare` first with only its supported routing fields: intent, selected project workspace, a distinct run directory for a new task, and task when required.',
     'Execute only the returned nextAction. Preserve the user brief and runner options such as candidatePath, profilePath, maxCycles, and paper when invoking a new-run action.',
-    'For WAITING, continue the same run. For PAUSED, explain the constraint and do not retry. A terminal run is reported with its persisted terminal status and is not relaunched.',
+    'For WAITING, continue the same run. For unchanged PAUSED, explain the constraint and do not retry. Explicit recovery must provide changedCondition with relevant newEvidencePaths (new sources require frozen criterionIds), or an increased total maxCycles; pass these through research_prepare and execute only its validated action. A terminal run is reported with its persisted terminal status and is not relaunched.',
     '',
     `Initial intent hint: ${intent}.`,
   )

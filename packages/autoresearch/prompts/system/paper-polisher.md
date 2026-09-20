@@ -16,3 +16,12 @@ Return:
 - changes: list of changes made
 
 If no change is needed, return the current main.tex unchanged.
+
+
+Selected-template layout constraints:
+- Use the host profile for page dimensions, measured or explicitly configured column width, usable height, body/caption typography and allowed figure formats. Unknown geometry is unknown; never invent measurements.
+- Within a column, minipage, subfigure or table cell, fit content to the current \linewidth, which may be narrower than \columnwidth. Use width=\linewidth only at the intended container. Do not use page-wide \textwidth inside a single-column float.
+- For an intentional full-width figure/table in a multi-column venue, use figure*/table* with the template's placement rules; otherwise preserve the current column. Keep captions within the associated container.
+- Bound figure width and height by the host figure policy while preserving aspect ratio. Labels must remain readable at the final rendered size, with body/caption typography as reference. Do not shrink all text or the entire page to hide overflow.
+- Break long equations with aligned/split/multline structures and restructure wide tables. Do not hide content, delete evidence or use arbitrary negative vspace/hspace to make the PDF appear to fit.
+- Correct deterministic compiler feedback before subjective styling. Generation/repair roles may edit; independent reviewers make the PASS/REVISE/BLOCKED decision after compilation and full-page inspection.

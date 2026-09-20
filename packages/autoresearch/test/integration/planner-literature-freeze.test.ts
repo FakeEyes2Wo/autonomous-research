@@ -19,16 +19,16 @@ async function setup(f: any, nominated: unknown, entry = 'minimal') {
     prompts.push({ role: input.label, text: input.prompt[0].text })
     const structured = input.label === 'planner'
       ? { plan: 'Measure alpha independently.', protocol: { split: 'heldout', ...(nominated === undefined ? {} : { allowed_literature_span_ids: nominated }) } }
-      : { status: 'completed', summary: 'Executed fixture.', artifacts: ['observation.json'] }
+      : { status: 'completed', summary: 'Executed fixture.', artifacts: [`work/cycle-${String(ctx.state.cycle).padStart(2, '0')}/observation.json`] }
+    if (input.label === 'research-worker') await writeFile(join(f.runDir, `work/cycle-${String(ctx.state.cycle).padStart(2, '0')}/observation.json`), '{}')
     return { id: `child-${prompts.length}`, result: Promise.resolve({ stopReason: 'completed', structured, output: [] }), async dispose() {} }
   } } as never)
-  await writeFile(join(f.runDir, 'observation.json'), '{}')
   await writeFile(join(f.runDir, 'RUBRIC.md'), 'Use a fixed independent comparison.')
   const context = { parent: { id: 'parent', session: { id: 'parent' } }, signal: new AbortController().signal,
     projectDir: f.project, runId: 'run', policySnapshot: { ...structuredClone(DEFAULT_PROJECT_SETTINGS), literature: f.input.settings } }
   const ctx = createRunContext({ provider }, f.runDir, await createInitialState(f.runDir, 'run'), await ResearchTree.load(f.runDir), context)
   const plan = () => entry === 'legacy' ? runPlanner(ctx, { idea: 'alpha', profile: '' }) : runMinimalPlan(ctx, { idea: 'alpha', profile: '' })
-  const work = () => runWorker(ctx, { workDir: f.runDir, planText: 'Measure alpha independently.', experimentDesign: '', minimalVerification: '' })
+  const work = () => runWorker(ctx, { workDir: join(f.runDir, 'work', `cycle-${String(ctx.state.cycle).padStart(2, '0')}`), planText: 'Measure alpha independently.', experimentDesign: '', minimalVerification: '' })
   return { ctx, prompts, plan, work }
 }
 
