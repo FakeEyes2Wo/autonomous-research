@@ -3,6 +3,8 @@ export {
   DEFAULT_PROJECT_SETTINGS,
   WORKFLOW_TOGGLES,
   type BudgetSettings,
+  type CurrentIdeaSearchBudget,
+  type CurrentIdeaSearchToggle,
   type CapabilityTier,
   type ContextBudgetSettings,
   type ExperimentSettings,

@@ -132,7 +132,7 @@ async function setup(mode: string) {
   await mkdir(join(dir, '.autoresearch'), { recursive: true })
   await writeFile(join(dir, 'input', 'idea.md'), '# Idea\n\n## Direction\n\nTreatment improves success.\n')
   await writeFile(join(dir, 'PROFILE.md'), 'Local deterministic fixture only.')
-  await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), `version: 2\nworkflow:\n  mode: ${mode}\n  brainstorm: never\n  deepDive: never\n  experimentReview: never\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n`)
+  await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), `version: 2\nworkflow:\n  mode: ${mode}\n  currentIdeaSearch: never\n  brainstorm: never\n  deepDive: never\n  experimentReview: never\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n`)
   return dir
 }
 

@@ -27,6 +27,7 @@ import { ResearchStore } from '../research/store.js'
 import { readContinuation, validateRecovery, consumeRecovery, recordContinuationPause } from './continuation.js'
 import { parseAcceptance, parseRecovery, type AcceptanceInput, type RecoveryInput } from '../research/continuation.js'
 import { hashContent } from '../research/records.js'
+import type { DiscoveryRuntimeOptions } from './types.js'
 
 export interface ResearchRunOptions {
   acceptance?: AcceptanceInput
@@ -59,6 +60,7 @@ export interface AutoResearchServiceOptions {
   reviewGates?: ReviewGateId[]
   /** Trusted host injection; never accepted from model-facing tool arguments. */
   experimentRuntimeForProject?: (projectDir: string) => Promise<NonNullable<RoleExecutionContext['experimentRuntime']>>
+  discovery?: DiscoveryRuntimeOptions
 }
 
 const POLICY_SNAPSHOT_FILE = join('.autoresearch', 'policy-snapshot.json')
@@ -83,6 +85,7 @@ function isFrozenPolicySnapshot(value: unknown): value is FrozenPolicySnapshot {
     if (!isRecord(config) || (config.tier !== undefined && !POLICY_TIERS.includes(config.tier as typeof POLICY_TIERS[number])) || (config.provider !== undefined && typeof config.provider !== 'string') || (config.model !== undefined && typeof config.model !== 'string') || (config.maxInputTokens !== undefined && !nonNegativeInteger(config.maxInputTokens)) || (config.maxOutputTokens !== undefined && !nonNegativeInteger(config.maxOutputTokens)) || (config.escalateTo !== undefined && !POLICY_TIERS.includes(config.escalateTo as typeof POLICY_TIERS[number])) || (config.escalateOn !== undefined && (!Array.isArray(config.escalateOn) || config.escalateOn.some((entry) => typeof entry !== 'string')))) return false
   }
   const workflow = value.workflow
+  if (workflow.currentIdeaSearch !== undefined && workflow.currentIdeaSearch !== 'enabled' && workflow.currentIdeaSearch !== 'never') return false
   for (const key of ['brainstorm', 'deepDive', 'modelScout', 'experimentReview', 'paper', 'postResultSynthesis']) if (!WORKFLOW_TOGGLES.includes(workflow[key] as typeof WORKFLOW_TOGGLES[number])) return false
   for (const key of ['paperImprovementRounds', 'candidateLimit', 'reflexionRounds']) if (!nonNegativeInteger(workflow[key])) return false
   const budget = value.budget
@@ -110,13 +113,15 @@ async function loadFrozenPolicy(runDir: string, projectSettings: Awaited<ReturnT
       if (!isFrozenPolicySnapshot(parsed)) {
         throw new Error('invalid policy snapshot shape')
       }
-      return freezePolicy({ ...parsed, literature: frozenLiteratureSettings(parsed.literature) } as FrozenPolicySnapshot)
+      const workflow = parsed.workflow as unknown as Record<string, unknown>
+      const historical = existing && workflow.currentIdeaSearch === undefined
+      return freezePolicy({ ...parsed, workflow: { ...workflow, ...(historical ? { currentIdeaSearch: 'never' } : {}) }, literature: frozenLiteratureSettings(parsed.literature) } as FrozenPolicySnapshot)
     } catch {
       throw new Error('invalid frozen policy snapshot at ' + path)
     }
   }
   const snapshot = { ...createPolicySnapshot(projectSettings), model: structuredClone(projectSettings.model) }
-  if (existing) { snapshot.workflow.mode = 'legacy'; snapshot.literature = frozenLiteratureSettings(undefined) }
+  if (existing) { snapshot.workflow.mode = 'legacy'; snapshot.workflow.currentIdeaSearch = 'never'; snapshot.literature = frozenLiteratureSettings(undefined) }
   await writeText(path, JSON.stringify(snapshot, null, 2) + '\n')
   return freezePolicy(snapshot)
 }
@@ -265,6 +270,7 @@ export class AutoResearchService {
       brainstorm: projectPaper ? 'off' : options.brainstorm,
       projectSettings,
       policySnapshot,
+      discovery: this.deps.options.discovery,
       })
       const runContext: ResearchRunContext = {
       ...context,

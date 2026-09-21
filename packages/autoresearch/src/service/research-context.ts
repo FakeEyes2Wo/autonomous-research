@@ -8,13 +8,17 @@ import type { RunContext } from './context.js'
 import { retrieveLiteratureContext } from '../literature/context-adapter.js'
 import { loadClaimAssessments, assessmentEvidenceHash } from '../literature/claim-assessment.js'
 import { ContextInsufficientError } from '../research-context/index.js'
+import { buildDiscoveryContext, DISCOVERY_CONTEXT_ROLES } from '../literature/discovery/context.js'
+import { createDiscoverySourceStore, readCurrentIdeaSurvey } from '../research/current-idea-survey.js'
+import { selectCurrentIdea } from '../research/current-idea.js'
+import { fingerprintIdea } from '../literature/discovery/contracts.js'
 
 /** Only committed records enter scientific context; actor work receives the frozen contract. */
 export async function researchContextForRole(ctx: RunContext, role: RoleName, input?: RoleInput): Promise<ResearchContextRequest | undefined> {
   return researchContextForInput(role, input ?? { runDir: ctx.runDir }, { ...ctx.context, runId: ctx.state.runId })
 }
 
-export async function researchContextForInput(role: RoleName, input: RoleInput, context: Pick<RoleExecutionContext, 'projectDir' | 'runId' | 'policySnapshot'>): Promise<ResearchContextRequest | undefined> {
+export async function researchContextForInput(role: RoleName, input: RoleInput, context: Pick<RoleExecutionContext, 'projectDir' | 'runId' | 'policySnapshot' | 'discoverySourceStore'>): Promise<ResearchContextRequest | undefined> {
   const snapshot = await new ResearchStore(input.runDir).loadCurrent()
   const projectDir = context.projectDir ?? input.projectDir ?? input.runDir
   const runId = context.runId ?? input.runDir
@@ -29,13 +33,25 @@ export async function researchContextForInput(role: RoleName, input: RoleInput, 
     settings: context.policySnapshot?.literature, branchId: snapshot?.branch_id, split: snapshot?.protocol.split,
     query: [claim?.statement, input.idea, constraints[0], input.plan].filter(Boolean).join('\n') || 'research',
     requiredSpanIds, reviewSpanIds: assessments.flatMap(a => a.spanIds), allowedSpanIds: snapshot?.protocol.allowed_literature_span_ids })
-  if (!snapshot && !literature) return undefined
+  let discovery: Awaited<ReturnType<typeof buildDiscoveryContext>> | undefined
+  if ((DISCOVERY_CONTEXT_ROLES as readonly string[]).includes(role)) {
+    const report = await readCurrentIdeaSurvey(input.runDir)
+    if (report) {
+      const target = selectCurrentIdea({ intakeIdea: input.idea ?? constraints[0] ?? '', profile: input.profile ?? constraints[1] ?? '', snapshot: snapshot as any ?? undefined })
+      const targetFingerprint = fingerprintIdea(target)
+      if (targetFingerprint === report.ideaFingerprint) {
+        discovery = await buildDiscoveryContext({ runDir: input.runDir, report, scope: { projectId: projectDir, branchId: snapshot?.branch_id ?? 'pre-snapshot', runId }, role, maxContextChars: 12_000, currentTargetFingerprint: targetFingerprint, sourceStore: context.discoverySourceStore ?? createDiscoverySourceStore(input.runDir) })
+      }
+    }
+  }
+  if (!snapshot && !literature && !discovery?.records.length) return undefined
   const scope = { projectId: projectDir, branchId: snapshot?.branch_id ?? 'pre-snapshot', runId }
   const visibility = { ...scope, visibility: 'run' as const }
   const records = [
     sealContextRecord({ id: 'constraints', version: 1, layer: 0, kind: 'constraint', scope: visibility, required: true,
       payload: { goal: constraints[0] ?? input.idea ?? '', profile: constraints[1] ?? input.profile ?? '', rubric: constraints[2] ?? '', budget: context.policySnapshot?.budget }, source: { recordType: 'constraints' } }),
   ]
+  if (discovery?.records.length) records.push(...discovery.records)
   if (snapshot) records.push(
     sealContextRecord({ id: snapshot.protocol.id, version: snapshot.protocol.version, layer: 0, kind: 'constraint', scope: visibility, required: true,
       payload: snapshot.protocol, source: { recordType: 'protocol', path: 'CURRENT.json' } }),
@@ -67,7 +83,7 @@ export async function researchContextForInput(role: RoleName, input: RoleInput, 
   }
   return { stage: role, scope, ...(snapshot ? { snapshot: { id: snapshot.id, contentHash: snapshot.content_hash }, protocolHash: snapshot.protocol.content_hash } : {}),
     queryTerms: snapshot ? [snapshot.active_claim.id, snapshot.active_hypothesis.id, snapshot.protocol.content_hash] : literature?.queryTerms,
-    requiredRecordIds: literature?.requiredRecordIds, ...(literature?.literature ? { literature: literature.literature } : {}), records }
+    requiredRecordIds: literature?.requiredRecordIds, ...(literature?.literature ? { literature: literature.literature } : {}), ...(discovery?.binding ? { discovery: discovery.binding } : {}), records }
 }
 
 /** Brainstorm and paper callers share the same pre-snapshot grounding path. */

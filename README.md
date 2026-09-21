@@ -212,6 +212,28 @@ npm --prefix packages/autoresearch run run:headless -- `
 
 设置页主要管理模型来源、研究强度与论文输出；高级区管理角色路由、workflow 和预算声明。`project-secrets.yaml`、DSH credentials、CPA OAuth/token 与客户端 key 均不得进入 Git、URL、日志、导出或截图。预算声明只有在相应 runtime hook 已验证时才能称为硬限制；缺少 usage 时应标为 estimated/unknown，不能记为零。
 
+## 当前想法的相似论文检索
+
+新运行在 legacy 和 minimal 两种模式下，都会在新的 planner 开始前围绕当前想法检索 arXiv、Crossref 和 Semantic Scholar。默认进行 3–5 轮、每轮 4 个不同角度的查询，最多 80 次 HTTP 请求、保留 200 个候选、每轮最多审阅 20 个候选，最终提供最多 20 个最相近候选，时限 10 分钟。限流、缺失摘要和查询覆盖不足会写入报告；没有结果不代表想法新颖。
+
+在项目设置中使用以下开关与七项预算：
+
+```yaml
+workflow:
+  currentIdeaSearch: enabled   # 设为 never 可关闭
+budget:
+  currentIdeaSearch:
+    minRounds: 3
+    maxRounds: 5
+    queriesPerRound: 4
+    maxRequests: 80
+    maxCandidates: 200
+    maxDurationMs: 600000
+    nearestLimit: 20
+```
+
+这项检索独立于旧的 `deepDive` 开关和 `literature.mode` 文献库检索。旧运行的冻结策略若没有此设置，恢复时仍保持关闭；相同目标的已完成检索会复用已验证记录。初始创意生成早于 planner 检索钩子，因此不会提前得到这份新报告。报告用于规划和想法审阅，不自动入库、修改固定索引版本或成为科学证据。检索产物位于 run 目录的 `brainstorm/current-idea-survey/`；验证方法和已知限制见[检索验证记录](docs/verification/2026-09-20-idea-similarity-survey.md)。
+
 ## 常见问题
 
 **在仓库根目录执行 `npm run ...` 报 `ENOENT`**

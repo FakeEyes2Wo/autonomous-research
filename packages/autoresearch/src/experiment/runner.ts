@@ -36,6 +36,7 @@ import {
 
 export interface ExperimentDependencies {
   readonly provider: RoleAgentProvider
+  readonly discovery?: ResearchRunnerOptions['discovery']
 }
 
 export interface ExperimentRunRequest {
@@ -86,12 +87,15 @@ async function loadExperimentPolicy(runDir: string, settings: ProjectSettings, e
       !('model' in parsed) || !('modelRouting' in parsed) || !('workflow' in parsed) || !('budget' in parsed)) {
       throw new AutoResearchError(`invalid experiment policy snapshot: ${file}`, 'STATE_CORRUPT')
     }
-    return freezePolicy({ ...parsed, literature: frozenLiteratureSettings((parsed as { literature?: unknown }).literature) } as NonNullable<RoleExecutionContext['policySnapshot']>)
+    const workflow = (parsed as { workflow: Record<string, unknown> }).workflow
+    if (workflow.currentIdeaSearch !== undefined && workflow.currentIdeaSearch !== 'enabled' && workflow.currentIdeaSearch !== 'never') throw new AutoResearchError(`invalid experiment policy snapshot: ${file}`, 'STATE_CORRUPT')
+    const historical = existing && workflow.currentIdeaSearch === undefined
+    return freezePolicy({ ...parsed, workflow: { ...workflow, ...(historical ? { currentIdeaSearch: 'never' } : {}) }, literature: frozenLiteratureSettings((parsed as { literature?: unknown }).literature) } as NonNullable<RoleExecutionContext['policySnapshot']>)
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && !(error instanceof Error && /cannot read .*ENOENT/i.test(error.message))) throw error
   }
   const snapshot = { ...createPolicySnapshot(settings), model: structuredClone(settings.model) }
-  if (existing) snapshot.literature = frozenLiteratureSettings(undefined)
+  if (existing) { snapshot.workflow.currentIdeaSearch = 'never'; snapshot.literature = frozenLiteratureSettings(undefined) }
   await atomicWriteJson(file, snapshot)
   return freezePolicy(snapshot)
 }
@@ -415,6 +419,7 @@ async function executeExperimentTask(
     provider: deps.provider,
     maxCycles: maxRounds,
     brainstorm: 'off',
+    discovery: deps.discovery,
   }
   const ctx = createRunContext(researchDeps, runDir, state, tree, {
     ...agentContext,

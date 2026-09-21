@@ -10,7 +10,7 @@ for (const mode of ['minimal', 'legacy']) for (const metadata of ['attempt.json'
   const runDir = await mkdtemp(join(tmpdir(), 'ar-corrupt-ownership-'))
   t.after(() => rm(runDir, { recursive: true, force: true }))
   await mkdir(join(runDir, '.autoresearch'), { recursive: true })
-  await writeFile(join(runDir, '.autoresearch/project-settings.yaml'), `version: 2\nworkflow:\n  mode: ${mode}\n  experimentReview: never\n  paper: never\n`)
+  await writeFile(join(runDir, '.autoresearch/project-settings.yaml'), `version: 2\nworkflow:\n  mode: ${mode}\n  currentIdeaSearch: never\n  experimentReview: never\n  paper: never\n`)
   const request = { runDir, task: 'Cached ownership metadata', maxRounds: 1, agentContext: { parent: { id: 'test', session: { id: 'test' } }, signal: new AbortController().signal } }
   await assert.rejects(runExperimentTask({ provider: new FakeAgentProvider({ decisions: ['finish'], throwOnRole: 'supervisor' }) }, request))
   await writeFile(join(runDir, 'cycles/cycle-1', metadata), '{broken')
@@ -26,7 +26,7 @@ test('legacy experiment resume keeps literature off despite lexical current proj
     const runDir = await mkdtemp(join(tmpdir(), 'ar-literature-policy-'))
     t.after(() => rm(runDir, { recursive: true, force: true }))
     await mkdir(join(runDir, '.autoresearch'), { recursive: true })
-    await writeFile(join(runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\nliterature:\n  mode: lexical\n')
+    await writeFile(join(runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\nliterature:\n  mode: lexical\n')
     const observed: string[] = []
     const provider = { async run(_role, _input, ctx) { observed.push(ctx.policySnapshot.literature.mode); throw new Error('fixture stop before transport') } }
     const request = { runDir, task: 'policy resume', maxRounds: 1, agentContext: { parent: { id: 'parent', session: { id: 'parent' } }, signal: new AbortController().signal } }
@@ -77,6 +77,7 @@ test('standalone minimal mode freezes policy, records a ledger, and does not dis
     'version: 2',
     'workflow:',
     '  mode: minimal',
+    '  currentIdeaSearch: never',
     '  paper: never',
     '  experimentReview: never',
   ].join('\n') + '\n', 'utf8')
@@ -229,7 +230,7 @@ test('standalone minimal resume validates cached artifacts before a decision', a
   const runDir = await mkdtemp(join(tmpdir(), 'ar-experiment-cached-artifact-'))
   t.after(() => rm(runDir, { recursive: true, force: true }))
   await mkdir(join(runDir, '.autoresearch'), { recursive: true })
-  await writeFile(join(runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n  paper: never\n', 'utf8')
+  await writeFile(join(runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  experimentReview: never\n  paper: never\n', 'utf8')
   const first = new FakeAgentProvider({ decisions: ['finish'], throwOnRole: 'supervisor' })
   await assert.rejects(() => runExperimentTask({ provider: first }, {
     runDir, task: 'Validate cached evidence', maxRounds: 1,
@@ -257,7 +258,7 @@ for (const mode of ['legacy', 'minimal'] as const) {
       t.after(() => rm(runDir, { recursive: true, force: true }))
       if (mode === 'minimal') {
         await mkdir(join(runDir, '.autoresearch'), { recursive: true })
-        await writeFile(join(runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n  paper: never\n', 'utf8')
+        await writeFile(join(runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  experimentReview: never\n  paper: never\n', 'utf8')
       }
       const request = {
         runDir, task: `Validate ${mode} cached work shape`, maxRounds: 1,

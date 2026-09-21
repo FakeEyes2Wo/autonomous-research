@@ -11,6 +11,7 @@ import { renderLabeledContextEntries } from '../harness/context-budget.js'
 import { assembleResearchContext, canonicalContextJson, type ResearchContextPackage } from '../research-context/index.js'
 import { researchContextForInput } from '../service/research-context.js'
 import { prepareLiteratureExposure, finishLiteratureExposure, promptContainsSpan, type RegisteredLiteratureSource } from '../literature/context-adapter.js'
+import { prepareDiscoveryExposure, finishDiscoveryExposure, type DiscoveryExposureReceipt } from '../literature/discovery/context.js'
 import { isBudgetExhaustedError } from '../policy/request-ledger.js'
 import { registerOwnedSession, withRequestBinding, type OwnedSessionBinding } from './request-accounting.js'
 import type { RequestLedger } from '../policy/request-ledger.js'
@@ -32,6 +33,7 @@ import { basename, extname, join } from 'node:path'
 const LONG_TASK_ROLES = new Set<RoleName>(['research-worker'])
 const REGISTRY_FILE = join('.autoresearch', 'subagent-tasks.json')
 const READ_ONLY_PAPER_ROLES = new Set<RoleName>(['coverage-reviewer', 'figure-reviewer', 'paper-contract-reviewer', 'layout-reviewer', 'paper-reviewer', 'proof-checker', 'claim-auditor', 'citation-auditor', 'kill-argument-reviewer'])
+const READ_ONLY_DISCOVERY_ROLES = new Set<RoleName>(['idea-query-planner', 'idea-similarity-reviewer'])
 
 export interface SubagentProviderOptions {
   attachments?: { saveImage(input: { data: Uint8Array; mediaType: string; name: string }): Promise<Extract<ContentBlock, { type: 'image' }>['attachment']> }
@@ -64,21 +66,42 @@ const exposedLiteratureSources = new WeakMap<RoleInput, RegisteredLiteratureSour
 
 async function transportWithExposure<T>(role: RoleName, input: RoleInput, prompt: string, transport: () => Promise<T>, repair = false): Promise<T> {
   const binding = input.researchContext?.literature
+  const discoveryBinding = input.researchContext?.discovery
   const context = preparedResearchContexts.get(input)
-  if (!binding || !context) return transport()
+  if ((!binding && !discoveryBinding) || !context) return transport()
+  let discoveryExposure: DiscoveryExposureReceipt | undefined
+  if (discoveryBinding && context) discoveryExposure = await prepareDiscoveryExposure({ runDir: input.runDir, binding: discoveryBinding, context, prompt, role })
+  if (!binding) {
+    try {
+      const result = await transport()
+      if (discoveryExposure) await finishDiscoveryExposure(discoveryBinding!, discoveryExposure, 'sent')
+      return result
+    } catch (error) {
+      if (discoveryExposure) await finishDiscoveryExposure(discoveryBinding!, discoveryExposure, 'unknown')
+      throw error
+    }
+  }
   // Repair receives previous output only; account for source text repeated by that output.
   const actualContext = repair ? { ...context, selection: { ...context.selection, selected: context.selection.selected.filter(({ record }) => {
     const evidenceText = (record.payload as { evidenceText?: string }).evidenceText
     return record.source.recordType === 'literature-span' && typeof evidenceText === 'string' && promptContainsSpan(prompt, evidenceText)
   }) } } : context
-  const exposure = await prepareLiteratureExposure({ runDir: input.runDir, binding, context: actualContext, prompt, role, repair })
+  let exposure: Awaited<ReturnType<typeof prepareLiteratureExposure>>
+  try {
+    exposure = await prepareLiteratureExposure({ runDir: input.runDir, binding, context: actualContext, prompt, role, repair })
+  } catch (error) {
+    if (discoveryExposure) await finishDiscoveryExposure(discoveryBinding!, discoveryExposure, 'unknown')
+    throw error
+  }
   if (!repair) exposedLiteratureSources.set(input, exposure.sources)
   let result: T
   try { result = await transport() }
   catch (error) {
+    if (discoveryExposure) await finishDiscoveryExposure(discoveryBinding!, discoveryExposure, 'unknown')
     await finishLiteratureExposure(binding.root, exposure.prepared, 'unknown')
     throw error
   }
+  if (discoveryExposure) await finishDiscoveryExposure(discoveryBinding!, discoveryExposure, 'sent')
   await finishLiteratureExposure(binding.root, exposure.prepared, 'sent')
   return result
 }
@@ -604,7 +627,7 @@ export class SubagentRoleAgentProvider implements RoleAgentProvider {
       signal: context.signal,
       ...(options.schema !== undefined ? { outputSchema: options.schema } : {}),
       ...(agentOptions(route) ? { agentOptions: agentOptions(route) } : {}),
-      ...(READ_ONLY_PAPER_ROLES.has(role) ? { toolFilter: { allow: options.kind === 'repair' ? [] : ['read', 'read_image', 'glob', 'grep'] } as ToolRestriction } : role === 'project-explorer' ? { toolFilter: { allow: [] } as ToolRestriction } : options.toolFilter ? { toolFilter: options.toolFilter } : {}),
+      ...(READ_ONLY_DISCOVERY_ROLES.has(role) ? { toolFilter: { allow: [] } as ToolRestriction } : READ_ONLY_PAPER_ROLES.has(role) ? { toolFilter: { allow: options.kind === 'repair' ? [] : ['read', 'read_image', 'glob', 'grep'] } as ToolRestriction } : role === 'project-explorer' ? { toolFilter: { allow: [] } as ToolRestriction } : options.toolFilter ? { toolFilter: options.toolFilter } : {}),
     }
     const start = () => transportWithExposure(role, input, options.prompt, () => this.runtime.start(this.providerName, startOptions), options.kind === 'repair')
     const run = provisional ? await withRequestBinding(provisional, start) : await start()

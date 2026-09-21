@@ -11,6 +11,12 @@ npm run build
 npm test
 ```
 
+## 当前想法的相似论文检索
+
+新 legacy/minimal 运行默认在 planner 前执行当前想法检索：arXiv、Crossref、Semantic Scholar，3–5 轮、每轮 4 个查询，最多 80 次 HTTP、200 个保留候选和 10 分钟；每轮最多审阅 20 个候选，最终提供最多 20 个最相近候选。项目设置 `workflow.currentIdeaSearch: never` 可关闭；七项预算在 `budget.currentIdeaSearch` 下，完整示例见[根 README](../../README.md#当前想法的相似论文检索)。
+
+旧运行缺失此冻结策略字段时仍关闭；初始创意生成早于检索钩子，不能提前取得新报告。相似度报告只给规划和想法审阅提供可追溯参考，不自动写入文献库、改变固定索引或成为科学证据。[验证记录](../../docs/verification/2026-09-20-idea-similarity-survey.md)区分离线受控基准和实际联网冒烟结果。
+
 ## 轻量实验工程约定
 
 需要生成可执行代码时，planner、worker、实验设计/反思、证据和 supervisor 角色共享一份插件内置的工程提示。新实验默认采用以下小型结构；实际任务按需缩减，不创建空目录或复杂框架：

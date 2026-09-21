@@ -1,6 +1,7 @@
 export type CapabilityTier = 'cheap' | 'standard' | 'deep'
 export type WorkflowMode = 'minimal' | 'legacy'
 export type WorkflowToggle = 'enabled' | 'auto' | 'never'
+export type CurrentIdeaSearchToggle = 'enabled' | 'never'
 
 export interface PaperExplorationSettings {
   maxPapers: number
@@ -62,6 +63,17 @@ export interface WorkflowSettings {
   paperImprovementRounds: number
   candidateLimit: number
   reflexionRounds: number
+  currentIdeaSearch: CurrentIdeaSearchToggle
+}
+
+export interface CurrentIdeaSearchBudget {
+  minRounds: number
+  maxRounds: number
+  queriesPerRound: number
+  maxRequests: number
+  maxCandidates: number
+  maxDurationMs: number
+  nearestLimit: number
 }
 
 export interface ContextBudgetSettings {
@@ -80,6 +92,7 @@ export interface BudgetSettings {
   jsonRepairAttempts: number
   maxUpgradesPerTask: number
   context: ContextBudgetSettings
+  currentIdeaSearch: CurrentIdeaSearchBudget
 }
 
 export interface ProjectSettings {
@@ -97,6 +110,16 @@ export interface ProjectSettings {
 }
 
 export interface ProjectSecrets { figureApiKey?: string }
+
+/** Browser-safe bounds shared by settings validation and the discovery engine. */
+export const CURRENT_IDEA_SEARCH_LIMITS = {
+  maxRounds: 20,
+  queriesPerRound: 20,
+  maxRequests: 1000,
+  maxCandidates: 2000,
+  nearestLimit: 100,
+  maxDurationMs: 3_600_000,
+} as const
 
 export interface ValidationError { path: string; code: string; message: string }
 export interface ValidationWarning { path: string; code: string; message: string }
@@ -123,8 +146,8 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
     tiers: { cheap: route('', ''), standard: route('', ''), deep: route('', '') },
     roles: {},
   },
-  workflow: { mode: 'legacy', brainstorm: 'auto', deepDive: 'auto', modelScout: 'auto', experimentReview: 'auto', paper: 'auto', postResultSynthesis: 'auto', paperImprovementRounds: 0, candidateLimit: 3, reflexionRounds: 1 },
-  budget: { maxInputTokens: 24_000, maxOutputTokens: 8_000, maxRunTokens: 120_000, maxRoleCalls: 120, maxRetriesPerCall: 1, jsonRepairAttempts: 1, maxUpgradesPerTask: 1, context: { treeSummaryTokens: 2_500, evidenceTokens: 5_000, paperTokens: 8_000, failureTokens: 2_500 } },
+  workflow: { mode: 'legacy', brainstorm: 'auto', deepDive: 'auto', modelScout: 'auto', experimentReview: 'auto', paper: 'auto', postResultSynthesis: 'auto', paperImprovementRounds: 0, candidateLimit: 3, reflexionRounds: 1, currentIdeaSearch: 'enabled' },
+  budget: { maxInputTokens: 24_000, maxOutputTokens: 8_000, maxRunTokens: 120_000, maxRoleCalls: 120, maxRetriesPerCall: 1, jsonRepairAttempts: 1, maxUpgradesPerTask: 1, context: { treeSummaryTokens: 2_500, evidenceTokens: 5_000, paperTokens: 8_000, failureTokens: 2_500 }, currentIdeaSearch: { minRounds: 3, maxRounds: 5, queriesPerRound: 4, maxRequests: 80, maxCandidates: 200, maxDurationMs: 600_000, nearestLimit: 20 } },
 }
 
 export const WORKFLOW_TOGGLES: readonly WorkflowToggle[] = ['enabled', 'auto', 'never']

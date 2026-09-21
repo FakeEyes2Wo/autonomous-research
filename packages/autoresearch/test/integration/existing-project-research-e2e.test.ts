@@ -25,7 +25,7 @@ async function setup(t: any, f: any, options: { roleCap?: number; validator?: st
   await writeFile(join(f.project, 'README.md'), '# alpha implementation\nA candidate intervention needs independent validation.\n')
   await writeFile(join(f.project, 'report.md'), 'Historical result: 99% accuracy. Unverified.\n')
   const settings = structuredClone(DEFAULT_PROJECT_SETTINGS)
-  Object.assign(settings.workflow, { mode: 'minimal', deepDive: 'never', modelScout: 'never', experimentReview: 'never', postResultSynthesis: 'never', reflexionRounds: 0 })
+  Object.assign(settings.workflow, { mode: 'minimal', deepDive: 'never', currentIdeaSearch: 'never', modelScout: 'never', experimentReview: 'never', postResultSynthesis: 'never', reflexionRounds: 0 })
   settings.literature = f.input.settings
   settings.budget.maxRoleCalls = options.roleCap ?? 8
   settings.budget.maxRunTokens = 40000

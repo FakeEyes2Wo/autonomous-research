@@ -7,6 +7,30 @@ import { objectSchema } from '../schema.js'
  * brainstorm/research/paper.
  */
 export const generalRoleSpecs = {
+  'idea-query-planner': {
+    sections: ['idea', 'profile', 'plan'],
+    outputSchema: objectSchema({
+      queries: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
+        text: { type: 'string', required: true },
+        dimensions: { type: 'array', required: true, items: { type: 'string', enum: ['problem', 'mechanism', 'assumption', 'terminology', 'cross-domain'] } },
+      } } },
+    }),
+  },
+  'idea-similarity-reviewer': {
+    sections: ['idea', 'profile', 'plan'],
+    outputSchema: objectSchema({
+      assessments: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
+        candidateId: { type: 'string', required: true },
+        overlap: { type: 'array', required: true, items: { type: 'string' } },
+        differences: { type: 'array', required: true, items: { type: 'string' } },
+        uncertainty: { type: 'array', required: true, items: { type: 'string' } },
+        relevance: { type: 'string', required: true, enum: ['nearest', 'related', 'weak', 'uncertain'] },
+        excerptProofs: { type: 'array', required: true, items: { type: 'object', additionalProperties: true } },
+        followupQueries: { type: 'array', required: true, items: { type: 'string' } },
+        citationSeeds: { type: 'array', required: true, items: { type: 'string' } },
+      } } },
+    }),
+  },
   planner: {
     sections: ['idea', 'profile', 'rubric', 'plan', 'runtimeConstraints', 'treeSummary'],
     outputSchema: objectSchema({
