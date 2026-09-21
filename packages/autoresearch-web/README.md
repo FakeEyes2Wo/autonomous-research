@@ -2,6 +2,10 @@
 
 Optional DSH Web surface for simple AutoResearch settings and a LaTeX/PDF research workbench.
 
+Repository source version **0.2.0**, paired with the exact core peer `@athena/autoresearch: 0.2.0`. Declared DSH peers are pinned to **0.1.5-alpha.1** and cordis to **4.0.2**. `engines.dsh >=0.1.5-alpha.1` is an engine admission floor, not verification of later releases or an override of exact peer requirements. The independent `dsh-cpa` package remains 0.1.0. This source version does not assert npm publication; see the [release note](../../docs/releases/v0.2.0.md).
+
+Recorded validation: core **771/771** and typecheck, Web **84/84**, plus **7/7** Web literature tests explicitly mapped to the current core build. These checks and the limited public HTTP smoke do not constitute complete live-model/DSH-host acceptance. See the [verification record](../../docs/verification/2026-09-20-idea-similarity-survey.md).
+
 Settings now show model source, research intensity and paper output by default;
 advanced routing/workflow/budget controls are collapsed. Open the research
 workbench from this section or the top-left native sidebar entry (`/?autoresearch=1`).

@@ -8,6 +8,8 @@ idea → plan → work → evidence → decide → paper | failure report
 
 它既可以完成文献探索、独立实验和论文流水线，也可以通过可选 Web 包提供项目设置与对话式 LaTeX/PDF 工作台。当前部署方式是从本仓库源码构建并链接到 DSH profile；这里不承诺 npm registry 发布状态，也不宣称兼容任意最新 DSH。当前依赖锚点见各包 `package.json`，升级宿主后应重新验收。
 
+当前仓库源码版本为 **0.2.0**：核心包与 Web 包同步，Web 精确依赖同版本核心包；独立的 `dsh-cpa` 保持 0.1.0。两个主包声明的 DSH peer 依赖固定为 **0.1.5-alpha.1**，cordis 固定为 **4.0.2**。`engines.dsh >=0.1.5-alpha.1` 只是引擎准入下限，不代表后续 DSH 版本均已验证，也不放宽精确的 peer 依赖约束。版本与升级说明见 [v0.2.0](docs/releases/v0.2.0.md)。
+
 快速导航：[安装核心包](#安装核心包) · [可选 Web 工作台](#可选-web-工作台) · [使用方式](#两种使用方式) · [workflow](#minimal-与-legacy完整workflow) · [实验协议](#实验工程与科学协议) · [恢复](#产物与断点恢复) · [排错](#常见问题) · [目录说明](docs/project-layout.md) · [设计文档](docs/README.md)
 
 ## 能力与边界
@@ -20,7 +22,7 @@ idea → plan → work → evidence → decide → paper | failure report
 
 核心包不依赖 Web 或 CPA。Web 也不复制 DSH 的 Models/credentials 页面；provider、CPA 地址和凭据仍由 DSH 管理。CPA 的示例模型名不是官方或已验证模型，真实端点、协议能力、工具调用与计费必须由用户在自己的环境中单独验收。
 
-当前本地验证覆盖核心 `155/155`、核心 typecheck，以及 Web `60/60`。这些结果证明的是仓库代码和本地 mock/fixture 契约，不代表真实 provider、真实模型请求或真实科研结论已经通过验证。
+本轮验证为核心 `771/771`、核心 typecheck、Web `84/84`，以及显式映射到当前核心构建的 Web 文献定向测试 `7/7`；详见[验证记录](docs/verification/2026-09-20-idea-similarity-survey.md)。这些结果验证仓库代码和本地 mock/fixture 契约；另有三个公开论文检索 HTTP 请求的有限冒烟证据，不等于完整真实模型/DSH 宿主验收或科学结论验证，也不表示已发布到 npm。
 
 ## 界面预览
 
