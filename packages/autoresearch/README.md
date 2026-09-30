@@ -42,13 +42,12 @@ planner 会收到一个受限、无敏感信息的 **outer AutoResearch runtime 
 
 ## AutoResearch 模式（DSH Preset）
 
-安装时会自动安装：
-
-```text
-~/.dsh/.agent-presets/auto_research/
-  preset.yml
-  agent.cordis.yml
-```
+当前目标宿主为 DSH `0.2.0-rc.1`。安装脚本在目标 profile 的
+`cordis.patch.yml` 中注册 `@deepseek-ai/dsh-agent-preset`，模式 ID 为
+`auto-research`，并将包内的 `agent.cordis.yml` 写入其 `config.plugins`。
+新版不再通过旧的 `~/.dsh/.agent-presets/` 目录发现模式；升级后需要重新执行
+`npm run install:dsh -- web`，再重启对应 profile。重复安装会保留已有的
+`@deepseek-ai/dsh-agent-preset` 声明及其自定义配置；只有首次注册时才写入包内默认配置。
 
 DSH Agent 调用 AutoResearch 工具时，相对 `runDir` 和 `projectDir` 会以该调用
 会话的工作区目录为基准解析；显式绝对路径语义不变。没有 Agent 上下文的直接

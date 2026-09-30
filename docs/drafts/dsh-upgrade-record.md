@@ -1,5 +1,9 @@
 # DSH upgrade record
 
+Current target: `0.2.0-rc.1`. See [2026-09-29 verification](../verification/2026-09-29-dsh-0.2.0-rc.1.md)
+for installation, declarative preset migration and exact acceptance results.
+The entries below describe the historical alpha.1 upgrade.
+
 - Anchor: `0.1.5-alpha.1` (the requested `dsh-v0.1.5-alpha.1` release).
 - Installed CLI/package location: the active global `@deepseek-ai/dsh` package; no repository package is coupled to that installation path.
 - Historical execution boundary: the alpha.1 upgrade and an early `--version`/help/diagnostic sequence did touch the real default DSH home. The settings document hash was unchanged, but the Web profile metadata was rewritten (including `patchReload: live`) and the credentials format migration ran. No model request, login, or deliberate termination of an existing user process was performed.

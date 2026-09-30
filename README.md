@@ -20,7 +20,7 @@ idea → plan → work → evidence → decide → paper | failure report
 
 核心包不依赖 Web 或 CPA。Web 也不复制 DSH 的 Models/credentials 页面；provider、CPA 地址和凭据仍由 DSH 管理。CPA 的示例模型名不是官方或已验证模型，真实端点、协议能力、工具调用与计费必须由用户在自己的环境中单独验收。
 
-当前本地验证覆盖核心 `155/155`、核心 typecheck，以及 Web `60/60`。这些结果证明的是仓库代码和本地 mock/fixture 契约，不代表真实 provider、真实模型请求或真实科研结论已经通过验证。
+DSH `0.2.0-rc.1` 适配已通过核心 typecheck、预设依赖检查、Web `84/84` 测试及临时宿主的预设加载与空白会话创建。核心全量测试仍有失败，具体结果与验证边界见[升级验证记录](docs/verification/2026-09-29-dsh-0.2.0-rc.1.md)。这些检查不代表真实模型请求或科研结论已经通过验证。
 
 ## 界面预览
 
@@ -46,7 +46,7 @@ _390×844 窄屏工作台（本地临时 mock host，示例论文与聊天内容
 
 - Node.js `>=22.19.0`；
 - npm（仓库各包分别维护 `package.json`，根目录没有 npm scripts）；
-- 已创建的 DSH profile，当前适配锚点为 `0.1.5-alpha.1`；
+- 已创建的 DSH profile，当前适配锚点为 `0.2.0-rc.1`（Cordis `~4.0.4`）；
 - 使用安装脚本时，目标 profile 还需要 pnpm；
 - 可选：`tectonic`、`latexmk`、`pdflatex` 或 `xelatex` 用于 PDF；缺少编译器时，部分无头产出可使用本机 Chrome/Edge 兜底。
 

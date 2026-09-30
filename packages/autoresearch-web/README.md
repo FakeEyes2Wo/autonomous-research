@@ -187,7 +187,9 @@ After reviewing the allowlist, run the profile package manager in that profile
 public `inject: ['webServer']` declaration waits for the native web service;
 the browser `dsh.client` manifest is consumed by the host's web composition.
 The repository's Cordis/SlotCore and real local profile checks validate this
-contract for DSH 0.1.5-alpha.1.
+contract for DSH 0.2.0-rc.1 (Cordis ~4.0.4). Re-run the core package's
+`install:dsh -- web` command when upgrading: this release discovers the
+`auto-research` preset through a declarative profile row, not `.agent-presets`.
 
 The native workspace registry supplies production directories; the standalone
 allowlist is test-only. The browser cannot submit filesystem paths.

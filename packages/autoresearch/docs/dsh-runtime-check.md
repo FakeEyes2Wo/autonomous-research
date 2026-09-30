@@ -16,7 +16,14 @@ You can require the same preflight before installation changes profile or preset
 npm run install:dsh -- web --dsh-package /absolute/path/to/node_modules/@deepseek-ai/dsh/package.json
 ```
 
-Without `--dsh-package`, the installer only copies local configuration. It reports that runtime validation remains required and prints the checker command. This offline mode does not inspect or modify a global DSH installation.
+Without `--dsh-package`, the installer only writes local profile configuration. It reports that runtime validation remains required and prints the checker command. This offline mode does not inspect or modify a global DSH installation.
+
+The current target is DSH `0.2.0-rc.1` with Cordis `~4.0.4`. The installer registers
+`@deepseek-ai/dsh-agent-preset` with `config.id: auto-research` and the bundled
+plugin list under `config.plugins`. The old `.agent-presets` discovery directory
+is no longer the installation target. The preset uses `dsh-workflow-ptc`, which
+consumes the host's `ptcRuntime`; do not reinstall the removed
+`dsh-workflow-worker-thread` package to make the import check pass.
 
 If a failure names a transitive peer, repair that package in the host installation that owns the selected `dsh/package.json`. Use the exact version compatible with the surrounding DSH release; for the observed `0.1.5` release-candidate deployment, the missing workflow peer was repaired with `@deepseek-ai/dsh-workflow@0.1.5-rc.2`. Preserve the host's existing manifest and lockfile and add only the confirmed dependency. Do not broadly upgrade the DSH package family to make versions look uniform: release-candidate and alpha package versions may coexist, and the version report is evidence for reviewing that drift rather than a request to rewrite it.
 
