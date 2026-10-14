@@ -52,12 +52,17 @@ planner 会收到一个受限、无敏感信息的 **outer AutoResearch runtime 
 
 ## AutoResearch 模式（DSH Preset）
 
-安装时会自动安装：
+`npm run install:dsh -- <profile>` 会按目标宿主的机制安装 AutoResearch 模式；两种落点可以共存：
 
-```text
-~/.dsh/.agent-presets/auto_research/
-  preset.yml
-  agent.cordis.yml
+| 宿主 | 机制 | 落点 |
+|---|---|---|
+| DSH ≤ 0.1.x | 目录式：宿主扫描 preset 目录 | `~/.dsh/.agent-presets/auto-research/{preset.yml,agent.cordis.yml}` |
+| DSH ≥ 0.2.x | 插件式：宿主用 `@deepseek-ai/dsh-agent-preset` 注册 | 目标 profile 的 `cordis.patch.yml`（自动注入、幂等、写入前备份为 `cordis.patch.yml.before-autoresearch-preset`） |
+
+脚本通过检查目标 DSH 安装里是否带 `@deepseek-ai/dsh-agent-preset` / `dsh-agent-preset-registry` 来决定注入哪一种；定位不到宿主时会提示用 `--dsh-package <宿主 dsh/package.json 绝对路径>` 重跑。只查看生成的插件式条目（不写文件）：
+
+```bash
+node scripts/install-dsh-plugin.mjs web --print-preset
 ```
 
 DSH Agent 调用 AutoResearch 工具时，相对 `runDir` 和 `projectDir` 会以该调用
@@ -80,11 +85,13 @@ service 或 headless CLI 调用继续保持原有的进程相对路径语义。
 围绕当前项目做一组对比实验，输出 EXPERIMENT_REPORT.md。
 ```
 
-如果安装后没有看到该模式，重新运行：
+如果安装后没有看到该模式：
 
-```bash
-npm run install:dsh -- web
-```
+1. 确认 profile 名称正确，重新运行 `npm run install:dsh -- web`；
+2. 检查该 profile 的 `cordis.patch.yml` 里是否存在 `preset-autoresearch` 段落（0.2.x 宿主）；
+3. 在宿主日志里搜索 `agent preset auto-research:`，挂载失败会带上具体原因。
+
+> preset 在会话第一轮开始前选定（DSH 规则 `agent-preset/locked`），**已有会话无法切换**。安装或更新 preset 后必须完整重启 DSH，并**新建会话**才能看到它。
 
 > `/auto_research` 是插件注册的轻量 Slash 命令，仅用于查看帮助 / 配置 / run 状态；要自动探索目录并执行任务，请选择 **AutoResearch** Agent Preset。
 

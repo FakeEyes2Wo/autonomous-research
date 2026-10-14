@@ -2,13 +2,14 @@
 
 Optional DSH Web surface for simple AutoResearch settings and a LaTeX/PDF research workbench.
 
-Repository source version **0.2.0**, paired with the exact core peer `@athena/autoresearch: 0.2.0`. Declared DSH peers are pinned to **0.1.5-alpha.1** and cordis to **4.0.2**. `engines.dsh >=0.1.5-alpha.1` is an engine admission floor, not verification of later releases or an override of exact peer requirements. The independent `dsh-cpa` package remains 0.1.0. This source version does not assert npm publication; see the [release note](../../docs/releases/v0.2.0.md).
+Repository source version **0.2.0**, paired with the exact core peer `@athena/autoresearch: 0.2.0`. Declared DSH peers share the compatibility range `>=0.1.5-alpha.1 <0.3.0-0 || >=0.2.0-0 <0.3.0-0` and cordis stays at **4.0.2**; `engines.dsh` declares the same union range, so the `0.2.0-rc.2` host loads this package without a profile-level exact-version exemption, while `0.3.x` is still excluded. This is an engine admission range, not verification of later releases. The independent `dsh-cpa` package remains 0.1.0. This source version does not assert npm publication; see the [release note](../../docs/releases/v0.2.0.md).
 
 Recorded validation: core **771/771** and typecheck, Web **84/84**, plus **7/7** Web literature tests explicitly mapped to the current core build. These checks and the limited public HTTP smoke do not constitute complete live-model/DSH-host acceptance. See the [verification record](../../docs/verification/2026-09-20-idea-similarity-survey.md).
 
 Settings now show model source, research intensity and paper output by default;
-advanced routing/workflow/budget controls are collapsed. Open the research
-workbench from this section or the top-left native sidebar entry (`/?autoresearch=1`).
+advanced routing/workflow/budget controls are collapsed. The settings section no
+longer carries an "open research workbench" entry point; the research workbench
+is opened from the top-left native sidebar entry (`/?autoresearch=1`).
 It retains the original DSH workspace sidebar, where one native workspace
 directory is one research project. It places LaTeX and PDF above the native
 conversation, and uses DSH theme tokens. The conversation has a small
@@ -28,6 +29,20 @@ The workbench uses Tectonic selected by `workbench.compiler`, `TECTONIC_PATH`,
 or PATH. No machine-specific compiler path, mandatory local proxy or browser CDN
 is built in. Editing and saving still work if Tectonic is unavailable.
 PDF.js and its resources are copied into `dist/vendor/pdfjs` during the build.
+
+When the paper pipeline writes the finished manuscript, the next file poll opens
+it in the editor automatically. The ranking is `<project>/paper/main.tex`, then
+any `main.tex` (shallowest first, later run names first), then any other `.tex`.
+A dirty draft is never discarded: the sync notice offers the explicit switch
+instead.
+
+**在 VS Code 中打开** (labeled after whichever editor is installed) asks the
+host's same-origin `GET /open-in-app/apps` which applications exist, then posts
+`POST /open-in-app/open` with `{ "app": "<id>", "path": "<canonical project root>" }`.
+The workbench documents listing exposes that read-only `root` so the browser
+never invents a path. VS Code is preferred, otherwise the first advertised
+application is used, and an unavailable application or missing directory is
+reported in Chinese instead of failing silently.
 
 ## Literature reading
 
@@ -191,7 +206,9 @@ After reviewing the allowlist, run the profile package manager in that profile
 public `inject: ['webServer']` declaration waits for the native web service;
 the browser `dsh.client` manifest is consumed by the host's web composition.
 The repository's Cordis/SlotCore and real local profile checks validate this
-contract for DSH 0.1.5-alpha.1.
+contract for DSH `0.1.5-alpha.1`–`0.2.x`. The host peers are declared as
+`>=0.1.5-alpha.1 <0.3.0-0 || >=0.2.0-0 <0.3.0-0`, so the `0.2.0-rc.2` host
+accepts the package without a profile-level version exemption.
 
 The native workspace registry supplies production directories; the standalone
 allowlist is test-only. The browser cannot submit filesystem paths.

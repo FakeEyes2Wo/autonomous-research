@@ -5,11 +5,30 @@ import { installLiterature } from './literature-client.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/autoresearch/vendor/pdfjs/pdf.worker.mjs';
 const $ = (id) => document.getElementById(id);
-const ui = Object.fromEntries(['project', 'project-name', 'document', 'editor', 'new-document', 'save', 'compile', 'reload', 'notice', 'save-state', 'document-name', 'line-numbers', 'cursor-position', 'engine-state', 'preview-state', 'build-state', 'build-log', 'pdf-viewport', 'pdf-canvas', 'preview-empty', 'download', 'page-number', 'page-count', 'previous-page', 'next-page', 'zoom'].map((id) => [id, $(id)]));
+const ui = Object.fromEntries(['project', 'project-name', 'document', 'editor', 'new-document', 'save', 'compile', 'reload', 'open-in-app', 'notice', 'save-state', 'document-name', 'line-numbers', 'cursor-position', 'engine-state', 'preview-state', 'build-state', 'build-log', 'pdf-viewport', 'pdf-canvas', 'preview-empty', 'download', 'page-number', 'page-count', 'previous-page', 'next-page', 'zoom'].map((id) => [id, $(id)]));
 const params = new URL(location.href).searchParams;
 const workspaceManaged = params.get('workspaceManaged') === '1';
-const state = { projects: [], projectId: '', documents: [], document: null, savedSource: '', csrf: '', engine: null, loading: true, saving: false, building: false, generation: 0, projectListGeneration: 0, managedReady: false, managedPendingProject: undefined, selectionId: null, pdf: null, pdfRevision: null, pdfTask: null, pdfPending: null, renderTask: null, renderGeneration: 0, pdfGeneration: 0, page: 1 };
+const state = { projects: [], projectId: '', projectRoot: '', documents: [], document: null, savedSource: '', csrf: '', engine: null, loading: true, saving: false, building: false, generation: 0, projectListGeneration: 0, managedReady: false, managedPendingProject: undefined, selectionId: null, pdf: null, pdfRevision: null, pdfTask: null, pdfPending: null, renderTask: null, renderGeneration: 0, pdfGeneration: 0, page: 1, autoOpened: '', openInApp: undefined, appsCheckedAt: 0, openingInApp: false };
 const projectCache = new Map();
+// DSH ships open-in-app as a same-origin host route; it only lists applications
+// that are actually installed on this machine.
+const OPEN_IN_APP_LABELS = { vscode: 'VS Code', vscodeinsiders: 'VS Code Insiders', cursor: 'Cursor', windsurf: 'Windsurf', zed: 'Zed', vscodium: 'VSCodium', sublime: 'Sublime Text', textmate: 'TextMate', trae: 'Trae', fleet: 'Fleet', intellij: 'IntelliJ IDEA', webstorm: 'WebStorm', pycharm: 'PyCharm', goland: 'GoLand', clion: 'CLion', rider: 'Rider', phpstorm: 'PhpStorm', rubymine: 'RubyMine', datagrip: 'DataGrip', appcode: 'AppCode', androidstudio: 'Android Studio', eclipse: 'Eclipse', nova: 'Nova' };
+// The AutoResearch paper pipeline writes the finished manuscript to
+// <project>/paper/main.tex, and a run-scoped pipeline to
+// <project>/.runs/<run>/paper/main.tex. Prefer the project-level paper, then any
+// main.tex (shallowest first, later run names first), and only then any other .tex.
+const FINAL_PAPER_PATH = 'paper/main.tex';
+const openInAppLabel = (app) => OPEN_IN_APP_LABELS[app] || app;
+function finalPaperDocument(documents) {
+  const ranked = (Array.isArray(documents) ? documents : []).map((item) => {
+    const path = String(item?.relativePath || item?.name || '').split('\\').join('/');
+    const tier = path === FINAL_PAPER_PATH ? 0 : path === 'main.tex' || path.endsWith('/main.tex') ? 1 : path.endsWith('.tex') ? 2 : 3;
+    return { item, tier, depth: path.split('/').length, path };
+  }).filter((entry) => entry.tier < 3);
+  ranked.sort((a, b) => a.tier - b.tier || a.depth - b.depth || (a.path < b.path ? 1 : a.path > b.path ? -1 : 0));
+  return ranked.length ? ranked[0].item : null;
+}
+
 const literature = installLiterature({ getCsrf: () => state.csrf });
 const currentDirty = () => Boolean(state.document && ui.editor.value !== state.savedSource);
 const cachedDirty = () => [...projectCache.values()].some((item) => item.source !== item.savedSource);
@@ -57,6 +76,11 @@ function update() {
   ui.save.disabled = busy() || !dirty() || state.document?.orphaned;
   ui.compile.disabled = busy() || !hasDocument || state.document?.orphaned || !state.engine?.available;
   ui.reload.disabled = busy() || !state.projectId;
+  // The open-in-app button stays clickable even when nothing is detected so the
+  // user always gets an explicit Chinese reason instead of a silent no-op.
+  ui['open-in-app'].disabled = state.openingInApp;
+  ui['open-in-app'].textContent = state.openingInApp ? '正在打开…' : state.openInApp ? `在 ${openInAppLabel(state.openInApp.app)} 中打开` : '在编辑器中打开';
+  ui['open-in-app'].title = state.openInApp ? `用 ${openInAppLabel(state.openInApp.app)} 打开当前项目的根目录` : '本机未检测到 VS Code / Cursor 等编辑器，点击查看说明';
   ui.compile.textContent = state.building ? '正在编译…' : state.saving ? '正在保存…' : '▶ 保存并编译';
   ui['save-state'].textContent = state.loading ? '正在加载…' : state.saving ? '正在保存…' : !hasDocument ? '选择或新建论文' : state.document?.orphaned ? '草稿未关联文件' : dirty() ? '未保存' : '已保存';
   ui['save-state'].classList.toggle('dirty', dirty());
@@ -244,6 +268,84 @@ async function readDocument(id, generation = state.generation) {
   if (document.pdf) void showPdf(document.pdf, document.pdf.sourceRevision).catch((error) => message(`无法预览 PDF：${error.message}`));
 }
 
+// Auto-open the finished manuscript exactly once per project and document. The
+// claim also stops a later poll from pulling the user back after they picked
+// another paper on purpose.
+function claimAutoOpen(document) {
+  const key = `${state.projectId}\u0000${document?.id || ''}`;
+  if (!document?.id || state.autoOpened === key) return false;
+  state.autoOpened = key;
+  return true;
+}
+
+// switch: the requested document is open. cancelled: the user refused to drop a
+// dirty draft (the caller restores the select). failed: the document is gone.
+async function openDocument(id) {
+  if (!id) return 'failed';
+  if (state.document?.id === id) return 'switch';
+  if (!discard()) return 'cancelled';
+  if (state.document?.orphaned) projectCache.delete(state.projectId);
+  const generation = ++state.generation;
+  const projectId = state.projectId;
+  state.loading = true; state.document = null; state.savedSource = ''; ui.editor.value = ''; message(); await clearPdf();
+  try {
+    await readDocument(id, generation);
+    return generation === state.generation && state.document ? 'switch' : 'failed';
+  } catch (error) {
+    if (generation === state.generation && projectId === state.projectId) message(error.message);
+    return 'failed';
+  } finally {
+    if (generation === state.generation && projectId === state.projectId) { state.loading = false; update(); }
+  }
+}
+
+// Only the applications this machine actually has; the host route answers with
+// {"apps":[...]} and 404/400 when a requested application is unavailable.
+async function refreshApps() {
+  state.appsCheckedAt = Date.now();
+  try {
+    const response = await fetch('/open-in-app/apps', { credentials: 'same-origin', headers: { accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error(`请求失败（${response.status}）`);
+    const data = await response.json();
+    const apps = Array.isArray(data?.apps) ? data.apps.filter((item) => typeof item === 'string' && item) : [];
+    state.openInApp = apps.length ? { app: apps.includes('vscode') ? 'vscode' : apps[0] } : null;
+  } catch {
+    state.openInApp = null;
+  }
+  update();
+}
+
+async function resolveProjectRoot() {
+  if (state.projectRoot) return state.projectRoot;
+  try {
+    const data = await api(`/workbench/session-target?${query({ projectId: state.projectId })}`);
+    if (typeof data?.cwd === 'string' && data.cwd) state.projectRoot = data.cwd;
+  } catch { /* the caller reports the explicit Chinese failure below */ }
+  return state.projectRoot;
+}
+
+async function openInProjectEditor() {
+  if (state.openingInApp) return;
+  if (!state.projectId) { message('请先选择项目，再在编辑器中打开项目目录。'); return; }
+  // Retry a previously failed probe so a host that loads open-in-app late heals.
+  if (state.openInApp === undefined || (state.openInApp === null && Date.now() - state.appsCheckedAt > 8000)) await refreshApps();
+  if (!state.openInApp) { message('本机没有检测到可用编辑器（VS Code、Cursor 等），无法打开项目目录。'); return; }
+  const app = state.openInApp.app;
+  const label = openInAppLabel(app);
+  state.openingInApp = true; update();
+  try {
+    const root = await resolveProjectRoot();
+    if (!root) { message(`当前项目没有可用的绝对目录，无法在 ${label} 中打开。`); return; }
+    const response = await fetch('/open-in-app/open', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ app, path: root }), signal: AbortSignal.timeout(15000) });
+    let payload = {};
+    try { payload = await response.json(); } catch { payload = {}; }
+    if (!response.ok || payload?.ok !== true) throw new Error(payload?.error?.message || payload?.message || `请求失败（${response.status}）`);
+    message(`已在 ${label} 中打开项目目录：${root}`, true);
+  } catch (error) {
+    message(`无法在 ${label} 中打开项目目录：${error.message}`);
+  } finally { state.openingInApp = false; update(); }
+}
+
 async function loadProject(projectId, preferredDocument, { discardOrphan = false } = {}) {
   if (!projectId || !state.projects.some((project) => project.id === projectId)) return;
   literature.setProject(projectId);
@@ -251,6 +353,7 @@ async function loadProject(projectId, preferredDocument, { discardOrphan = false
   else rememberCurrentDraft();
   const generation = ++state.generation;
   state.projectId = projectId; state.document = null; state.savedSource = ''; state.documents = []; state.loading = true; state.saving = false; state.building = false;
+  state.projectRoot = ''; state.autoOpened = '';
   updateNotice();
   ui.editor.value = ''; ui.project.value = projectId; message();
   ui['build-state'].textContent = '仅在点击编译时生成 PDF'; ui['build-log'].textContent = '尚未开始编译。';
@@ -259,6 +362,10 @@ async function loadProject(projectId, preferredDocument, { discardOrphan = false
     const data = await api(`/workbench/documents?${query({ projectId })}`);
     if (generation !== state.generation) return;
     state.documents = data.documents; state.engine = data.engine;
+    // The documents listing exposes the canonical project root so the editor
+    // button can hand an absolute existing directory to DSH open-in-app.
+    if (typeof data.root === 'string' && data.root) state.projectRoot = data.root;
+    if (!state.openInApp) void refreshApps();
     ui['engine-state'].textContent = data.engine?.available ? `${data.engine.name || 'Tectonic'} · 可以编译` : '未找到 Tectonic：安装后加入 PATH，或设置插件的编译器路径。编辑与保存仍可使用。';
     options(ui.document, data.documents, '', '尚无论文');
     const cached = projectCache.get(projectId);
@@ -267,8 +374,11 @@ async function loadProject(projectId, preferredDocument, { discardOrphan = false
       restoreOrphanedDraft(projectId, cached);
     } else {
       if (cached && !cachedDocumentExists) projectCache.delete(projectId);
-      const selected = data.documents.find((doc) => doc.id === preferredDocument) || data.documents.find((doc) => doc.id === cached?.documentId) || data.documents[0];
-      if (selected) await readDocument(selected.id, generation);
+      // A project that already produced its manuscript opens on the final
+      // LaTeX instead of the alphabetically first discovery (often a run paper).
+      const final = finalPaperDocument(data.documents);
+      const selected = data.documents.find((doc) => doc.id === preferredDocument) || data.documents.find((doc) => doc.id === cached?.documentId) || final || data.documents[0];
+      if (selected) { if (selected === final) claimAutoOpen(final); await readDocument(selected.id, generation); }
     }
     if (generation !== state.generation) return;
     const pageUrl = new URL(location.href); pageUrl.searchParams.set('projectId', projectId); history.replaceState(null, '', pageUrl);
@@ -411,15 +521,8 @@ window.addEventListener('message', (event) => {
   if (event.data.type === 'request-exit' && discard()) { permitConfirmedNavigation(); window.parent.postMessage({ channel: 'autoresearch-workbench', type: 'exit' }, location.origin); }
 });
 ui.project.addEventListener('change', () => { if (!discard()) { ui.project.value = state.projectId; return; } void loadProject(ui.project.value); });
-ui.document.addEventListener('change', async () => {
-  const id = ui.document.value;
-  if (!discard()) { ui.document.value = state.document?.id || ''; return; }
-  if (state.document?.orphaned) projectCache.delete(state.projectId);
-  const generation = ++state.generation;
-  const projectId = state.projectId;
-  state.loading = true; state.document = null; state.savedSource = ''; ui.editor.value = ''; message(); await clearPdf();
-  try { await readDocument(id, generation); } catch (error) { if (generation === state.generation && projectId === state.projectId) message(error.message); } finally { if (generation === state.generation && projectId === state.projectId) { state.loading = false; update(); } }
-});
+ui.document.addEventListener('change', async () => { if (await openDocument(ui.document.value) === 'cancelled') ui.document.value = state.document?.id || ''; });
+ui['open-in-app'].addEventListener('click', () => void openInProjectEditor());
 ui.reload.addEventListener('click', () => { if (discard()) void loadProject(state.projectId, state.document?.id, { discardOrphan: Boolean(state.document?.orphaned) }); });
 $('load-update').addEventListener('click', () => { if (!busy() && discard()) void loadProject(state.projectId, pendingUpdate || state.document?.id, { discardOrphan: Boolean(state.document?.orphaned) }); });
 ui['new-document'].addEventListener('click', async () => {
@@ -475,6 +578,8 @@ async function syncFiles() {
     const discovered = listing.documents.filter((item) => !state.documents.some((known) => known.id === item.id));
     state.documents = listing.documents;
     options(ui.document, listing.documents, state.document?.id, '尚无论文');
+    if (typeof listing.root === 'string' && listing.root) state.projectRoot = listing.root;
+    const finalDocument = finalPaperDocument(listing.documents);
     if (snapshot.documentId && !listing.documents.some((item) => item.id === snapshot.documentId)) {
       ++state.generation;
       if (currentDirty() && state.document) {
@@ -491,9 +596,28 @@ async function syncFiles() {
       return;
     }
     if (!state.document && listing.documents.length) {
+      const preferred = finalDocument || listing.documents[0];
+      if (preferred === finalDocument) claimAutoOpen(finalDocument);
       state.loading = true; update();
-      try { await readDocument(listing.documents[0].id, snapshot.generation); }
-      finally { if (snapshot.generation === state.generation) { state.loading = false; update(); } }
+      try {
+        await readDocument(preferred.id, snapshot.generation);
+        if (preferred === finalDocument && snapshot.generation === state.generation && state.document?.id === finalDocument.id) message(`已自动打开最终论文：${finalDocument.relativePath || finalDocument.name}`, true);
+      } finally { if (snapshot.generation === state.generation) { state.loading = false; update(); } }
+      return;
+    }
+    // The pipeline just wrote the finished manuscript: open it in the editor as
+    // soon as the listing reports it, but never silently drop a dirty draft.
+    const finalIsNew = Boolean(finalDocument) && finalDocument.id !== state.document?.id && discovered.some((item) => item.id === finalDocument.id);
+    if (finalIsNew) {
+      if (!dirty() && claimAutoOpen(finalDocument)) {
+        state.loading = true; update();
+        try {
+          await readDocument(finalDocument.id, snapshot.generation);
+          if (snapshot.generation === state.generation && state.document?.id === finalDocument.id) message(`已自动打开最终论文：${finalDocument.relativePath || finalDocument.name}`, true);
+        } finally { if (snapshot.generation === state.generation) { state.loading = false; update(); } }
+        return;
+      }
+      updateNotice(`最终论文已生成：${finalDocument.relativePath || finalDocument.name}。当前论文有未保存修改，未自动切换。`, finalDocument.id);
       return;
     }
     if (discovered.length) updateNotice(`发现新论文：${discovered.at(-1).relativePath || discovered.at(-1).name}`, discovered.at(-1).id);
@@ -547,4 +671,5 @@ try {
     else { state.loading = false; ui['engine-state'].textContent = '请先在 DSH 插件设置中登记项目目录。'; message('尚未登记项目，请返回 DSH 配置 AutoResearch 的项目目录。'); update(); }
   }
 } catch (error) { state.loading = false; message(`工作台连接失败：${error.message}`); update(); }
+void refreshApps();
 setTimeout(watchFiles, 3000);

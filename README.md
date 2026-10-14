@@ -48,7 +48,7 @@ _390×844 窄屏工作台（本地临时 mock host，示例论文与聊天内容
 
 - Node.js `>=22.19.0`；
 - npm（仓库各包分别维护 `package.json`，根目录没有 npm scripts）；
-- 已创建的 DSH profile，当前适配锚点为 `0.1.5-alpha.1`；
+- 已创建的 DSH profile，当前适配锚点为 `0.1.5-alpha.1`–`0.2.x`：各包 `peerDependencies` 声明为 `>=0.1.5-alpha.1 <0.3.0-0 || >=0.2.0-0 <0.3.0-0`，因此 DSH `0.2.0-rc.2` 无需版本豁免即可加载；
 - 使用安装脚本时，目标 profile 还需要 pnpm；
 - 可选：`tectonic`、`latexmk`、`pdflatex` 或 `xelatex` 用于 PDF；缺少编译器时，部分无头产出可使用本机 Chrome/Edge 兜底。
 

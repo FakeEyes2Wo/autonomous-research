@@ -21,7 +21,7 @@
       <div class="project-control"><label for="project">当前项目</label><select id="project" disabled aria-label="当前项目"><option>正在加载…</option></select><span id="project-name" class="project-name" aria-live="polite">DSH 左侧工作区</span></div>
     </div>
     <div class="workspace-toolbar">
-      <button id="literature-open" class="button" disabled>文献目录</button>
+      <div class="toolbar-tools"><button id="literature-open" class="button" disabled>文献目录</button><button id="open-in-app" class="button" title="用本地编辑器打开当前项目的根目录">在编辑器中打开</button></div>
       <div class="document-controls"><span class="file-icon" aria-hidden="true">T<span>E</span>X</span><select id="document" aria-label="论文文件" disabled><option>选择论文</option></select><button id="new-document" class="button quiet" disabled>＋ 新建论文</button></div>
       <div class="save-controls"><span id="save-state" class="status" role="status">正在连接</span><button id="reload" class="button quiet" disabled title="重新读取项目中的论文">重新加载</button><button id="save" class="button" disabled>保存</button><button id="compile" class="button primary" disabled><span aria-hidden="true">▶</span> 保存并编译</button></div>
     </div>

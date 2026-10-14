@@ -81,7 +81,7 @@ try {
   assert.equal(await evaluate('document.querySelector("[aria-label=\\"AutoResearch project settings\\"]") !== null'), true)
   assert.equal(await evaluate('document.body.innerText.includes("模型来源") && document.body.innerText.includes("研究强度") && document.body.innerText.includes("论文输出")'), true)
   assert.equal(await evaluate('document.querySelector("details.ar-advanced")?.open === false'), true)
-  assert.equal(await evaluate('document.querySelector(".ar-workbench-link")?.getAttribute("href") === "/?autoresearch=1"'), true)
+  assert.equal(await evaluate('document.querySelector(".ar-workbench-link") === null && document.body.innerText.includes("打开科研工作台") === false'), true)
   assert.equal(await evaluate('document.body.innerText.includes("revision")'), false)
   assert.deepEqual(await evaluate(`(()=>Object.fromEntries(['模型来源','研究强度','论文输出'].map((name)=>{const field=[...document.querySelectorAll('label')].find((node)=>node.textContent.includes(name)); return [name,field?.querySelector('select')?.value];})))()`), { '模型来源': 'inherit', '研究强度': 'balanced', '论文输出': 'auto' })
   await page('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, deviceScaleFactor: 1, mobile: false })

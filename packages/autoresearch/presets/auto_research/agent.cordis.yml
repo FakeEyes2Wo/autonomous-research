@@ -257,8 +257,12 @@
         backgroundMode: one-shot
         maxDepth: provider-managed
 
-    - id: workflow-worker-thread
-      name: '@deepseek-ai/dsh-workflow-worker-thread'
+    # DSH 0.2.0-rc.2 removed @deepseek-ai/dsh-workflow-worker-thread (last
+    # published 0.1.5-rc.3); the shipped standard preset now supplies the same
+    # workflowEngine service from @deepseek-ai/dsh-workflow-ptc with an
+    # identical `provider: spawn` config.
+    - id: workflow-ptc
+      name: '@deepseek-ai/dsh-workflow-ptc'
       config:
         provider: spawn
 

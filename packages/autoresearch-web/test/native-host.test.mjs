@@ -66,7 +66,7 @@ test('alpha.1 client metadata is a resolvable browser graph contract', async () 
   for (const dependency of packageJson.dsh.client.inject) {
     assert.ok(packageJson.peerDependencies[dependency], `${dependency} must be declared as a peer dependency`);
   }
-  assert.equal(packageJson.engines.dsh, '>=0.1.5-alpha.1');
+  assert.equal(packageJson.engines.dsh, '>=0.1.5-alpha.1 <0.3.0-0 || >=0.2.0-0 <0.3.0-0');
 });
 
 test('Cordis host starts when the optional settings service is not injected', async () => {
