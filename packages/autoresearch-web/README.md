@@ -4,7 +4,7 @@ Optional DSH Web surface for simple AutoResearch settings and a LaTeX/PDF resear
 
 Repository source version **0.2.0**, paired with the exact core peer `@athena/autoresearch: 0.2.0`. Declared DSH peers share the compatibility range `>=0.1.5-alpha.1 <0.3.0-0 || >=0.2.0-0 <0.3.0-0` and cordis stays at **4.0.2**; `engines.dsh` declares the same union range, so the `0.2.0-rc.2` host loads this package without a profile-level exact-version exemption, while `0.3.x` is still excluded. This is an engine admission range, not verification of later releases. The independent `dsh-cpa` package remains 0.1.0. This source version does not assert npm publication; see the [release note](../../docs/releases/v0.2.0.md).
 
-Recorded validation: core **771/771** and typecheck, Web **84/84**, plus **7/7** Web literature tests explicitly mapped to the current core build. These checks and the limited public HTTP smoke do not constitute complete live-model/DSH-host acceptance. See the [verification record](../../docs/verification/2026-09-20-idea-similarity-survey.md).
+Recorded validation: core **771/771** and typecheck, Web **84/84**, plus **7/7** Web literature tests explicitly mapped to the current core build and a headless-Chrome workbench check covering the auto-open and open-in-app paths (`npm run test:final-paper:browser`). These checks and the limited public HTTP smoke do not constitute complete live-model/DSH-host acceptance. See the [verification record](../../docs/verification/2026-09-20-idea-similarity-survey.md).
 
 Settings now show model source, research intensity and paper output by default;
 advanced routing/workflow/budget controls are collapsed. The settings section no
