@@ -20,7 +20,10 @@
 # ── identity ────────────────────────────────────────────────────────────────
 
 # The preset's own persona, shadowing the deployment default for this agent.
-# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+# `{{model}}` resolves from the agent's own route. `{{cwd}}` is NOT a registered
+# prompt variable in DSH 0.2.x (the registry exposes only provider/model), so the
+# persona suffix must not reference it: doing so fails every turn while rendering
+# `deployment:persona-suffix`. Run `npm run check:preset-vars` to guard this.
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
@@ -63,7 +66,7 @@
       Then use the AutoResearch tools (research_prepare, project_paper_run, research_run, experiment_run, project_settings_*,
       paper_pipeline_*) to execute the task. Keep the user informed and interact when a
       human decision is needed.
-    suffix: Your working directory is {{cwd}}.
+    suffix: Call the shell tool (pwd) to learn the working directory; do not assume a fixed path.
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'

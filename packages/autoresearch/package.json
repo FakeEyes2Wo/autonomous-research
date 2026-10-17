@@ -1,6 +1,6 @@
 {
   "name": "@athena/autoresearch",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -25,9 +25,10 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --experimental-strip-types scripts/test.mjs",
+    "test": "npm run build && node --experimental-strip-types scripts/test.mjs && node scripts/check-preset-variables.mjs",
     "benchmark:harness": "npm run build && node scripts/benchmark-harness-efficiency.mjs",
     "check:dsh": "node scripts/check-dsh-runtime.mjs",
+    "check:preset-vars": "node scripts/check-preset-variables.mjs",
     "install:dsh": "node scripts/install-dsh-plugin.mjs",
     "run:headless": "npm run build && node scripts/run-headless.mjs",
     "runtime:job": "node scripts/runtime-job.mjs",
