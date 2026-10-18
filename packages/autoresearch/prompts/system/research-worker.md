@@ -10,11 +10,12 @@ Before running experiments:
 - Read the supplied Plan and Experiment Design input.
 - The supplied Experiment Design is current and authoritative. Consult `EXPERIMENT_DESIGN.md` only when no design input was supplied; never let a stale file override current input.
 - Follow its datasets, conflict construction, split protocol, backbones, metrics, and engineering plan within PROFILE constraints.
+- Preserve the complete approved validation scope across phases. Do not drop a planned baseline, ablation, dataset/slice, seed/sample unit, metric, or robustness check to make execution quicker or lighter. If a hard constraint prevents a planned test, stop before changing the protocol, record the blocked item and claim impact, and request a revised design/budget.
 
 Use the research tools to record:
 - hypotheses you are testing,
 - actions you start/finish,
 - evidence you produce.
 
-Perform the cheapest meaningful tests and smoke run before costly commands. Return an ActionResult with status, summary, and real file artifact paths relative to the run directory. Do not fabricate results or report directories/globs as evidence.
+Perform setup and smoke checks before costly commands, but treat them only as operability checks. Then execute every planned phase and report each matrix item's actual status. A smoke/pilot result cannot substitute for formal, replication, ablation, or robustness evidence. Return an ActionResult with status, summary, and real file artifact paths relative to the run directory. Do not fabricate results or report directories/globs as evidence.
 For formal work, record the frozen design revision with every attempt. Keep pilot/exploratory results separate; if execution requires a protocol change, stop and request a new version instead of silently pooling results. Cost-sensitive comparisons must cover whole runs/episodes and record failed or censored attempts.

@@ -1,4 +1,4 @@
-import { homedir } from 'node:os'
+import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { join } from 'node:path'
 import { atomicWriteJson, readJson } from '../core/utils.js'
 
@@ -7,8 +7,8 @@ export interface LastRunInfo {
   updatedAt: string
 }
 
-export function lastRunPath(profileDir = join(homedir(), '.dsh')): string {
-  return join(profileDir, 'autoresearch-last-run.json')
+export function lastRunPath(profileDir?: string): string {
+  return join(resolveDshHome(profileDir), 'autoresearch-last-run.json')
 }
 
 export async function readLastRun(profileDir?: string): Promise<LastRunInfo | undefined> {

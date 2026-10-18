@@ -10,6 +10,7 @@ const fixed = new Map([
   ['/autoresearch/literature.css', ['literature.css', 'text/css; charset=utf-8']],
   ['/autoresearch/workbench-sync.js', ['workbench-sync.js', 'text/javascript; charset=utf-8']],
   ['/autoresearch/workbench-chat.js', ['workbench-chat.js', 'text/javascript; charset=utf-8']],
+  ['/autoresearch/research-ui.js', ['research-ui.js', 'text/javascript; charset=utf-8']],
   ['/autoresearch/workbench.css', ['workbench.css', 'text/css; charset=utf-8']],
   ['/autoresearch/workbench-layout.css', ['workbench-layout.css', 'text/css; charset=utf-8']],
   ['/autoresearch/workbench-theme.css', ['workbench-theme.css', 'text/css; charset=utf-8']],

@@ -16,12 +16,13 @@ assert.ok(address, 'Startup log does not contain a local DSH login URL.');
 const browser = await launchBrowser();
 try {
   const { page, evaluate, waitFor } = browser;
+  const workbenchEntry = `([...document.querySelectorAll('button')].find(node => node.textContent.trim() === '科研工作台' || node.getAttribute('aria-label') === '科研工作台'))`;
   await page('Page.addScriptToEvaluateOnNewDocument', { source: `window.__arWarnings=[];{const original=console.warn.bind(console);console.warn=(...args)=>{try{window.__arWarnings.push(args.map(value=>value instanceof Error?{name:value.name,message:value.message,code:value.code}:String(value)))}catch{}return original(...args)}}` });
   await page('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
   const startAddress = new URL(address);
   if (directSession && expectedSession) { startAddress.searchParams.set('autoresearch', '1'); startAddress.searchParams.set('autoresearchSession', expectedSession); }
   await page('Page.navigate', { url: startAddress.href });
-  await waitFor('document.querySelector(".ar-native-brand")');
+  await waitFor(workbenchEntry);
   await waitFor(`document.body.innerText.includes(${JSON.stringify(workspaceTitle)})`);
   const sessionIdentity = `(()=>{const selected=document.querySelector('[role="treeitem"][aria-selected="true"]');if(!selected)return null;const dataTransfer=new DataTransfer();selected.dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer}));return dataTransfer.getData('text/plain')||null})()`;
   await waitFor(sessionIdentity);
@@ -29,7 +30,7 @@ try {
   const originalSession = await evaluate(sessionIdentity);
   assert.ok(originalSession, 'The current native session must expose its identity.');
 
-  if (!directSession) await evaluate('document.querySelector(".ar-native-brand").click()');
+  if (!directSession) await evaluate(`${workbenchEntry}.click()`);
   await waitFor('document.querySelector("[data-autoresearch-paper-frame]")');
 
   const workspaceAction = await evaluate(`(()=>{const title=${JSON.stringify(workspaceTitle)},leaf=[...document.querySelectorAll('*')].find(e=>e.children.length===0&&e.textContent.trim()===title),row=leaf?.closest('[role="treeitem"]');if(!row)return null;const box=row.getBoundingClientRect();return {x:box.left+box.width/2,y:box.top+box.height/2,expanded:row.getAttribute('aria-expanded')==='true'}})()`);
@@ -65,6 +66,9 @@ try {
   if (expectedSession) assert.equal(selectedTargetSession, expectedSession);
   else assert.notEqual(selectedTargetSession, originalSession, 'The workspace action must create a fresh session.');
   await waitFor(`(()=>{const title=${JSON.stringify(workspaceTitle)},leaf=[...document.querySelectorAll('*')].find(e=>e.children.length===0&&e.textContent.trim()===title),workspace=leaf?.closest('[role="treeitem"]'),rows=[...document.querySelectorAll('[role="treeitem"]')],start=rows.indexOf(workspace);if(start<0)return false;const following=rows.slice(start+1),boundary=following.findIndex(e=>e.hasAttribute('aria-expanded')),sessions=(boundary<0?following:following.slice(0,boundary)).filter(e=>!e.hasAttribute('aria-expanded'));return sessions.some(row=>{const transfer=new DataTransfer();row.dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer:transfer}));return transfer.getData('text/plain')===${JSON.stringify(selectedTargetSession)}})})()`);
+  // Selecting/creating a session now returns to native conversation. Open the
+  // independent workbench page again to inspect that workspace's paper.
+  await evaluate(`${workbenchEntry}.click()`);
   await waitFor(`document.querySelector('[data-autoresearch-paper-frame]')?.contentDocument?.querySelector('#project-name')?.textContent===${JSON.stringify(workspaceTitle)}`);
   const projectName = await evaluate('document.querySelector("[data-autoresearch-paper-frame]").contentDocument.querySelector("#project-name").textContent');
   const projectId = await evaluate('document.querySelector("[data-autoresearch-paper-frame]").contentDocument.querySelector("#project").value');
@@ -73,7 +77,7 @@ try {
   assert.equal(target.body.projectId, projectId);
   assert.equal(typeof target.body.workspaceId, 'string');
   assert.equal(target.body.cwd, 'D:\\teskdesk\\TEST paper');
-  await waitFor('document.querySelector(".ar-native-status")?.textContent==="AutoResearch · 连续对话"');
+  await waitFor('document.querySelector("[data-ar-prompt=generate]")?.disabled===false');
   const workbenchStatus = await evaluate('document.querySelector(".ar-native-status").textContent');
   const screenshot = await browser.screenshot('test-paper-autoresearch-session.png');
   await evaluate('document.querySelector(".ar-native-back").click()');
@@ -81,7 +85,7 @@ try {
 
   let nativeDefaultSessionCreated = false;
   if (verifyNativeDefault) {
-    await waitFor('document.querySelector(".ar-native-brand")');
+    await waitFor(workbenchEntry);
     await waitFor(`document.body.innerText.includes(${JSON.stringify(workspaceTitle)})`);
     const beforeNativeCreate = await evaluate(sessionIdentity);
     const createLabel = `在“${workspaceTitle}”中新建会话`;

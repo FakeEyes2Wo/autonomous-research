@@ -30,7 +30,7 @@ function nativeComponentHarness(remoteCreate) {
   const ctx = { get(name) { return ({ workspaces, sessions, uiWorkspace, 'remote.session': { create: remoteCreate } })[name]; }, slots: { inject(_name, callback) { return callback(); }, register(_options, component) { Component = component; return () => {}; } }, effect() {} };
   const win = { innerHeight: 800, localStorage: { getItem() { return null; }, setItem() {} }, location: { search: '?autoresearch=1', origin: 'http://localhost' }, document: { createElement() { return { remove() {} }; }, head: { appendChild() {} }, querySelector() { return null; }, body: { classList: { add() {}, remove() {} } } }, addEventListener() {}, removeEventListener() {}, getComputedStyle() { return { getPropertyValue() { return ''; }, colorScheme: 'light' }; }, ResizeObserver: class { observe() {} disconnect() {} } };
   return {
-    async mount() { const { installNativeWorkbench } = await import('../src/native-workbench-client.js'); installNativeWorkbench(ctx, React, win); state[3] = new Map([['ws-a', 'project-a']]); render(); applyEffects([1, 4]); },
+    async mount() { const { installNativeWorkbench } = await import('../src/native-workbench-client.js'); installNativeWorkbench(ctx, React, win); state[0] = new Map([['ws-a', 'project-a']]); render(); applyEffects([1, 3]); },
     render, applyEffects, state, refs, listeners, byId, opened, uiWorkspace,
     async flush() { await new Promise((resolve) => setImmediate(resolve)); },
   };
@@ -41,9 +41,9 @@ test('an unchanged native selection preserves a fresh-session error status', asy
   await harness.mount();
   harness.uiWorkspace.startSession('ws-a');
   await harness.flush();
-  assert.equal(harness.state[5], 'missing workflow package');
+  assert.equal(harness.state[2], 'missing workflow package');
   for (const listener of [...harness.listeners.workspaces, ...harness.listeners.sessions]) listener();
-  assert.equal(harness.state[5], 'missing workflow package');
+  assert.equal(harness.state[2], 'missing workflow package');
 });
 
 test('an unrelated project map update does not cancel an in-flight A session creation', async () => {
@@ -52,7 +52,7 @@ test('an unrelated project map update does not cancel an in-flight A session cre
   await harness.mount();
   harness.uiWorkspace.startSession('ws-a');
   await harness.flush();
-  harness.state[3] = new Map([['ws-a', 'project-a'], ['ws-b', 'project-b']]);
+  harness.state[0] = new Map([['ws-a', 'project-a'], ['ws-b', 'project-b']]);
   harness.render(); harness.applyEffects([4]);
   harness.byId.created = { agentPreset: 'auto-research' };
   resolveCreate({ ok: true, value: { sessionId: 'created' } });
@@ -487,7 +487,8 @@ test('browser factory loads with the real DSH SlotCore and unregisters its secti
   assert.deepEqual(inject, ['webServer']);
   const source = await readFile(new URL('../dist/client.js', import.meta.url), 'utf8');
   let handoff;
-  const context = { window: { __ModuleLoader__: { load(value) { handoff = value; } } }, document: {}, console, URLSearchParams };
+  const document = { createElement: () => ({ remove() {} }), head: { appendChild() {} } };
+  const context = { window: { document, __ModuleLoader__: { load(value) { handoff = value; } } }, document, console, URLSearchParams };
   vm.createContext(context); new vm.Script(source).runInContext(context);
   assert.equal(handoff.id, '@athena/autoresearch-web');
   const exports = handoff.factory((name) => {
@@ -497,6 +498,8 @@ test('browser factory loads with the real DSH SlotCore and unregisters its secti
   assert.equal(typeof exports.apply, 'function');
   assert.equal(Array.from(exports.inject).join(','), 'locale,slots');
   const core = new SlotCore(); core.record('settings.section').spec = { kind: 'list', scope: 'root' }; core.record('sidebar.brand.name').spec = { kind: 'single', scope: 'root' };
+  core.record('main').spec = { kind: 'keyed', scope: 'root' };
+  core.record('sidebar.panellist').spec = { kind: 'list', scope: 'root' };
   core.register({ name: 'sidebar.brand.name', id: 'official-brand', priority: 0 }, () => {});
   let dispose; const injected = [];
   let serviceLookups = 0;
@@ -511,10 +514,12 @@ test('browser factory loads with the real DSH SlotCore and unregisters its secti
   exports.apply(ctx);
   assert.equal(serviceLookups, 0);
   assert.deepEqual(core.entriesOfSlot('settings.section').map((entry) => entry.options.id), ['autoresearch']);
-  assert.deepEqual(injected, ['settings.section', 'sidebar.brand.name']);
+  assert.deepEqual(injected, ['settings.section', 'main', 'sidebar.panellist']);
   assert.equal(core.entriesOfSlot('sidebar.brand.name').length, 1);
-  assert.equal(core.entriesOfSlot('sidebar.brand.name')[0].options.priority, -100);
-  assert.equal(core.entriesOfSlot('sidebar.brand.name')[0].options.id, 'autoresearch-workbench');
+  assert.equal(core.entriesOfSlot('sidebar.brand.name')[0].options.id, 'official-brand');
+  const nav = core.entriesOfSlot('sidebar.panellist')[0];
+  assert.equal(nav.options.label(), '科研工作台');
+  assert.equal(core.entriesOfSlot('main')[0].options.key, nav.options.id);
   assert.equal(typeof dispose, 'function'); dispose(); assert.deepEqual(core.entriesOfSlot('settings.section'), []);
 });
 
@@ -597,7 +602,7 @@ test('native bridge skips optional service lookup when root mode is off', async 
 test('browser plugin declares services provided by sibling Cordis plugins', async () => {
   const source = await readFile(new URL('../dist/client.js', import.meta.url), 'utf8');
   let handoff;
-  vm.runInNewContext(source, { window: { __ModuleLoader__: { load(value) { handoff = value; } } }, URLSearchParams });
+  vm.runInNewContext(source, { window: { document: { createElement: () => ({ remove() {} }), head: { appendChild() {} } }, __ModuleLoader__: { load(value) { handoff = value; } } }, URLSearchParams });
   const client = handoff.factory(() => ({ createElement() {} }));
   const registered = [];
   const dictionariesByNamespace = new Map([['settings', new Set(['zh', 'en'])]]);
@@ -618,6 +623,9 @@ test('browser plugin declares services provided by sibling Cordis plugins', asyn
       register(options) { registered.push(options.id); return () => {}; }
     });
     scope.provide('sessions', {});
+    scope.provide('workspaces', {});
+    scope.provide('layout', {});
+    scope.provide('uiWorkspace', {});
     scope.provide('remote', {});
     scope.provide('conversation', {});
   });
@@ -626,7 +634,7 @@ test('browser plugin declares services provided by sibling Cordis plugins', asyn
     await services;
     fiber = ctx.plugin(client);
     await fiber;
-    assert.deepEqual(registered, ['autoresearch', 'autoresearch-workbench']);
+    assert.deepEqual(registered.sort(), ['autoresearch', 'autoresearch', 'autoresearch-workbench']);
   } finally {
     await fiber?.dispose();
     await services.dispose();

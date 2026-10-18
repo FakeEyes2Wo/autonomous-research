@@ -1,4 +1,4 @@
-import { homedir } from 'node:os'
+import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { join } from 'node:path'
 import { atomicWriteJson, readJson } from '../core/utils.js'
 
@@ -10,8 +10,8 @@ interface AutoModeState {
   updatedAt: string
 }
 
-export function autoModeFile(profileDir = join(homedir(), '.dsh')): string {
-  return join(profileDir, 'autoresearch-auto-mode.json')
+export function autoModeFile(profileDir?: string): string {
+  return join(resolveDshHome(profileDir), 'autoresearch-auto-mode.json')
 }
 
 export async function readAutoMode(profileDir?: string): Promise<boolean> {

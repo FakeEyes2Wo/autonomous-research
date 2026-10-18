@@ -79,15 +79,15 @@ try {
   const evaluate = async (expression) => { const result = await page('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture: true }); assert.ok(!result.exceptionDetails, JSON.stringify(result.exceptionDetails)); return result.result.value }
   for (let i = 0; i < 80; i += 1) { if (await evaluate('window.__rendered && document.querySelectorAll("input").length > 0')) break; await new Promise((resolve) => setTimeout(resolve, 100)) }
   assert.equal(await evaluate('document.querySelector("[aria-label=\\"AutoResearch project settings\\"]") !== null'), true)
-  assert.equal(await evaluate('document.body.innerText.includes("模型来源") && document.body.innerText.includes("研究强度") && document.body.innerText.includes("论文输出")'), true)
+  assert.equal(await evaluate('document.body.innerText.includes("模型来源") && document.body.innerText.includes("调度预算") && document.body.innerText.includes("论文输出")'), true)
   assert.equal(await evaluate('document.querySelector("details.ar-advanced")?.open === false'), true)
   assert.equal(await evaluate('document.querySelector(".ar-workbench-link")?.getAttribute("href") === "/?autoresearch=1"'), true)
   assert.equal(await evaluate('document.body.innerText.includes("revision")'), false)
-  assert.deepEqual(await evaluate(`(()=>Object.fromEntries(['模型来源','研究强度','论文输出'].map((name)=>{const field=[...document.querySelectorAll('label')].find((node)=>node.textContent.includes(name)); return [name,field?.querySelector('select')?.value];})))()`), { '模型来源': 'inherit', '研究强度': 'balanced', '论文输出': 'auto' })
+  assert.deepEqual(await evaluate(`(()=>Object.fromEntries(['模型来源','调度预算','论文输出'].map((name)=>{const field=[...document.querySelectorAll('label')].find((node)=>node.textContent.includes(name)); return [name,field?.querySelector('select')?.value];})))()`), { '模型来源': 'inherit', '调度预算': 'balanced', '论文输出': 'auto' })
   await page('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, deviceScaleFactor: 1, mobile: false })
   assert.equal(await evaluate('document.documentElement.scrollWidth <= document.documentElement.clientWidth'), true)
   await page('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1200, deviceScaleFactor: 1, mobile: false })
-  const customIntensity = await evaluate(`(()=>{const advanced=document.querySelector('details.ar-advanced'); advanced.open=true; const target=document.querySelector('label[data-path="workflow.candidateLimit"] input'); if(!target) throw new Error('candidateLimit input not found'); const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; setter.call(target,'4'); target.dispatchEvent(new Event('input',{bubbles:true})); return new Promise((resolve)=>setTimeout(()=>{const intensity=[...document.querySelectorAll('label')].find((node)=>node.textContent.includes('研究强度'))?.querySelector('select'); resolve({value:intensity?.value, open:advanced.open});},100));})()`)
+  const customIntensity = await evaluate(`(()=>{const advanced=document.querySelector('details.ar-advanced'); advanced.open=true; const target=document.querySelector('label[data-path="workflow.candidateLimit"] input'); if(!target) throw new Error('candidateLimit input not found'); const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; setter.call(target,'4'); target.dispatchEvent(new Event('input',{bubbles:true})); return new Promise((resolve)=>setTimeout(()=>{const intensity=[...document.querySelectorAll('label')].find((node)=>node.textContent.includes('调度预算'))?.querySelector('select'); resolve({value:intensity?.value, open:advanced.open});},100));})()`)
   assert.deepEqual(customIntensity, { value: 'custom', open: true })
   await evaluate(`(()=>{[...document.querySelectorAll('button')].find((node)=>node.textContent.includes('撤销'))?.click();})()`)
   const closeGuard = await evaluate(`(()=>{const target=document.querySelector('label[data-path="workflow.candidateLimit"] input'); const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; setter.call(target,'4'); target.dispatchEvent(new Event('input',{bubbles:true})); return new Promise((resolve)=>setTimeout(()=>{window.confirm=()=>false; [...document.querySelectorAll('button')].find((node)=>node.textContent.includes('关闭'))?.click(); resolve(window.__closed===true);},100));})()`)
@@ -109,6 +109,28 @@ try {
   assert.equal(roleConflict.conflictAlert, true)
   assert.equal(roleConflict.roleTier, '')
   assert.equal(roleConflict.rolePersisted, false)
+  const workflowSaved = await evaluate(`(async()=>{
+    const mode=[...document.querySelectorAll('label')].find(n=>n.firstChild?.textContent==='研究流程').querySelector('select');
+    mode.value='minimal'; mode.dispatchEvent(new Event('change',{bubbles:true}));
+    const rounds=document.querySelector('label[data-path="workflow.paperImprovementRounds"] input');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(rounds,'2'); rounds.dispatchEvent(new Event('input',{bubbles:true}));
+    const row=[...document.querySelectorAll('.ar-table tbody tr')].find(n=>n.textContent.includes('experiment-designer'));
+    row.querySelector('select').value='deep';row.querySelector('select').dispatchEvent(new Event('change',{bubbles:true}));
+    await new Promise(r=>setTimeout(r,100));
+    window.confirm=()=>false;
+    const click=new MouseEvent('click',{bubbles:true,cancelable:true}); document.querySelector('.ar-workbench-link').dispatchEvent(click);
+    const protectedDraft=click.defaultPrevented;
+    [...document.querySelectorAll('button')].find(n=>n.textContent==='校验并保存').click();
+    await new Promise(r=>setTimeout(r,400));
+    const saved=await (await fetch('/api/autoresearch/settings?projectId=smoke')).json();
+    [...document.querySelectorAll('button')].find(n=>n.textContent==='重新加载').click();
+    await new Promise(r=>setTimeout(r,200));
+    return {protectedDraft, mode:saved.document.workflow.mode, rounds:saved.document.workflow.paperImprovementRounds,
+      tier:saved.document.modelRouting.roles['experiment-designer'].tier,
+      restored:document.querySelector('label[data-path="workflow.paperImprovementRounds"] input').value,
+      guidance:document.querySelector('[data-ar-workflow-help]').textContent.includes('减少角色调度调用')};
+  })()`)
+  assert.deepEqual(workflowSaved, {protectedDraft:true,mode:'minimal',rounds:2,tier:'deep',restored:'2',guidance:true})
   const clearedProject = await evaluate(`(async()=>{const select=[...document.querySelectorAll('select')].find((node)=>[...node.options].some((option)=>option.value==='smoke')); if(!select) throw new Error('project selector not found'); select.value=''; select.dispatchEvent(new Event('change',{bubbles:true})); await new Promise(r=>setTimeout(r,100)); const target=document.querySelector('label[data-path="budget.maxRunTokens"] input'); return {status:document.querySelector('.ar-badge')?.textContent || '', maxRunTokens:target?.value || null};})()`)
   assert.equal(clearedProject.status, '请选择项目', JSON.stringify(clearedProject))
   assert.equal(clearedProject.maxRunTokens, null)

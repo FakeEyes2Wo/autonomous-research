@@ -39,7 +39,7 @@ h1 { font-size: 23px; letter-spacing: -.6px; }
 .chat-actions .text-button { font-size: 10px; }
 .chat-actions { flex-shrink: 0; }
 .chat-content { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; border-radius: 0 0 12px 12px; }
-.chat-prompts { display: flex; align-items: center; gap: 7px; padding: 7px 14px 2px; flex-shrink: 0; }
+.chat-prompts { display: flex; align-items: center; gap: 7px; padding: 7px 14px 2px; flex-shrink: 0; overflow-x: auto; }
 .chat-prompts button { border: 1px solid #dde8df; color: #426a56; background: #f6faf5; border-radius: 6px; padding: 4px 9px; font-size: 10px; white-space: nowrap; }
 .chat-prompts button:hover:enabled { background: #e8f1e6; }
 #chat-hint { margin-left: auto; color: var(--muted); font-size: 9px; }

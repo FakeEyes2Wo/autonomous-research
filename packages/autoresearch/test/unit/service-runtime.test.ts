@@ -75,7 +75,7 @@ test('experiment reflexion reviews the second redesign before returning it', asy
       reviewCalls += 1
       return {
         text: '',
-        structured: { feasibility: 'high', generalizability: 'high', risks: [], failureDirections: [], verdict: reviewCalls < 3 ? 'revise' : 'proceed' },
+        structured: { feasibility: 'high', generalizability: 'high', completeness: 'complete', coverageGaps: [], risks: [], failureDirections: [], verdict: reviewCalls < 3 ? 'revise' : 'proceed' },
         stopReason: 'completed',
       }
     }

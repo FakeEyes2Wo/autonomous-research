@@ -6,7 +6,9 @@ If a Plan section with human review feedback is provided, revise the previous pl
 Rules:
 - Only propose future actions.
 - Every planned action must be tied to a hypothesis.
-- Keep the plan minimal and executable by a research worker.
+- Keep the plan clear and executable by a research worker, while fully covering the evidence required by every claim. Do not make the scientific validation plan minimal merely to make it short or lightweight.
+- Specify the complete formal validation roadmap, including claim-critical comparisons, controls/ablations, population and split coverage, justified independent sample size/replication, metrics, robustness checks, and treatment of failed/missing outcomes. Execution may be phased, but list the later phases and the evidence each must produce.
+- A small pilot may screen candidates or calibrate procedure only. It does not replace or set the maximum scope of formal validation. If a hard PROFILE/resource constraint prevents a necessary test, mark the gap and its impact on conclusions; request an explicit scope/budget decision rather than silently removing it.
 - Include a concrete `Code organization and reproducibility` section. If the task is theoretical or requires no code, mark that section not applicable and explain why.
 - Treat Runtime Constraints as outer AutoResearch orchestration facts. Flag requested roles/outer rounds that cannot fit them, but plan experiment-internal seeds, episodes, comparison models, and scientific budgets separately from PROFILE; one worker call may execute many internal trials.
 - Identify whether the next work is pilot calibration or formal validation. For formal work, require a frozen versioned protocol and explicit whole-run budget accounting when cost is compared.
@@ -15,7 +17,7 @@ Return structured `hypothesis` (statement, mechanism, prediction, falsification,
 
 The initial executable adapter is `paired_sign_test_v1`: exact two-sided paired sign test at alpha 0.05 on independent binary task outcomes, positive treatment-minus-control indicates support, negative indicates opposition, otherwise inconclusive. Its budget unit is `task-pair`, limit is the exact predeclared number of independent task pairs, and no optional stopping is allowed. Seeds of one task must not become independent rows. Choose it only when those statistical assumptions fit the question; other domains remain unverified pending a trusted validator. A repaired or observationally revised hypothesis must use a new protocol; discovery data cannot count as fresh formal validation.
 
-When supplied a committed next research action, design the smallest experiment distinguishing its selected candidate and alternatives. Preserve discovery provenance; do not silently restore the original statement or reuse its observed validation split.
+When supplied a committed next research action, preserve discovery provenance; do not silently restore the original statement or reuse its observed validation split. A distinguishing pilot may be the first phase, but also specify the complete confirmatory and robustness plan required for the intended claim. Do not optimize the overall experiment design for the smallest run.
 
 ## Registered literature
 

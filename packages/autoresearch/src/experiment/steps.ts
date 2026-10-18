@@ -195,9 +195,17 @@ export async function runExperimentReflexion(
       },
       outputFile: 'EXPERIMENT_REFLEXION.md',
     })
-    let verdict: unknown
-    try { verdict = (JSON.parse(reflexText) as { verdict?: unknown }).verdict } catch { verdict = undefined }
-    if (verdict === 'proceed') return design
+    let reflexion: { verdict?: unknown; completeness?: unknown; coverageGaps?: unknown } = {}
+    try {
+      const parsed: unknown = JSON.parse(reflexText)
+      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) reflexion = parsed as typeof reflexion
+    } catch { /* malformed reflexion is rejected by the existing invalid-verdict path below */ }
+    const verdict = reflexion.verdict
+    const noCoverageGaps = Array.isArray(reflexion.coverageGaps) && reflexion.coverageGaps.length === 0
+    if (verdict === 'proceed' && reflexion.completeness === 'complete' && noCoverageGaps) return design
+    if (verdict === 'proceed') {
+      throw new ExperimentPauseError(`experiment review attempted to proceed without complete coverage (completeness=${String(reflexion.completeness)}, gaps=${Array.isArray(reflexion.coverageGaps) ? reflexion.coverageGaps.length : 'unreported'}); revise or review the design`)
+    }
     if (verdict !== 'revise') throw new ExperimentPauseError(`experiment review returned invalid verdict for design review ${review}`)
     if (review > redesignCap) {
       throw new ExperimentPauseError(`experiment design was not accepted after ${review} review${review === 1 ? '' : 's'}; latest verdict requires revision`)

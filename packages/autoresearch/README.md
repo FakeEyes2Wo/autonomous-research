@@ -34,6 +34,8 @@ Python 项目优先沿用仓库已经选择的工具；manifest 还需配合可�
 
 `workflow.mode=minimal` 保持 planner → worker → 本地 evidence → supervisor 的低调用流程，worker 自行承担重要逻辑测试和 smoke check；research minimal 仅在既有策略要求时进行可选的 post-work review，且该审查只能接受已执行协议或暂停，不能为旧结果追溯改写设计。完整流程会额外使用 minimal verifier、model scout、experiment designer/reflexion 和 evidence agent。两种模式使用同一工程约定，不增加强制角色或新 checkpoint。
 
+低调用流程只减少 orchestration 开销，不缩小科学验证范围。Planner/worker 仍须列出并执行目标结论所需的完整验证；minimal verifier 的小数据、少量 seed、简单模型与 smoke 结果仅用于试跑或校准，不构成正式设计上限。若 PROFILE 或实际资源无法覆盖某项 claim-critical 测试，保留缺口并说明结论边界，等待明确的预算/范围调整。
+
 planner 会收到一个受限、无敏感信息的 **outer AutoResearch runtime constraints** 区块：有效 workflow mode、outer cycle/round 上限、外层角色模型路由的已知/继承状态、相关 review 策略和全局 LLM 上限。它不代表实验内部的 seed、episode、重试、被研究模型或科学预算；外层路由关闭也不禁止多模型实验。
 
 运行时现在强制两项基本门槛：完整模式最多允许两次自动 redesign，但返回给 worker 的精确版本必须再获得 `proceed`；worker 的结构化结果必须为 completed、摘要非空，并至少列出一个真实、普通、解析后仍位于 real run root 内的文件。缺失文件、目录、glob、遍历、逃逸 symlink、失败或 malformed 输出会在 evidence/supervisor 前进入 `PAUSED` 并保留报告/checkpoint；恢复时缓存 work 也会重新做同样校验，不重跑已完成 worker。旧的 terminal completed run 不追溯修改。

@@ -96,6 +96,21 @@ export const researchRoleSpecs = {
       metrics: { type: 'array', items: { type: 'string' }, required: true },
       rootCauseValidation: { type: 'string', required: true },
       limitations: { type: 'array', items: { type: 'string' }, required: true },
+      coverageMatrix: {
+        type: 'array',
+        required: true,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            dimension: { type: 'string', required: true },
+            status: { type: 'string', enum: ['included', 'staged', 'not_applicable', 'blocked'], required: true },
+            plannedWork: { type: 'string', required: true },
+            rationale: { type: 'string', required: true },
+            claimImpact: { type: 'string', required: true },
+          },
+        },
+      },
       engineeringPlan: { type: 'string' },
     }),
   },
@@ -104,6 +119,8 @@ export const researchRoleSpecs = {
     outputSchema: objectSchema({
       feasibility: { type: 'string', enum: ['high', 'medium', 'low'], required: true },
       generalizability: { type: 'string', enum: ['high', 'medium', 'low'], required: true },
+      completeness: { type: 'string', enum: ['complete', 'incomplete'], required: true },
+      coverageGaps: { type: 'array', items: { type: 'string' }, required: true },
       risks: { type: 'array', items: { type: 'string' }, required: true },
       failureDirections: { type: 'array', items: { type: 'string' }, required: true },
       verdict: { type: 'string', enum: ['proceed', 'revise'], required: true },

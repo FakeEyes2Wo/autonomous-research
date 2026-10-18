@@ -94,6 +94,12 @@ try {
   await waitFor('document.querySelector("#native-chat").contentWindow.drafts.length === 1');
   assert.match(await evaluate('document.querySelector("#native-chat").contentWindow.drafts[0]'), /paper\/main.tex/);
   assert.equal(await evaluate('document.querySelector("#native-chat").contentWindow.binds.length'), 1);
+  await evaluate('document.querySelector("#chat-design").click()');
+  await waitFor('document.querySelector("#native-chat").contentWindow.drafts.length === 2');
+  assert.match(await evaluate('document.querySelector("#native-chat").contentWindow.drafts[1]'), /完整验证覆盖矩阵/);
+  await evaluate('document.querySelector("#chat-review").click()');
+  await waitFor('document.querySelector("#native-chat").contentWindow.drafts.length === 3');
+  assert.match(await evaluate('document.querySelector("#native-chat").contentWindow.drafts[2]'), /设计完整性和实际执行状态/);
   await evaluate('document.querySelector("#chat-collapse").click()');
   assert.equal(await evaluate('document.querySelector("#chat-content").hidden'), true);
   await evaluate('document.querySelector("#chat-collapse").click();document.querySelector("#chat-resize").dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowUp",bubbles:true}))');
@@ -169,6 +175,7 @@ try {
   const saveStarted = new Promise((resolve) => { saveRequestStarted = resolve; });
   await evaluate(`document.querySelector('#paper-frame').contentDocument.querySelector('#save').click()`);
   await saveStarted;
+  assert.equal(await evaluate(`(()=>{const w=document.querySelector('#paper-frame').contentWindow;return w.dispatchEvent(new w.Event('autoresearch-before-leave',{cancelable:true}))})()`), false, 'Unmount must wait for an in-flight save');
   await evaluate(`(()=>{const w=document.querySelector('#paper-frame').contentWindow;const e=w.document.querySelector('#editor');e.value+=String.fromCharCode(10)+'% newer than delayed save';e.dispatchEvent(new w.Event('input',{bubbles:true}));w.postMessage({channel:'autoresearch-workbench',type:'select-project',projectId:'second',selectionId:'managed-second-4'},location.origin)})()`);
   await waitFor('document.querySelector("#paper-frame").contentDocument.querySelector("#editor").value.includes("A Second Research Workspace")');
   await evaluate(`document.querySelector('#paper-frame').contentWindow.postMessage({channel:'autoresearch-workbench',type:'select-project',projectId:'smoke',selectionId:'managed-smoke-5'},location.origin)`);
@@ -205,6 +212,7 @@ try {
   await waitForFileContains(secondSourcePath, '% embedded draft');
   assert.equal(await evaluate(`(async()=>{const w=document.querySelector('#paper-frame').contentWindow,d=w.document,projectId=d.querySelector('#project').value,documentId=d.querySelector('#document').value,response=await w.fetch('/api/autoresearch/workbench/document?'+new URLSearchParams({projectId,documentId}));return response.ok&&(await response.json()).source===d.querySelector('#editor').value})()`), true, 'The managed second-project save must reach the selected document.');
   assert.equal(await evaluate('document.querySelector("#paper-frame").contentDocument.querySelector("#save-state").textContent'), '未保存', 'The preserved smoke-project draft keeps the global dirty indicator active.');
+  assert.equal(await evaluate(`(()=>{const w=document.querySelector('#paper-frame').contentWindow;return w.dispatchEvent(new w.Event('autoresearch-before-leave',{cancelable:true}))})()`), false, 'A cached draft in another project also prevents unmount');
   await evaluate(`document.querySelector('#paper-frame').contentWindow.postMessage({channel:'autoresearch-workbench',type:'select-project',projectId:'smoke',selectionId:'managed-smoke-exit-8'},location.origin)`);
   await waitFor('paperMessages.some(m=>m.type==="context" && m.selectionId==="managed-smoke-exit-8" && m.document?.relativePath==="paper/main.tex" && m.dirty===true) && document.querySelector("#paper-frame").contentDocument.querySelector("#editor").value.includes("managed local conflict draft")');
   await evaluate(`(()=>{const w=document.querySelector('#paper-frame').contentWindow;w.confirm=()=>true;w.postMessage({channel:'autoresearch-workbench',type:'request-exit'},location.origin)})()`);

@@ -28,7 +28,7 @@ test('prompt factory delivers shared engineering guidance only to experiment rol
 
   for (const role of relevant) {
     const prompt = await buildPrompt(role, { runDir })
-    assert.match(prompt, /Lightweight experiment engineering/i, `${role} missed shared guidance`)
+    assert.match(prompt, /Experimental engineering and scientific coverage/i, `${role} missed shared guidance`)
     assert.match(prompt, /experiment\/README\.md/)
   }
   assert.doesNotMatch(await buildPrompt('writer', { runDir }), /Lightweight experiment engineering/i)
@@ -121,6 +121,10 @@ class RedesignProvider extends FakeAgentProvider implements RoleAgentProvider {
           metrics: ['accuracy'],
           rootCauseValidation: 'cross-model comparison',
           limitations: [],
+          coverageMatrix: [{
+            dimension: 'claim validation', status: 'included', plannedWork: 'compare model variants',
+            rationale: 'fixture covers the primary claim', claimImpact: 'supports the fixture claim only',
+          }],
           engineeringPlan: revised ? 'revised engineering layout' : 'initial engineering layout',
         },
         stopReason: 'completed',
@@ -135,6 +139,8 @@ class RedesignProvider extends FakeAgentProvider implements RoleAgentProvider {
         structured: {
           feasibility: 'high',
           generalizability: 'high',
+          completeness: 'complete',
+          coverageGaps: [],
           risks: [],
           failureDirections: [],
           verdict: this.reflexionCalls === 1 ? 'revise' : 'proceed',

@@ -3,9 +3,14 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { assertSupportedJsonSchema, validateJsonSchemaValue } from '@deepseek-ai/dsh-tools'
 import { bindToolWorkspacePaths, projectSettingsGet, researchHypothesisAdd, researchActionStart, researchActionFinish, researchEvidenceAdd, researchTreeQuery, researchObservationRead, researchVerifiedReceipt } from '../../dist/tools/index.js'
 
 const exec = { signal: new AbortController().signal }
+
+test('research_tree_query output schema is accepted by dsh', () => {
+  assert.doesNotThrow(() => assertSupportedJsonSchema(researchTreeQuery.output.schema))
+})
 
 test('research tools maintain parent/artifact rules', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-tools-'))
@@ -16,6 +21,7 @@ test('research tools maintain parent/artifact rules', async () => {
     await researchEvidenceAdd.execute({ runDir: dir, actionId: action.id, content: 'evidence', verdict: 'supports' }, exec)
 
     const nodes = await researchTreeQuery.execute({ runDir: dir }, exec) as Array<{ kind: string; status: string }>
+    assert.deepEqual(validateJsonSchemaValue(researchTreeQuery.output.schema, nodes), [])
     assert.equal(nodes.filter((n) => n.kind === 'hypothesis').length, 1)
     assert.equal(nodes.filter((n) => n.kind === 'action').length, 1)
     assert.equal(nodes.filter((n) => n.kind === 'evidence').length, 1)
@@ -49,6 +55,7 @@ test('research_tree_query opt-in packing and observation tools provide exact ret
     const hyp = await researchHypothesisAdd.execute({ runDir: dir, content: 'large hypothesis ' + 'x'.repeat(4000) }, exec) as { id: string }
     const result = await researchTreeQuery.execute({ runDir: dir, packObservation: true, observationThresholdBytes: 1, observationExcerptBytes: 11, observationTaskId: 'task-1', observationDirection: 'direction-a' }, exec) as { observation: { handle: string; owner: { taskId?: string } } }
     assert.equal(result.observation.owner.taskId, 'task-1')
+    assert.deepEqual(validateJsonSchemaValue(researchTreeQuery.output.schema, result), [])
     const page = await researchObservationRead.execute({ runDir: dir, handle: result.observation.handle, limitBytes: 13 }, exec) as { text: string; nextOffset: number }
     assert.ok(page.text.length > 0)
     const receipt = await researchVerifiedReceipt.execute({ runDir: dir, handle: result.observation.handle, source: 'tree-query', quotes: [page.text] }, exec) as { scientificStatus: string; status: string }

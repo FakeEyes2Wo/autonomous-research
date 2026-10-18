@@ -227,7 +227,7 @@ export const researchTreeQuery: ToolDefinitionLike = {
     required: ['runDir'],
     additionalProperties: false,
   },
-  output: { schema: { anyOf: [{ type: 'array', items: { type: 'object', additionalProperties: true } }, { type: 'object', properties: { observation: { type: 'object', additionalProperties: true }, count: { type: 'number' } }, required: ['observation', 'count'], additionalProperties: false }] }, render: renderJson },
+  output: { schema: { oneOf: [{ type: 'array', items: { type: 'object', additionalProperties: true } }, { type: 'object', properties: { observation: { type: 'object', additionalProperties: true }, count: { type: 'number' } }, required: ['observation', 'count'], additionalProperties: false }] }, render: renderJson },
   async execute(args) {
     const tree = await ResearchTree.load(requireRunDir(args))
     const result = tree.query({

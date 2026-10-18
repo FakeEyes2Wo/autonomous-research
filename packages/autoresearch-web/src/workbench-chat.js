@@ -1,9 +1,18 @@
+import { RESEARCH_ACTIONS, researchActionDisabled, researchPrompt } from './research-ui.js';
+
 const CHANNEL = 'autoresearch-workbench';
 const $ = (id) => document.getElementById(id);
 
 export function installChat({ api, getContext, canLeave }) {
   const panel = $('research-chat');
   const frame = $('native-chat');
+  const actions = document.querySelector('.chat-prompts');
+  for (const action of RESEARCH_ACTIONS) {
+    const button = document.createElement('button');
+    button.id = `chat-${action.id}`; button.textContent = action.label; button.title = action.description; button.disabled = true;
+    button.addEventListener('click', () => prompt(action.id));
+    actions.insertBefore(button, $('chat-hint'));
+  }
   let current = null;
   let target = null;
   let ready = false;
@@ -59,9 +68,7 @@ export function installChat({ api, getContext, canLeave }) {
   }
   function refreshButtons() {
     const context = getContext();
-    $('chat-generate').disabled = !ready || context.busy;
-    $('chat-refine').disabled = !ready || !context.document || context.dirty || context.busy;
-    $('chat-review').disabled = !ready || !context.document || context.dirty || context.busy;
+    for (const action of RESEARCH_ACTIONS) $('chat-' + action.id).disabled = researchActionDisabled(action.id, { ...context, ready });
     $('chat-hint').textContent = context.dirty ? '先保存论文，再将最新内容带入对话' : '快捷指令会填入草稿，由你发送';
   }
   function bind() {
@@ -128,19 +135,9 @@ export function installChat({ api, getContext, canLeave }) {
   $('chat-open-dsh').addEventListener('click', (event) => { if (!canLeave()) event.preventDefault(); });
   function prompt(kind) {
     const context = getContext();
-    if (!ready || context.busy || (kind !== 'generate' && (context.dirty || !context.document))) return;
-    const path = context.document?.relativePath;
-    const paper = path ? `当前论文源文件：${JSON.stringify(path)}（相对于当前项目）。请先读取文件。\n` : '';
-    const prompts = {
-      generate: '请使用 AutoResearch 根据我们讨论的研究问题开展研究并生成论文。先与我确认研究问题和评价标准；正式运行时使用项目下独立的 .runs 目录，保存 main.tex、参考文献及可用的 PDF。不要编造实验结果或引用。\n我的研究想法：',
-      refine: `${paper}请结合此前对话改进这篇论文，先说明计划再修改源文件，保留已验证的结论和引用。完成后总结修改，并按需编译 PDF。不要重新运行已完成的研究来替代论文修订。\n本轮修改要求：`,
-      review: `${paper}请检查论文的论证、实验设计与结论是否得到证据支持，标出最需要改进的部分，并给出可以在下一轮逐项讨论的修改建议。不要编造数据或参考文献。`,
-    };
-    send({ type: 'draft', projectId: current, sessionId, text: prompts[kind] });
+    if (researchActionDisabled(kind, { ...context, ready })) return;
+    send({ type: 'draft', projectId: current, sessionId, text: researchPrompt(kind, context.document) });
   }
-  $('chat-generate').addEventListener('click', () => prompt('generate'));
-  $('chat-refine').addEventListener('click', () => prompt('refine'));
-  $('chat-review').addEventListener('click', () => prompt('review'));
   return { update() {
     const context = getContext();
     if (context.projectId && current !== context.projectId) void selectProject(context.projectId);

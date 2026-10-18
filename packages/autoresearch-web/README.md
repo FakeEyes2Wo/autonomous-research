@@ -2,14 +2,23 @@
 
 Optional DSH Web surface for simple AutoResearch settings and a LaTeX/PDF research workbench.
 
-Settings now show model source, research intensity and paper output by default;
-advanced routing/workflow/budget controls are collapsed. Open the research
-workbench from this section or the top-left native sidebar entry (`/?autoresearch=1`).
+Settings show model source, orchestration budget, paper output, workflow mode
+and paper improvement rounds. Low-call and full research workflows both require
+the scientific validation needed by the claim; pilot results do not replace
+formal coverage. Advanced routing covers all core research and paper roles.
+Open the workbench from the dedicated **科研工作台** sidebar row (also available
+as an icon in the collapsed rail), the settings link, or `/?autoresearch=1`.
+The sidebar keeps the original DSH brand. Re-entering an open workbench does
+not reload it, and leaving it checks for unsaved paper edits.
 It retains the original DSH workspace sidebar, where one native workspace
-directory is one research project. It places LaTeX and PDF above the native
-conversation, and uses DSH theme tokens. The conversation has a small
-outer margin and can be resized or collapsed. Research shortcuts populate the
-native draft for the user to send; generated papers and external edits are
+directory is one research project. The workbench is an independent native main
+page that fills the content area. It uses DSH theme tokens and includes an
+explicit **返回聊天** action; other sidebar pages and sessions remain usable.
+Unsaved paper edits require confirmation before leaving, and in-flight saves
+finish before navigation. Research shortcuts populate the native draft and
+switch to conversation for the user to send: start research, design experiments, review
+evidence, write a paper, or refine the current paper. Only refinement requires
+an existing paper. Generated papers and external edits are
 discovered without overwriting unsaved source drafts. See the
 [conversation and portability guide](../../docs/guides/2026-09-10-conversational-workbench-guide.md).
 
@@ -18,7 +27,10 @@ the workbench to another research directory, open one of that workspace's
 sessions or use the `+` action on its row. While the research workbench is
 open, workspace-row and global new-session actions create a fresh AutoResearch
 session in the selected native workspace; they do not reuse the remembered
-conversation or the directory that was active previously.
+conversation or the directory that was active previously. Selecting or creating
+a session opens the conversation page; click **科研工作台** again to edit that
+workspace's paper. Reopening uses saved document content; canceled navigation
+keeps the existing draft intact.
 
 The workbench uses Tectonic selected by `workbench.compiler`, `TECTONIC_PATH`,
 or PATH. No machine-specific compiler path, mandatory local proxy or browser CDN
@@ -74,9 +86,9 @@ checks, not retrieval benchmarks or provider quality evaluations.
 The package registers one `settings.section` entry and a loopback, same-origin
 API. It does not replace DSH Settings → Models: providers, CPA base URLs and
 credentials remain owned by the native Models page. The AutoResearch page shows
-three primary controls—model source, research intensity and paper output.
-Advanced routing, workflow and budget declarations remain available in the
-collapsed section.
+model source, orchestration budget, paper output, workflow mode and paper
+improvement rounds. Advanced routing and detailed budget declarations remain
+available in the collapsed section.
 
 The earlier DSH deployment record predates the workspace-managed workbench.
 It does not verify the current native workspace/session integration.

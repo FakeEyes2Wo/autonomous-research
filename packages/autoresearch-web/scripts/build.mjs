@@ -11,11 +11,12 @@ await mkdir(dist, { recursive: true });
 await cp(source, dist, { recursive: true });
 // Keep a single DSH lazy factory: the host applies this package once. The native
 // bridge is a source module for testing and is inlined into that factory here.
-const nativeBridge = (await readFile(resolve(source, 'native-workbench-client.js'), 'utf8')).replace(/^export /gm, '');
+const sharedUi = (await readFile(resolve(source, 'research-ui.js'), 'utf8')).replace(/^export /gm, '');
+const nativeBridge = (await readFile(resolve(source, 'native-workbench-client.js'), 'utf8')).replace(/^import .* from '\.\/research-ui\.js';\r?\n/m, '').replace(/^export /gm, '');
 const client = await readFile(resolve(source, 'client.js'), 'utf8');
 const marker = "    const React = require('react');";
 if (!client.includes(marker)) throw new Error('DSH client factory insertion point is missing');
-await writeFile(resolve(dist, 'client.js'), client.replace(marker, `${nativeBridge}\n${marker}`));
+await writeFile(resolve(dist, 'client.js'), client.replace(marker, `${sharedUi}\n${nativeBridge}\n${marker}`));
 const require = createRequire(import.meta.url);
 const pdfjs = dirname(require.resolve('pdfjs-dist/package.json'));
 const vendor = resolve(dist, 'vendor/pdfjs');

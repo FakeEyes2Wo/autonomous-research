@@ -10,6 +10,7 @@ Allowed to reduce complexity:
 
 Rules:
 - Do not claim the hypothesis is fully validated.
+- This is only a screening/calibration stage. Its small data, simple model, few seeds, short run, or limited metrics must never cap or replace the later full experiment design. Explicitly identify what it did not test and pass those gaps forward.
 - Label this output as pilot/exploratory. If it changes metrics, splits, seeds, baselines, budgets, tolerances, or stopping rules, require a new formal design version; do not pool it silently with formal results.
 - Record commands, checks, failures, and real file artifacts in a clearly named probe directory under `<runDir>/work/`.
 - Return feasibility: feasible / uncertain / infeasible.

@@ -81,6 +81,7 @@ function cursor() {
   ui['cursor-position'].textContent = `行 ${lines.length}，列 ${lines.at(-1).length + 1}`;
 }
 function editorChanged() {
+  confirmedNavigation = false;
   const lines = ui.editor.value.split('\n').length;
   ui['line-numbers'].textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
   ui['line-numbers'].scrollTop = ui.editor.scrollTop;
@@ -95,7 +96,7 @@ function options(select, items, selected, empty) {
   for (const item of items) select.add(new Option(item.relativePath || item.name, item.id));
   select.value = selected || '';
 }
-function discard() { return !dirty() || window.confirm('还有未保存的 LaTeX 修改，确定离开当前论文？'); }
+function discard() { return !dirty() || window.confirm('还有未保存的 LaTeX 修改。点击「确定」放弃修改并离开，或点击「取消」返回保存。'); }
 
 function rememberCurrentDraft() {
   if (!workspaceManaged || !state.projectId || !state.document) return;
@@ -364,6 +365,16 @@ function permitConfirmedNavigation() {
   setTimeout(() => { confirmedNavigation = false; }, 1000);
 }
 window.addEventListener('beforeunload', (event) => { if (dirty() && !confirmedNavigation) { event.preventDefault(); event.returnValue = ''; } });
+// Native panel switches unmount the iframe without a browser beforeunload.
+// A same-origin, synchronous event lets navigation check the latest editor
+// state, including changes whose postMessage context has not arrived yet.
+window.addEventListener('autoresearch-before-leave', (event) => {
+  if (!embedded) return;
+  if (state.saving) { message('正在保存论文，请保存完成后再离开。'); event.preventDefault(); return; }
+  if (confirmedNavigation) return;
+  if (!discard()) event.preventDefault();
+  else permitConfirmedNavigation();
+});
 for (const anchor of [$('back-dsh'), document.querySelector('.brand')]) anchor.addEventListener('click', (event) => {
   if (!discard()) { event.preventDefault(); return; }
   if (embedded) { event.preventDefault(); permitConfirmedNavigation(); window.parent.postMessage({ channel: 'autoresearch-workbench', type: 'exit' }, location.origin); return; }

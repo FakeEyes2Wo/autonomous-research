@@ -86,11 +86,15 @@ export class FakeAgentProvider implements RoleAgentProvider {
             metrics: ['accuracy', 'reliability'],
             rootCauseValidation: 'cross-backbone consistent pattern',
             limitations: ['limited domains'],
+            coverageMatrix: [{
+              dimension: 'claim validation', status: 'included', plannedWork: 'compare registered fixture baselines',
+              rationale: 'required to exercise the designer schema', claimImpact: 'supports the fixture claim only',
+            }],
           },
           stopReason: 'completed',
         }
       case 'experiment-reflexion':
-        return { text: '', structured: { feasibility: 'high', generalizability: 'high', risks: [], failureDirections: [], verdict: this.script.experimentVerdicts?.shift() ?? 'proceed' }, stopReason: 'completed' }
+        return { text: '', structured: { feasibility: 'high', generalizability: 'high', completeness: 'complete', coverageGaps: [], risks: [], failureDirections: [], verdict: this.script.experimentVerdicts?.shift() ?? 'proceed' }, stopReason: 'completed' }
       case 'result-reflexion':
         return { text: '', structured: { summary: 'ok', failureAnalysis: 'none', explorationDirections: ['try more backbones'] }, stopReason: 'completed' }
       case 'insight-abstractor':
