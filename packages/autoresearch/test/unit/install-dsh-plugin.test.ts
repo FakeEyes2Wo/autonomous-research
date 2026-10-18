@@ -9,11 +9,25 @@ import { parse } from 'yaml'
 
 const yamlJsTag = { tag: 'tag:yaml.org,2002:js', resolve: (value: string) => value }
 
+async function createHost(profile: string, modern: boolean) {
+  const host = join(profile, 'node_modules', '@deepseek-ai', 'dsh')
+  await mkdir(host, { recursive: true })
+  await writeFile(join(host, 'package.json'), '{"name":"@deepseek-ai/dsh"}')
+  if (modern) {
+    for (const name of ['dsh-agent-preset', 'dsh-agent-preset-registry']) {
+      const directory = join(host, 'node_modules', '@deepseek-ai', name)
+      await mkdir(directory, { recursive: true })
+      await writeFile(join(directory, 'package.json'), '{}')
+    }
+  }
+}
+
 test('installer adds the core plugin beside autoresearch-web and stays idempotent', async (t) => {
   const dshTestHome = await mkdtemp(join(tmpdir(), 'ar-install-'))
   t.after(() => rm(dshTestHome, { recursive: true, force: true }))
   const profile = join(dshTestHome, 'profiles', 'web')
   await mkdir(profile, { recursive: true })
+  await createHost(profile, true)
   await writeFile(join(profile, 'package.json'), JSON.stringify({ private: true, dependencies: {} }))
   const patchPath = join(profile, 'cordis.patch.yml')
   await writeFile(patchPath, "- insert:\n    - id: autoresearch-web\n      name: '@athena/autoresearch-web'\n")
@@ -44,8 +58,12 @@ test('installer adds the core plugin beside autoresearch-web and stays idempoten
   assert.equal(subagents.find((row) => row.id === 'workflow-ptc')?.config?.provider, 'spawn')
   assert.equal(subagents.some((row) => row.id === 'workflow-worker-thread'), false)
   await assert.rejects(stat(join(dshTestHome, '.agent-presets', 'auto_research')))
+  await assert.rejects(stat(join(dshTestHome, '.agent-presets', 'auto-research')))
+  const backup = await readFile(`${patchPath}.before-autoresearch-preset`, 'utf8')
+  assert.equal(backup, "- insert:\n    - id: autoresearch-web\n      name: '@athena/autoresearch-web'\n")
   install()
   assert.equal(await readFile(patchPath, 'utf8'), first)
+  assert.equal(await readFile(`${patchPath}.before-autoresearch-preset`, 'utf8'), backup)
 })
 
 test('reinstall preserves an existing preset declaration and its user customizations', async (t) => {
@@ -72,6 +90,10 @@ test('reinstall preserves an existing preset declaration and its user customizat
       name: '@athena/autoresearch-web'
 `
   await writeFile(patchPath, patchBefore)
+  const legacyDir = join(dshTestHome, '.agent-presets', 'auto-research')
+  await mkdir(legacyDir, { recursive: true })
+  await writeFile(join(legacyDir, 'preset.yml'), 'name: User preset\n')
+  await writeFile(join(legacyDir, 'agent.cordis.yml'), '# custom legacy plugins\n')
   const install = () => {
     const result = spawnSync(process.execPath, [fileURLToPath(new URL('../../scripts/install-dsh-plugin.mjs', import.meta.url)), 'web'], {
       env: { ...process.env, DSH_HOME: dshTestHome }, encoding: 'utf8',
@@ -90,6 +112,8 @@ test('reinstall preserves an existing preset declaration and its user customizat
   assert.ok(first.indexOf('id: autoresearch-preset') < first.indexOf('id: autoresearch-web'))
   install()
   assert.equal(await readFile(patchPath, 'utf8'), first)
+  assert.equal(await readFile(join(legacyDir, 'preset.yml'), 'utf8'), 'name: User preset\n')
+  assert.equal(await readFile(join(legacyDir, 'agent.cordis.yml'), 'utf8'), '# custom legacy plugins\n')
 })
 
 test('explicit runtime preflight failure leaves profile and preset files untouched', async (t) => {
@@ -167,4 +191,58 @@ test('offline install says runtime validation is still required', async (t) => {
   assert.equal(result.status, 0, result.stderr)
   assert.match(result.stdout, /does not validate runtime readiness/i)
   assert.match(result.stdout, /npm run check:dsh -- --dsh-package <absolute path/i)
+})
+
+test('legacy preset entry ids and custom ids retain their declaration without duplicates', async (t) => {
+  for (const id of ['preset-autoresearch', 'my-research-preset']) {
+    const dshTestHome = await mkdtemp(join(tmpdir(), 'ar-install-alias-'))
+    t.after(() => rm(dshTestHome, { recursive: true, force: true }))
+    const profile = join(dshTestHome, 'profiles', 'web')
+    await mkdir(profile, { recursive: true })
+    await createHost(profile, true)
+    await writeFile(join(profile, 'package.json'), '{"private":true,"dependencies":{}}\n')
+    const patchPath = join(profile, 'cordis.patch.yml')
+    await writeFile(patchPath, `- insert:\n    - id: ${id}\n      name: '@deepseek-ai/dsh-agent-preset'\n      config:\n        id: auto-research\n        description: Custom research\n        plugins: []\n`)
+    const result = spawnSync(process.execPath, [fileURLToPath(new URL('../../scripts/install-dsh-plugin.mjs', import.meta.url)), 'web'], {
+      env: { ...process.env, DSH_HOME: dshTestHome }, encoding: 'utf8',
+    })
+    assert.equal(result.status, 0, result.stderr)
+    const rows = parse(await readFile(patchPath, 'utf8')).flatMap((row: { insert: Array<Record<string, any>> }) => row.insert)
+    const presets = rows.filter((row: Record<string, any>) => row.name === '@deepseek-ai/dsh-agent-preset')
+    assert.equal(presets.length, 1)
+    assert.equal(presets[0].id, id)
+    assert.equal(presets[0].config.description, 'Custom research')
+  }
+})
+
+test('a directory-only host is rejected before any profile or preset writes', async (t) => {
+  const dshTestHome = await mkdtemp(join(tmpdir(), 'ar-install-directory-'))
+  t.after(() => rm(dshTestHome, { recursive: true, force: true }))
+  const profile = join(dshTestHome, 'profiles', 'web')
+  await mkdir(profile, { recursive: true })
+  await createHost(profile, false)
+  await writeFile(join(profile, 'package.json'), '{"private":true,"dependencies":{}}\n')
+  await writeFile(join(profile, 'cordis.patch.yml'), '[]\n')
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL('../../scripts/install-dsh-plugin.mjs', import.meta.url)), 'web'], {
+    env: { ...process.env, DSH_HOME: dshTestHome }, encoding: 'utf8',
+  })
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /upgrade the host before installing/)
+  assert.equal(await readFile(join(profile, 'package.json'), 'utf8'), '{"private":true,"dependencies":{}}\n')
+  assert.equal(await readFile(join(profile, 'cordis.patch.yml'), 'utf8'), '[]\n')
+  await assert.rejects(stat(join(dshTestHome, '.agent-presets')))
+})
+
+test('print-preset emits tagged YAML without requiring or writing a profile', async (t) => {
+  const dshTestHome = await mkdtemp(join(tmpdir(), 'ar-install-print-'))
+  t.after(() => rm(dshTestHome, { recursive: true, force: true }))
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL('../../scripts/install-dsh-plugin.mjs', import.meta.url)), 'web', '--print-preset'], {
+    env: { ...process.env, DSH_HOME: dshTestHome }, encoding: 'utf8',
+  })
+  assert.equal(result.status, 0, result.stderr)
+  const rows = parse(result.stdout, { customTags: [yamlJsTag] })
+  assert.equal(rows[0].insert[0].config.id, 'auto-research')
+  assert.match(result.stdout, /!!js process.platform/)
+  await assert.rejects(stat(join(dshTestHome, 'profiles')))
+  await assert.rejects(stat(join(dshTestHome, '.agent-presets')))
 })

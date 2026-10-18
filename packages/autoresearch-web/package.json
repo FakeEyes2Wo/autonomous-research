@@ -1,6 +1,6 @@
 {
   "name": "@athena/autoresearch-web",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Portable AutoResearch settings and LaTeX/PDF research workbench for DSH",
   "type": "module",
   "main": "dist/index.js",
@@ -48,24 +48,25 @@
     "test": "node --test test/api.test.mjs test/core-integration.test.mjs test/factory.test.mjs test/native-host.test.mjs test/workbench.test.mjs test/assets.test.mjs test/workbench-sync.test.mjs test/literature.test.mjs test/research-ui.test.mjs",
     "test:native-host": "node --test test/native-host.test.mjs",
     "test:browser": "node test/browser-render.test.mjs",
+    "test:final-paper:browser": "node test/final-paper.browser.mjs",
     "test:workbench:browser": "node test/workbench-browser.mjs",
     "test:native-panel:browser": "node test/native-panel-browser.mjs",
     "test:literature:browser": "node test/literature-browser.mjs"
   },
   "engines": {
     "node": ">=22.19.0",
-    "dsh": ">=0.2.0-rc.1 <0.3.0"
+    "dsh": "0.2.0-rc.1 || 0.2.1-rc.2"
   },
   "peerDependencies": {
-    "@athena/autoresearch": "*",
+    "@athena/autoresearch": "0.3.0",
     "@deepseek-ai/cordis": "~4.0.4",
-    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-client-ui-workspace": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-client-ui-conversation": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-host-webserver": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-workspace": "0.2.0-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.2.0-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.1 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "0.2.0-rc.1 || 0.2.1-rc.2",
     "react": "^18.2.0"
   },
   "devDependencies": {

@@ -91,7 +91,7 @@ for (const { crashAt, mode, cap } of [
   await mkdir(join(f.runDir, '.autoresearch'), { recursive: true }); await mkdir(join(f.runDir, 'input'), { recursive: true })
   await writeFile(join(f.runDir, 'input/idea.md'), 'Replicate the checked finding')
   await writeFile(join(f.runDir, 'RUBRIC.md'), 'Check paired replication')
-  await writeFile(join(f.runDir, '.autoresearch/project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  brainstorm: never\n  deepDive: never\n  experimentReview: never\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n')
+  await writeFile(join(f.runDir, '.autoresearch/project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  brainstorm: never\n  deepDive: never\n  experimentReview: never\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n')
   if (mode === 'minimal') {
     const { loadProjectSettings } = await import('../../dist/settings/project-settings.js')
     const { createPolicySnapshot } = await import('../../dist/policy/model-routing.js')
@@ -260,7 +260,7 @@ for (const mode of ['minimal', 'legacy']) for (const entry of ['experiment', 're
   await mkdir(join(f.runDir, 'input'), { recursive: true })
   await writeFile(join(f.runDir, 'input', 'idea.md'), '# Idea\n\n## Direction\n\nControlled experiment')
   await writeFile(join(f.runDir, 'PROFILE.md'), 'Controlled local files only.')
-  await writeFile(join(f.runDir, '.autoresearch', 'project-settings.yaml'), `version: 2\nworkflow:\n  mode: ${mode}\n  brainstorm: never\n  deepDive: never\n  experimentReview: never\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n`)
+  await writeFile(join(f.runDir, '.autoresearch', 'project-settings.yaml'), `version: 2\nworkflow:\n  mode: ${mode}\n  currentIdeaSearch: never\n  brainstorm: never\n  deepDive: never\n  experimentReview: never\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n`)
   const provider = new FakeAgentProvider({ decisions: ['finish'] }), original = provider.run.bind(provider)
   let workerCalls = 0, plannerCalls = 0, designCalls = 0
   provider.run = async (role, input, ctx) => {
@@ -360,7 +360,7 @@ test('crash after CURRENT commit before outbox ack replays without a second scie
 test('missing host authority explicitly pauses the actual runner without a worker fallback', async t => {
   const f = await fixture(t)
   await mkdir(join(f.runDir, '.autoresearch'), { recursive: true })
-  await writeFile(join(f.runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n')
+  await writeFile(join(f.runDir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  experimentReview: never\n')
   const provider = new FakeAgentProvider({ decisions: ['finish'] }), original = provider.run.bind(provider)
   let workerCalls = 0
   provider.run = async (role, input, ctx) => {

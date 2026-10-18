@@ -59,16 +59,16 @@ test('temporary Cordis host waits for webServer and disposes the Web API', async
   provideWebServer();
 });
 
-test('0.2.0-rc.1 client metadata is a resolvable browser graph contract', async () => {
+test('supported DSH client metadata is a resolvable browser graph contract', async () => {
   const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   assert.deepEqual(packageJson.dsh?.client?.platform, 'web');
   assert.ok(packageJson.dsh.client.external.includes('react'));
   for (const dependency of packageJson.dsh.client.inject) {
     assert.ok(packageJson.peerDependencies[dependency], `${dependency} must be declared as a peer dependency`);
   }
-  assert.equal(packageJson.engines.dsh, '>=0.2.0-rc.1 <0.3.0');
+  assert.equal(packageJson.engines.dsh, '0.2.0-rc.1 || 0.2.1-rc.2');
   for (const [name, version] of Object.entries(packageJson.peerDependencies)) {
-    if (name.startsWith('@deepseek-ai/dsh-')) assert.equal(version, '0.2.0-rc.1');
+    if (name.startsWith('@deepseek-ai/dsh-')) assert.equal(version, '0.2.0-rc.1 || 0.2.1-rc.2');
   }
 });
 

@@ -25,6 +25,17 @@ test('settings validation rejects invalid nested values instead of migrating the
   assert.ok(result.errors.some((item) => item.path === '/budget/maxRunTokens' && item.code === 'POSITIVE_INTEGER'))
 })
 
+test('current idea search validation matches engine bounds and cross-field invariants', () => {
+  const tooMany = validateProjectSettingsCandidate({ version: 2, budget: { currentIdeaSearch: { maxRequests: 1001 } } })
+  assert.equal(tooMany.valid, false)
+  const inconsistentDefaults = validateProjectSettingsCandidate({ version: 2, budget: { currentIdeaSearch: { maxRounds: 1 } } })
+  assert.equal(inconsistentDefaults.valid, false)
+  const nearestOverflow = validateProjectSettingsCandidate({ version: 2, budget: { currentIdeaSearch: { maxCandidates: 1 } } })
+  assert.equal(nearestOverflow.valid, false)
+  const bounded = validateProjectSettingsCandidate({ version: 2, budget: { currentIdeaSearch: { minRounds: 1, maxRounds: 1, maxCandidates: 1, nearestLimit: 1, maxRequests: 1, queriesPerRound: 1, maxDurationMs: 1000 } } })
+  assert.equal(bounded.valid, true)
+})
+
 test('settings validation checks object types, route pairs, and escalation signals', () => {
   const result = validateProjectSettingsCandidate({ version: 2, modelRouting: { enabled: true, roles: { worker: { provider: 'p', escalateOn: ['context_truncated'] } } }, budget: { context: [] } })
   assert.equal(result.valid, false)

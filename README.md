@@ -8,6 +8,8 @@ idea → plan → work → evidence → decide → paper | failure report
 
 它既可以完成文献探索、独立实验和论文流水线，也可以通过可选 Web 包提供项目设置与对话式 LaTeX/PDF 工作台。当前部署方式是从本仓库源码构建并链接到 DSH profile；这里不承诺 npm registry 发布状态，也不宣称兼容任意最新 DSH。当前依赖锚点见各包 `package.json`，升级宿主后应重新验收。
 
+当前仓库源码版本为 **0.3.0**：核心包与 Web 包同步，Web 精确依赖同版本核心包；独立的 `dsh-cpa` 保持 0.1.0。两个主包声明支持 DSH **0.2.0-rc.1 或 0.2.1-rc.2**，Cordis 为 **~4.0.4**。本次实际宿主验收使用 0.2.1-rc.2 / Cordis 4.0.5，锁定的开发依赖仍为 0.2.0-rc.1。本版本提高了最低宿主要求，旧版 DSH 需要先升级；其他宿主版本需另行验收。版本与升级说明见 [v0.3.0](docs/releases/v0.3.0.md)，发版流程见 [RELEASING.md](RELEASING.md)。
+
 快速导航：[安装核心包](#安装核心包) · [可选 Web 工作台](#可选-web-工作台) · [使用方式](#两种使用方式) · [workflow](#minimal-与-legacy完整workflow) · [实验协议](#实验工程与科学协议) · [恢复](#产物与断点恢复) · [排错](#常见问题) · [目录说明](docs/project-layout.md) · [设计文档](docs/README.md)
 
 ## 能力与边界
@@ -20,7 +22,7 @@ idea → plan → work → evidence → decide → paper | failure report
 
 核心包不依赖 Web 或 CPA。Web 也不复制 DSH 的 Models/credentials 页面；provider、CPA 地址和凭据仍由 DSH 管理。CPA 的示例模型名不是官方或已验证模型，真实端点、协议能力、工具调用与计费必须由用户在自己的环境中单独验收。
 
-DSH `0.2.0-rc.1` 适配已通过核心 typecheck、预设依赖检查、Web `84/84` 测试及临时宿主的预设加载与空白会话创建。核心全量测试仍有失败，具体结果与验证边界见[升级验证记录](docs/verification/2026-09-29-dsh-0.2.0-rc.1.md)。这些检查不代表真实模型请求或科研结论已经通过验证。
+本次发布已通过核心 typecheck、核心 `781/781` 和 Web `91/91` 测试。浏览器与隔离宿主验收范围见 [v0.3.0 验证记录](docs/verification/2026-10-18-release-v0.3.0.md)。这些检查不代表真实模型请求或科研结论已经通过验证。
 
 ## 界面预览
 
@@ -46,7 +48,7 @@ _390×844 窄屏工作台（本地临时 mock host，示例论文与聊天内容
 
 - Node.js `>=22.19.0`；
 - npm（仓库各包分别维护 `package.json`，根目录没有 npm scripts）；
-- 已创建的 DSH profile，当前适配锚点为 `0.2.0-rc.1`（Cordis `~4.0.4`）；
+- 已创建的 DSH profile，宿主为 `0.2.0-rc.1` 或 `0.2.1-rc.2`（Cordis `~4.0.4`）；
 - 使用安装脚本时，目标 profile 还需要 pnpm；
 - 可选：`tectonic`、`latexmk`、`pdflatex` 或 `xelatex` 用于 PDF；缺少编译器时，部分无头产出可使用本机 Chrome/Edge 兜底。
 
@@ -213,6 +215,28 @@ npm --prefix packages/autoresearch run run:headless -- `
 ```
 
 设置页主要管理模型来源、研究强度与论文输出；高级区管理角色路由、workflow 和预算声明。`project-secrets.yaml`、DSH credentials、CPA OAuth/token 与客户端 key 均不得进入 Git、URL、日志、导出或截图。预算声明只有在相应 runtime hook 已验证时才能称为硬限制；缺少 usage 时应标为 estimated/unknown，不能记为零。
+
+## 当前想法的相似论文检索
+
+新运行在 legacy 和 minimal 两种模式下，都会在新的 planner 开始前围绕当前想法检索 arXiv、Crossref 和 Semantic Scholar。默认进行 3–5 轮、每轮 4 个不同角度的查询，最多 80 次 HTTP 请求、保留 200 个候选、每轮最多审阅 20 个候选，最终提供最多 20 个最相近候选，时限 10 分钟。限流、缺失摘要和查询覆盖不足会写入报告；没有结果不代表想法新颖。
+
+在项目设置中使用以下开关与七项预算：
+
+```yaml
+workflow:
+  currentIdeaSearch: enabled   # 设为 never 可关闭
+budget:
+  currentIdeaSearch:
+    minRounds: 3
+    maxRounds: 5
+    queriesPerRound: 4
+    maxRequests: 80
+    maxCandidates: 200
+    maxDurationMs: 600000
+    nearestLimit: 20
+```
+
+这项检索独立于旧的 `deepDive` 开关和 `literature.mode` 文献库检索。旧运行的冻结策略若没有此设置，恢复时仍保持关闭；相同目标的已完成检索会复用已验证记录。初始创意生成早于 planner 检索钩子，因此不会提前得到这份新报告。报告用于规划和想法审阅，不自动入库、修改固定索引版本或成为科学证据。检索产物位于 run 目录的 `brainstorm/current-idea-survey/`；验证方法和已知限制见[检索验证记录](docs/verification/2026-09-20-idea-similarity-survey.md)。
 
 ## 常见问题
 

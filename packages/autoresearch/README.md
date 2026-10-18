@@ -4,12 +4,22 @@
 
 基于 DSH 的 Agent/Subagent 系统实现，不依赖 Athena，不引入旧版 RunSpec/PipelineRunner/EventBus。
 
+仓库源码版本 **0.3.0**，与 Web 包同步；本次不发布到 npm。DSH peer 和引擎声明为 **0.2.0-rc.1 或 0.2.1-rc.2**，Cordis 为 **~4.0.4**；旧宿主需先升级。独立的 `dsh-cpa` 仍为 0.1.0。见[版本说明](../../docs/releases/v0.3.0.md)。
+
+本次核心测试 **781/781**、typecheck 和 Web **91/91** 通过。完整范围见[发布验证记录](../../docs/verification/2026-10-18-release-v0.3.0.md)；测试使用受控模型响应，不等于真实模型研究结论验收。
+
 ## 快速开始
 
 ```bash
 npm run build
 npm test
 ```
+
+## 当前想法的相似论文检索
+
+新 legacy/minimal 运行默认在 planner 前执行当前想法检索：arXiv、Crossref、Semantic Scholar，3–5 轮、每轮 4 个查询，最多 80 次 HTTP、200 个保留候选和 10 分钟；每轮最多审阅 20 个候选，最终提供最多 20 个最相近候选。项目设置 `workflow.currentIdeaSearch: never` 可关闭；七项预算在 `budget.currentIdeaSearch` 下，完整示例见[根 README](../../README.md#当前想法的相似论文检索)。
+
+旧运行缺失此冻结策略字段时仍关闭；初始创意生成早于检索钩子，不能提前取得新报告。相似度报告只给规划和想法审阅提供可追溯参考，不自动写入文献库、改变固定索引或成为科学证据。[验证记录](../../docs/verification/2026-09-20-idea-similarity-survey.md)区分离线受控基准和实际联网冒烟结果。
 
 ## 轻量实验工程约定
 
@@ -44,12 +54,14 @@ planner 会收到一个受限、无敏感信息的 **outer AutoResearch runtime 
 
 ## AutoResearch 模式（DSH Preset）
 
-当前目标宿主为 DSH `0.2.0-rc.1`。安装脚本在目标 profile 的
+当前支持的宿主为 DSH `0.2.0-rc.1` 和 `0.2.1-rc.2`。安装脚本检测宿主提供的预设插件后，在目标 profile 的
 `cordis.patch.yml` 中注册 `@deepseek-ai/dsh-agent-preset`，模式 ID 为
 `auto-research`，并将包内的 `agent.cordis.yml` 写入其 `config.plugins`。
 新版不再通过旧的 `~/.dsh/.agent-presets/` 目录发现模式；升级后需要重新执行
-`npm run install:dsh -- web`，再重启对应 profile。重复安装会保留已有的
+`npm run install:dsh -- web --dsh-package <宿主 dsh/package.json 绝对路径>`，再重启对应 profile。重复安装会保留已有的
 `@deepseek-ai/dsh-agent-preset` 声明及其自定义配置；只有首次注册时才写入包内默认配置。
+
+无法定位宿主时仅完成离线核心配置，并提示重新指定宿主；不会宣称预设已注册。检测到仅支持目录预设的旧宿主时，在写入前退出。旧 `.agent-presets` 文件保持原样；首次修改 profile patch 会保存 `.before-autoresearch-preset` 备份。使用 `node scripts/install-dsh-plugin.mjs --print-preset` 可只输出新默认声明，供升级时与自定义声明比较。
 
 DSH Agent 调用 AutoResearch 工具时，相对 `runDir` 和 `projectDir` 会以该调用
 会话的工作区目录为基准解析；显式绝对路径语义不变。没有 Agent 上下文的直接
@@ -71,11 +83,13 @@ service 或 headless CLI 调用继续保持原有的进程相对路径语义。
 围绕当前项目做一组对比实验，输出 EXPERIMENT_REPORT.md。
 ```
 
-如果安装后没有看到该模式，重新运行：
+如果安装后没有看到该模式：
 
-```bash
-npm run install:dsh -- web
-```
+1. 确认 profile 名称正确，重新运行 `npm run install:dsh -- web`；
+2. 检查该 profile 的 `cordis.patch.yml` 里是否存在 `preset-autoresearch` 段落（0.2.x 宿主）；
+3. 在宿主日志里搜索 `agent preset auto-research:`，挂载失败会带上具体原因。
+
+> preset 在会话第一轮开始前选定（DSH 规则 `agent-preset/locked`），**已有会话无法切换**。安装或更新 preset 后必须完整重启 DSH，并**新建会话**才能看到它。
 
 > `/auto_research` 是插件注册的轻量 Slash 命令，仅用于查看帮助 / 配置 / run 状态；要自动探索目录并执行任务，请选择 **AutoResearch** Agent Preset。
 

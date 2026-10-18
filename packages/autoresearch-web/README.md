@@ -2,6 +2,12 @@
 
 Optional DSH Web surface for simple AutoResearch settings and a LaTeX/PDF research workbench.
 
+Source release **0.3.0**, paired with core **0.3.0**. Supported DSH versions are
+**0.2.0-rc.1** and **0.2.1-rc.2**, with Cordis **~4.0.4**; older hosts must be upgraded first.
+The independent CPA package stays at **0.1.0**. See the
+[release notes](../../docs/releases/v0.3.0.md) and
+[verification record](../../docs/verification/2026-10-18-release-v0.3.0.md).
+
 Settings show model source, orchestration budget, paper output, workflow mode
 and paper improvement rounds. Low-call and full research workflows both require
 the scientific validation needed by the claim; pilot results do not replace
@@ -36,6 +42,20 @@ The workbench uses Tectonic selected by `workbench.compiler`, `TECTONIC_PATH`,
 or PATH. No machine-specific compiler path, mandatory local proxy or browser CDN
 is built in. Editing and saving still work if Tectonic is unavailable.
 PDF.js and its resources are copied into `dist/vendor/pdfjs` during the build.
+
+When the paper pipeline writes the finished manuscript, the next file poll opens
+it in the editor automatically. The ranking is `<project>/paper/main.tex`, then
+any `main.tex` (shallowest first, later run names first), then any other `.tex`.
+A dirty draft is never discarded: the sync notice offers the explicit switch
+instead.
+
+**在 VS Code 中打开** (labeled after whichever editor is installed) asks the
+host's same-origin `GET /open-in-app/apps` which applications exist, then posts
+`POST /open-in-app/open` with `{ "app": "<id>", "path": "<canonical project root>" }`.
+The workbench documents listing exposes that read-only `root` so the browser
+never invents a path. VS Code is preferred, otherwise the first advertised
+application is used, and an unavailable application or missing directory is
+reported in Chinese instead of failing silently.
 
 ## Literature reading
 
@@ -199,8 +219,9 @@ After reviewing the allowlist, run the profile package manager in that profile
 public `inject: ['webServer']` declaration waits for the native web service;
 the browser `dsh.client` manifest is consumed by the host's web composition.
 The repository's Cordis/SlotCore and real local profile checks validate this
-contract for DSH 0.2.0-rc.1 (Cordis ~4.0.4). Re-run the core package's
-`install:dsh -- web` command when upgrading: this release discovers the
+contract with SlotCore 0.2.0-rc.1 and a live DSH 0.2.1-rc.2
+host (Cordis 4.0.5). Re-run the core package's
+`install:dsh -- web --dsh-package <absolute host dsh/package.json>` command when upgrading: this release discovers the
 `auto-research` preset through a declarative profile row, not `.agent-presets`.
 
 The native workspace registry supplies production directories; the standalone

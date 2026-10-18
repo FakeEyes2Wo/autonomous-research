@@ -11,6 +11,7 @@ export const RESEARCH_ROLES = [
   ['project-explorer', '项目探索'], ['paper-survey', '文献综述'], ['direction-select', '方向选择'],
   ['paper-frontier-miner', '前沿挖掘'], ['brainstorm', '头脑风暴'], ['coverage-reviewer', '覆盖审查'],
   ['rubric-generator', '评价标准'], ['idea-generator', '选题'], ['idea-reflexion', '选题复盘'],
+  ['idea-query-planner', '选题检索规划'], ['idea-similarity-reviewer', '选题相似性审查'],
   ['planner', '研究规划'], ['minimal-verifier', '可行性试跑'], ['model-scout', '模型选择'],
   ['experiment-designer', '实验设计'], ['experiment-reflexion', '设计完整性审查'],
   ['research-worker', '研究执行'], ['evidence-agent', '证据整理'], ['supervisor', '监督决策'],

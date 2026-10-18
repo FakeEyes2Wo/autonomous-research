@@ -76,6 +76,7 @@ npm --prefix packages/autoresearch-web run test:browser
 npm --prefix packages/autoresearch-web run test:native-panel:browser
 npm --prefix packages/autoresearch-web run test:workbench:browser
 npm --prefix packages/autoresearch-web run test:literature:browser
+npm --prefix packages/autoresearch-web run test:final-paper:browser
 
 # 涉及 CPA 时执行。
 npm --prefix packages/dsh-cpa run typecheck

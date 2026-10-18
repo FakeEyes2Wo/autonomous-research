@@ -49,6 +49,10 @@ test('discovers, creates, reads, saves, and rejects stale document writes', asyn
   assert.deepEqual(listed.data.documents.map((item) => item.name), ['paper'])
   assert.equal(listed.data.documents[0].relativePath, 'paper/main.tex')
   assert.equal(listed.data.engine.available, false)
+  // The browser needs the canonical project directory for DSH open-in-app. This
+  // is read-only metadata: it exposes no file the allowlist did not already grant.
+  assert.equal(listed.data.root, root)
+  assert.equal((await call(workbench, 'GET', '/api/autoresearch/workbench/documents?projectId=other')).result.statusCode, 404)
   const documentId = listed.data.documents[0].id
   const document = await call(workbench, 'GET', `/api/autoresearch/workbench/document?projectId=demo&documentId=${documentId}`)
   assert.equal(document.data.source, '% initial\n')

@@ -11,6 +11,7 @@ import {
   type ValidationWarning,
   type WorkflowMode,
 } from './schema.js'
+import { CURRENT_IDEA_SEARCH_LIMITS } from './schema.js'
 
 const CORE_KEYS = new Set(['version', 'revision', 'paperExploration', 'figureApi', 'model', 'experiment', 'modelRouting', 'workflow', 'budget', 'literature', 'extensions'])
 
@@ -20,6 +21,7 @@ function bool(value: unknown, fallback: boolean): boolean { return typeof value 
 function str(value: unknown, fallback: string): string { return typeof value === 'string' ? value : fallback }
 function tier(value: unknown, fallback: CapabilityTier): CapabilityTier { return CAPABILITY_TIERS.includes(value as CapabilityTier) ? value as CapabilityTier : fallback }
 function toggle(value: unknown, fallback: 'enabled'|'auto'|'never'): 'enabled'|'auto'|'never' { return WORKFLOW_TOGGLES.includes(value as never) ? value as never : fallback }
+function currentIdeaSearch(value: unknown, fallback: 'enabled'|'never'): 'enabled'|'never' { return value === 'never' || value === 'enabled' ? value : fallback }
 function migrateRole(raw: Record<string, unknown>): RoleRouteSettings {
   return {
     ...(CAPABILITY_TIERS.includes(raw.tier as CapabilityTier) ? { tier: raw.tier as CapabilityTier } : {}),
@@ -62,8 +64,8 @@ export function migrateProjectSettings(input: unknown): ProjectSettings {
       tiers: Object.fromEntries(CAPABILITY_TIERS.map((name) => { const raw = isRecord(sourceTiers[name]) ? sourceTiers[name] : {}; const fallback = base.modelRouting.tiers[name]; return [name, { provider: str(raw.provider, fallback.provider), model: str(raw.model, fallback.model), ...(raw.maxInputTokens !== undefined ? { maxInputTokens: num(raw.maxInputTokens, 0) } : {}), ...(raw.maxOutputTokens !== undefined ? { maxOutputTokens: num(raw.maxOutputTokens, 0) } : {}) }] })) as ProjectSettings['modelRouting']['tiers'],
       roles: Object.fromEntries(Object.entries(roles).filter(([, raw]) => isRecord(raw)).map(([name, raw]) => [name, migrateRole(raw as Record<string, unknown>)])) as ProjectSettings['modelRouting']['roles'],
     },
-    workflow: { mode: value.version === 2 && workflow.mode === 'minimal' ? 'minimal' : 'legacy' as WorkflowMode, brainstorm: toggle(workflow.brainstorm, base.workflow.brainstorm), deepDive: toggle(workflow.deepDive, base.workflow.deepDive), modelScout: toggle(workflow.modelScout, base.workflow.modelScout), experimentReview: toggle(workflow.experimentReview, base.workflow.experimentReview), paper: toggle(workflow.paper, base.workflow.paper), postResultSynthesis: toggle(workflow.postResultSynthesis, base.workflow.postResultSynthesis), paperImprovementRounds: num(workflow.paperImprovementRounds, base.workflow.paperImprovementRounds), candidateLimit: num(workflow.candidateLimit, base.workflow.candidateLimit), reflexionRounds: num(workflow.reflexionRounds, base.workflow.reflexionRounds) },
-    budget: { maxInputTokens: num(budget.maxInputTokens, base.budget.maxInputTokens), maxOutputTokens: num(budget.maxOutputTokens, base.budget.maxOutputTokens), maxRunTokens: num(budget.maxRunTokens, base.budget.maxRunTokens), maxRoleCalls: num(budget.maxRoleCalls, base.budget.maxRoleCalls), maxRetriesPerCall: num(budget.maxRetriesPerCall, base.budget.maxRetriesPerCall), jsonRepairAttempts: num(budget.jsonRepairAttempts, base.budget.jsonRepairAttempts), maxUpgradesPerTask: num(budget.maxUpgradesPerTask, base.budget.maxUpgradesPerTask), context: { treeSummaryTokens: num(context.treeSummaryTokens, base.budget.context.treeSummaryTokens), evidenceTokens: num(context.evidenceTokens, base.budget.context.evidenceTokens), paperTokens: num(context.paperTokens, base.budget.context.paperTokens), failureTokens: num(context.failureTokens, base.budget.context.failureTokens) } },
+    workflow: { mode: value.version === 2 && workflow.mode === 'minimal' ? 'minimal' : 'legacy' as WorkflowMode, brainstorm: toggle(workflow.brainstorm, base.workflow.brainstorm), deepDive: toggle(workflow.deepDive, base.workflow.deepDive), modelScout: toggle(workflow.modelScout, base.workflow.modelScout), experimentReview: toggle(workflow.experimentReview, base.workflow.experimentReview), paper: toggle(workflow.paper, base.workflow.paper), postResultSynthesis: toggle(workflow.postResultSynthesis, base.workflow.postResultSynthesis), paperImprovementRounds: num(workflow.paperImprovementRounds, base.workflow.paperImprovementRounds), candidateLimit: num(workflow.candidateLimit, base.workflow.candidateLimit), reflexionRounds: num(workflow.reflexionRounds, base.workflow.reflexionRounds), currentIdeaSearch: currentIdeaSearch(workflow.currentIdeaSearch, base.workflow.currentIdeaSearch) },
+    budget: { maxInputTokens: num(budget.maxInputTokens, base.budget.maxInputTokens), maxOutputTokens: num(budget.maxOutputTokens, base.budget.maxOutputTokens), maxRunTokens: num(budget.maxRunTokens, base.budget.maxRunTokens), maxRoleCalls: num(budget.maxRoleCalls, base.budget.maxRoleCalls), maxRetriesPerCall: num(budget.maxRetriesPerCall, base.budget.maxRetriesPerCall), jsonRepairAttempts: num(budget.jsonRepairAttempts, base.budget.jsonRepairAttempts), maxUpgradesPerTask: num(budget.maxUpgradesPerTask, base.budget.maxUpgradesPerTask), context: { treeSummaryTokens: num(context.treeSummaryTokens, base.budget.context.treeSummaryTokens), evidenceTokens: num(context.evidenceTokens, base.budget.context.evidenceTokens), paperTokens: num(context.paperTokens, base.budget.context.paperTokens), failureTokens: num(context.failureTokens, base.budget.context.failureTokens) }, currentIdeaSearch: { minRounds: num(isRecord(budget.currentIdeaSearch) ? budget.currentIdeaSearch.minRounds : undefined, base.budget.currentIdeaSearch.minRounds), maxRounds: num(isRecord(budget.currentIdeaSearch) ? budget.currentIdeaSearch.maxRounds : undefined, base.budget.currentIdeaSearch.maxRounds), queriesPerRound: num(isRecord(budget.currentIdeaSearch) ? budget.currentIdeaSearch.queriesPerRound : undefined, base.budget.currentIdeaSearch.queriesPerRound), maxRequests: num(isRecord(budget.currentIdeaSearch) ? budget.currentIdeaSearch.maxRequests : undefined, base.budget.currentIdeaSearch.maxRequests), maxCandidates: num(isRecord(budget.currentIdeaSearch) ? budget.currentIdeaSearch.maxCandidates : undefined, base.budget.currentIdeaSearch.maxCandidates), maxDurationMs: num(isRecord(budget.currentIdeaSearch) ? budget.currentIdeaSearch.maxDurationMs : undefined, base.budget.currentIdeaSearch.maxDurationMs), nearestLimit: num(isRecord(budget.currentIdeaSearch) ? budget.currentIdeaSearch.nearestLimit : undefined, base.budget.currentIdeaSearch.nearestLimit) } },
     ...(isRecord(value.extensions) ? { extensions: clone(value.extensions) } : {}),
   }
   return next
@@ -135,14 +137,23 @@ function validateRawShape(candidate: Record<string, unknown>, errors: Validation
   }
 
   const workflow = nested(candidate.workflow, '/workflow', errors)
-  if (workflow) { checkKeys(workflow, '/workflow', ['mode', 'brainstorm', 'deepDive', 'modelScout', 'experimentReview', 'paper', 'postResultSynthesis', 'paperImprovementRounds', 'candidateLimit', 'reflexionRounds'], errors); enumField(workflow, 'mode', '/workflow', ['minimal', 'legacy'], errors); for (const key of ['brainstorm', 'deepDive', 'modelScout', 'experimentReview', 'paper', 'postResultSynthesis']) enumField(workflow, key, '/workflow', WORKFLOW_TOGGLES, errors); for (const key of ['paperImprovementRounds', 'candidateLimit', 'reflexionRounds']) numberField(workflow, key, '/workflow', errors) }
+  if (workflow) { checkKeys(workflow, '/workflow', ['mode', 'brainstorm', 'deepDive', 'modelScout', 'experimentReview', 'paper', 'postResultSynthesis', 'paperImprovementRounds', 'candidateLimit', 'reflexionRounds', 'currentIdeaSearch'], errors); enumField(workflow, 'mode', '/workflow', ['minimal', 'legacy'], errors); for (const key of ['brainstorm', 'deepDive', 'modelScout', 'experimentReview', 'paper', 'postResultSynthesis']) enumField(workflow, key, '/workflow', WORKFLOW_TOGGLES, errors); enumField(workflow, 'currentIdeaSearch', '/workflow', ['enabled', 'never'], errors); for (const key of ['paperImprovementRounds', 'candidateLimit', 'reflexionRounds']) numberField(workflow, key, '/workflow', errors) }
   const budget = nested(candidate.budget, '/budget', errors)
   if (budget) {
-    checkKeys(budget, '/budget', ['maxInputTokens', 'maxOutputTokens', 'maxRunTokens', 'maxRoleCalls', 'maxRetriesPerCall', 'jsonRepairAttempts', 'maxUpgradesPerTask', 'context'], errors)
+    checkKeys(budget, '/budget', ['maxInputTokens', 'maxOutputTokens', 'maxRunTokens', 'maxRoleCalls', 'maxRetriesPerCall', 'jsonRepairAttempts', 'maxUpgradesPerTask', 'context', 'currentIdeaSearch'], errors)
     for (const key of ['maxInputTokens', 'maxOutputTokens', 'maxRunTokens', 'maxRoleCalls']) numberField(budget, key, '/budget', errors, true)
     for (const key of ['maxRetriesPerCall', 'jsonRepairAttempts', 'maxUpgradesPerTask']) numberField(budget, key, '/budget', errors)
     const context = nested(budget.context, '/budget/context', errors)
     if (context) { checkKeys(context, '/budget/context', ['treeSummaryTokens', 'evidenceTokens', 'paperTokens', 'failureTokens'], errors); for (const key of ['treeSummaryTokens', 'evidenceTokens', 'paperTokens', 'failureTokens']) numberField(context, key, '/budget/context', errors, true) }
+    const current = nested(budget.currentIdeaSearch, '/budget/currentIdeaSearch', errors)
+    if (current) {
+      checkKeys(current, '/budget/currentIdeaSearch', ['minRounds', 'maxRounds', 'queriesPerRound', 'maxRequests', 'maxCandidates', 'maxDurationMs', 'nearestLimit'], errors)
+      for (const key of ['minRounds', 'maxRounds', 'queriesPerRound', 'maxRequests', 'maxCandidates', 'maxDurationMs', 'nearestLimit']) numberField(current, key, '/budget/currentIdeaSearch', errors, true)
+      const limits: Record<string, number> = CURRENT_IDEA_SEARCH_LIMITS
+      for (const key of Object.keys(limits)) if (current[key] !== undefined && typeof current[key] === 'number' && current[key] > limits[key]!) errors.push(error(`/budget/currentIdeaSearch/${key}`, 'RANGE', `must not exceed ${limits[key]}`))
+      if (typeof current.minRounds === 'number' && typeof current.maxRounds === 'number' && current.minRounds > current.maxRounds) errors.push(error('/budget/currentIdeaSearch', 'RANGE', 'minRounds must be <= maxRounds'))
+      if (typeof current.nearestLimit === 'number' && typeof current.maxCandidates === 'number' && current.nearestLimit > current.maxCandidates) errors.push(error('/budget/currentIdeaSearch', 'RANGE', 'nearestLimit must be <= maxCandidates'))
+    }
   }
   if (candidate.extensions !== undefined && !isRecord(candidate.extensions)) errors.push(error('/extensions', 'TYPE', 'extensions must be an object'))
 }
@@ -156,6 +167,9 @@ export function validateProjectSettingsCandidate(candidate: unknown): Validation
   validateRawShape(candidate, errors)
   if (errors.length > 0) return { valid: false, errors, warnings }
   const normalized = migrateProjectSettings(candidate)
+  const currentSearch = normalized.budget.currentIdeaSearch
+  if (currentSearch.minRounds > currentSearch.maxRounds) errors.push(error('/budget/currentIdeaSearch', 'RANGE', 'minRounds must be <= maxRounds'))
+  if (currentSearch.nearestLimit > currentSearch.maxCandidates) errors.push(error('/budget/currentIdeaSearch', 'RANGE', 'nearestLimit must be <= maxCandidates'))
   for (const name of normalized.modelRouting.enabled ? CAPABILITY_TIERS : []) {
     const route = normalized.modelRouting.tiers[name]
     if (!route.provider || !route.model) errors.push(error(`/modelRouting/tiers/${name}`, 'ROUTE', 'provider and model are required'))

@@ -4,6 +4,7 @@ import type { RunState } from '../core/types.js'
 import { createLogger, type Logger } from '../core/utils.js'
 import type { ResearchRunnerOptions } from './types.js'
 import { DEFAULT_PROJECT_SETTINGS } from '../settings/schema.js'
+import { createPolicySnapshot } from '../policy/model-routing.js'
 
 export type PolicySnapshot = NonNullable<RoleExecutionContext['policySnapshot']>
 
@@ -27,14 +28,9 @@ export function createRunContext(
 ): RunContext {
   const projectDir = context.projectDir ?? runDir
   const defaults = structuredClone(DEFAULT_PROJECT_SETTINGS)
-  const policySnapshot = context.policySnapshot ?? deps.policySnapshot ?? {
-    version: defaults.version,
-    model: defaults.model,
-    modelRouting: defaults.modelRouting,
-    workflow: defaults.workflow,
-    budget: defaults.budget,
-  }
-  const effectiveContext: RoleExecutionContext = { ...context, projectDir, policySnapshot }
+  const sourceSettings = deps.projectSettings ?? defaults
+  const policySnapshot = context.policySnapshot ?? deps.policySnapshot ?? { ...createPolicySnapshot(sourceSettings), model: structuredClone(sourceSettings.model) }
+  const effectiveContext: RoleExecutionContext = { ...context, projectDir, policySnapshot, ...(deps.discovery?.sourceStore ? { discoverySourceStore: deps.discovery.sourceStore } : {}) }
   return { deps, runDir, state, tree, context: effectiveContext, logger: createLogger(runDir), projectDir, policySnapshot }
 }
 

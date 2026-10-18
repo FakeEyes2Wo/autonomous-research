@@ -2,6 +2,7 @@ import type { RoleName } from './roles/index.js'
 import type { ProjectSettings } from '../settings/schema.js'
 import type { RequestLedger } from '../policy/request-ledger.js'
 import type { ResearchContextRequest } from '../research-context/index.js'
+import type { DiscoverySourceStore } from '../literature/discovery/contracts.js'
 export type { RoleName } from './roles/index.js'
 
 export interface ParentAgentLike {
@@ -20,6 +21,7 @@ export interface RoleExecutionContext {
   readonly runId?: string
   readonly policySnapshot?: Pick<ProjectSettings, 'version'|'model'|'modelRouting'|'workflow'|'budget'> & Partial<Pick<ProjectSettings, 'literature'>>
   readonly requestLedger?: RequestLedger
+  readonly discoverySourceStore?: DiscoverySourceStore
 }
 
 /**

@@ -8,12 +8,18 @@ import { loadState, saveState } from '../../dist/core/state.js'
 import { FakeAgentProvider } from './fake-agent-provider.ts'
 const artifactAcceptance = { criteria: [{ id: 'artifact', required: true, text: 'Produce a captured engineering artifact', evidenceKind: 'artifact' as const }] }
 
+async function disableCurrentIdeaSearch(dir: string): Promise<void> {
+  await mkdir(join(dir, '.autoresearch'), { recursive: true })
+  await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  currentIdeaSearch: never\n', 'utf8')
+}
+
 test('legacy loop delivers paper and completes only after explicit artifact coverage', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ar-loop-'))
   try {
     await mkdir(join(dir, 'input'), { recursive: true })
     await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nStudy conflictive multi-view learning.\n\n## A-priori ideas\n- Model conflicts explicitly\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n\n- Allowed: local analysis\n', 'utf8')
+    await disableCurrentIdeaSearch(dir)
 
     const provider = new FakeAgentProvider({
       decisions: ['finish'], coverage: 'explicit-artifact',
@@ -48,6 +54,7 @@ test('legacy loop pauses when supervisor fails without verified scientific evide
     await mkdir(join(dir, 'input'), { recursive: true })
     await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nSomething.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+    await disableCurrentIdeaSearch(dir)
 
     const provider = new FakeAgentProvider({ decisions: ['fail'] })
     const service = new AutoResearchService(provider)
@@ -72,6 +79,7 @@ test('minimal mode uses plan, worker, local evidence, and supervisor without opt
       'version: 2',
       'workflow:',
       '  mode: minimal',
+      '  currentIdeaSearch: never',
       '  experimentReview: never',
       '  modelScout: never',
       '  postResultSynthesis: never',
@@ -102,7 +110,7 @@ test('minimal mode honors explicitly enabled deep-dive prelude instead of silent
     await mkdir(join(dir, '.autoresearch'), { recursive: true })
     await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nUse an explicit deep-dive prelude.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
-    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  brainstorm: never\n  deepDive: enabled\n  experimentReview: never\n  paper: never\n', 'utf8')
+    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  brainstorm: never\n  deepDive: enabled\n  experimentReview: never\n  paper: never\n', 'utf8')
     const provider = new FakeAgentProvider({ decisions: ['finish'], coverage: 'explicit-artifact' })
     const state = await new AutoResearchService(provider).run({ runDir: dir, acceptance: artifactAcceptance }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
     assert.equal(state.status, 'COMPLETED')
@@ -124,6 +132,7 @@ test('minimal mode pauses on high risk when independent review is disabled', asy
       'version: 2',
       'workflow:',
       '  mode: minimal',
+      '  currentIdeaSearch: never',
       '  experimentReview: never',
       '  paper: never',
       'budget:',
@@ -150,7 +159,7 @@ test('minimal mode pauses when worker evidence is insufficient', async () => {
     await mkdir(join(dir, '.autoresearch'), { recursive: true })
     await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nEvidence must be checked.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
-    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n  paper: never\n', 'utf8')
+    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  experimentReview: never\n  paper: never\n', 'utf8')
     const provider = new FakeAgentProvider({ decisions: ['finish'], workerStatus: 'failed' })
     const state = await new AutoResearchService(provider).run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
     assert.equal(state.status, 'PAUSED')
@@ -167,7 +176,7 @@ test('minimal mode gates a non-low-risk plan before starting the worker when rev
     await mkdir(join(dir, '.autoresearch'), { recursive: true })
     await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nRisk must be reviewed first.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
-    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n  paper: never\n', 'utf8')
+    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  experimentReview: never\n  paper: never\n', 'utf8')
     const provider = new FakeAgentProvider({ decisions: ['finish'], minimalRisk: 'high' })
     const state = await new AutoResearchService(provider).run({ runDir: dir }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal })
     assert.equal(state.status, 'PAUSED')
@@ -185,7 +194,7 @@ test('minimal RUNNING crash replay reuses completed plan and worker checkpoints'
     await mkdir(join(dir, '.autoresearch'), { recursive: true })
     await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nResume the minimal loop.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
-    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n  paper: never\n', 'utf8')
+    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  experimentReview: never\n  paper: never\n', 'utf8')
     const first = new FakeAgentProvider({ decisions: ['finish'], throwOnRole: 'supervisor' })
     await assert.rejects(() => new AutoResearchService(first).run({ runDir: dir, acceptance: artifactAcceptance }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }))
     const interrupted = (await loadState(dir))!; interrupted.status = 'RUNNING'; await saveState(dir, interrupted)
@@ -209,7 +218,7 @@ test('minimal RUNNING crash replay repairs missing checkpoint result events with
     await mkdir(join(dir, '.autoresearch'), { recursive: true })
     await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nRepair checkpoint result records.\n', 'utf8')
     await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
-    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: never\n  paper: never\n', 'utf8')
+    await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  experimentReview: never\n  paper: never\n', 'utf8')
 
     const first = new FakeAgentProvider({ decisions: ['finish'], throwOnRole: 'supervisor' })
     await assert.rejects(() => new AutoResearchService(first).run({ runDir: dir, acceptance: artifactAcceptance }, { parent: { id: 'agent-1', session: { id: 'agent-1' } }, signal: new AbortController().signal }))
@@ -243,7 +252,7 @@ test('minimal post-work review pause cannot be retried unchanged', async (t) => 
   await mkdir(join(dir, '.autoresearch'), { recursive: true })
   await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nReview the executed protocol.\n', 'utf8')
   await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
-  await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  experimentReview: enabled\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n', 'utf8')
+  await writeFile(join(dir, '.autoresearch', 'project-settings.yaml'), 'version: 2\nworkflow:\n  mode: minimal\n  currentIdeaSearch: never\n  experimentReview: enabled\n  modelScout: never\n  postResultSynthesis: never\n  paper: never\n', 'utf8')
 
   const first = new FakeAgentProvider({ decisions: ['finish'], experimentVerdicts: ['revise'] })
   const paused = await new AutoResearchService(first).run({ runDir: dir }, {
@@ -269,6 +278,7 @@ test('legacy research pauses before work when automatic design review is unresol
   await mkdir(join(dir, 'input'), { recursive: true })
   await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nFreeze a reviewed protocol.\n', 'utf8')
   await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  await disableCurrentIdeaSearch(dir)
   const provider = new FakeAgentProvider({ decisions: ['finish'], experimentVerdicts: ['revise', 'revise', 'revise'] })
 
   const state = await new AutoResearchService(provider).run({ runDir: dir, humanReview: 'off' }, {
@@ -287,6 +297,7 @@ test('legacy research pauses before evidence when worker artifact is missing', a
   await mkdir(join(dir, 'input'), { recursive: true })
   await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nValidate worker evidence.\n', 'utf8')
   await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  await disableCurrentIdeaSearch(dir)
   const provider = new FakeAgentProvider({ decisions: ['finish'], workerArtifacts: ['work/cycle-1/missing.txt'] })
 
   const state = await new AutoResearchService(provider).run({ runDir: dir, humanReview: 'off' }, {
@@ -305,6 +316,7 @@ test('legacy research pauses when a second human experiment review still request
   await mkdir(join(dir, 'input'), { recursive: true })
   await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nRequire explicit human acceptance.\n', 'utf8')
   await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  await disableCurrentIdeaSearch(dir)
   const provider = new FakeAgentProvider({ decisions: ['finish'] })
   const reviewer = { ask: async () => ({ verdict: 'revise' as const, feedback: 'still incomplete' }) }
 
@@ -323,6 +335,7 @@ test('legacy research returns paused when automatic review rejects a human-reque
   await mkdir(join(dir, 'input'), { recursive: true })
   await writeFile(join(dir, 'input', 'idea.md'), '# Candidate\n\n## Direction\n\nReview the human redesign.\n', 'utf8')
   await writeFile(join(dir, 'PROFILE.md'), '# PROFILE\n', 'utf8')
+  await disableCurrentIdeaSearch(dir)
   const provider = new FakeAgentProvider({ decisions: ['finish'], experimentVerdicts: ['proceed', 'revise', 'revise', 'revise'] })
   let humanCalls = 0
   const reviewer = { ask: async () => ({ verdict: ++humanCalls === 1 ? 'revise' as const : 'approve' as const, feedback: 'redesign this' }) }

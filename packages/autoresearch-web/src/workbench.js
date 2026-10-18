@@ -562,7 +562,10 @@ export function createWorkbench(config = {}, hooks = {}) {
       if (url.pathname === `${PREFIX}/documents` && req.method === 'GET') {
         const project = await projectOrThrow(url.searchParams.get('projectId'))
         const compiler = await findCompiler(config)
-        return json(res, 200, { documents: await list(project), engine: engineInfo(config, compiler) }) || true
+        // `root` is the canonical allowlisted directory. It is read-only metadata
+        // that lets the browser hand an existing absolute path to DSH open-in-app;
+        // it grants no new file access.
+        return json(res, 200, { documents: await list(project), engine: engineInfo(config, compiler), root: project.root }) || true
       }
       if (url.pathname === `${PREFIX}/documents` && req.method === 'POST') {
         if (!jsonRequest(req)) return fail(res, 415, 'json_required', 'this endpoint accepts application/json only')

@@ -19,6 +19,7 @@ import { advanceExperimentGraph, writeRuntimeHandoff, rehydrateVerifiedCompleted
 import { cyclePath, writeResearchReport } from '../service/research-cycle.js'
 import { synchronizeResearchViews } from '../service/research-outputs.js'
 import { bindScientificFollowup, completeScientificFollowup } from '../service/continuation.js'
+import { ensureCurrentIdeaSurvey } from '../research/current-idea-survey.js'
 
 function plannerRuntimeConstraints(ctx: RunContext): string {
   const policy = ctx.policySnapshot
@@ -48,6 +49,7 @@ export async function runPlanner(
   const rubric = await readRubric(ctx.runDir)
   const feedback = ((await readOptionalText(join(ctx.runDir, 'PLAN_FEEDBACK.md'))) ?? '').trim() || undefined
   if (feedback) await writeText(join(ctx.runDir, 'PLAN_FEEDBACK.md'), '')
+  await ensureCurrentIdeaSurvey(ctx, idea, profile)
   const result = await runAgent(ctx, {
     role: 'planner',
     input: {
@@ -80,6 +82,7 @@ export async function runMinimalPlan(
   ctx: RunContext,
   { idea, profile }: { idea: string; profile: string },
 ): Promise<MinimalPlan> {
+  await ensureCurrentIdeaSurvey(ctx, idea, profile)
   const result = await runAgent(ctx, {
     role: 'planner',
     input: {

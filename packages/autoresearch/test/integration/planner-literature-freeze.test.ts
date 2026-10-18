@@ -25,7 +25,7 @@ async function setup(f: any, nominated: unknown, entry = 'minimal') {
   } } as never)
   await writeFile(join(f.runDir, 'RUBRIC.md'), 'Use a fixed independent comparison.')
   const context = { parent: { id: 'parent', session: { id: 'parent' } }, signal: new AbortController().signal,
-    projectDir: f.project, runId: 'run', policySnapshot: { ...structuredClone(DEFAULT_PROJECT_SETTINGS), literature: f.input.settings } }
+    projectDir: f.project, runId: 'run', policySnapshot: { ...structuredClone(DEFAULT_PROJECT_SETTINGS), workflow: { ...DEFAULT_PROJECT_SETTINGS.workflow, currentIdeaSearch: 'never' }, literature: f.input.settings } }
   const ctx = createRunContext({ provider }, f.runDir, await createInitialState(f.runDir, 'run'), await ResearchTree.load(f.runDir), context)
   const plan = () => entry === 'legacy' ? runPlanner(ctx, { idea: 'alpha', profile: '' }) : runMinimalPlan(ctx, { idea: 'alpha', profile: '' })
   const work = () => runWorker(ctx, { workDir: join(f.runDir, 'work', `cycle-${String(ctx.state.cycle).padStart(2, '0')}`), planText: 'Measure alpha independently.', experimentDesign: '', minimalVerification: '' })
