@@ -8,7 +8,7 @@ idea → plan → work → evidence → decide → paper | failure report
 
 它既可以完成文献探索、独立实验和论文流水线，也可以通过可选 Web 包提供项目设置与对话式 LaTeX/PDF 工作台。当前部署方式是从本仓库源码构建并链接到 DSH profile；这里不承诺 npm registry 发布状态，也不宣称兼容任意最新 DSH。当前依赖锚点见各包 `package.json`，升级宿主后应重新验收。
 
-当前仓库源码版本为 **0.3.0**：核心包与 Web 包同步，Web 精确依赖同版本核心包；独立的 `dsh-cpa` 保持 0.1.0。两个主包声明支持 DSH **0.2.0-rc.1 或 0.2.1-rc.2**，Cordis 为 **~4.0.4**。本次实际宿主验收使用 0.2.1-rc.2 / Cordis 4.0.5，锁定的开发依赖仍为 0.2.0-rc.1。本版本提高了最低宿主要求，旧版 DSH 需要先升级；其他宿主版本需另行验收。版本与升级说明见 [v0.3.0](docs/releases/v0.3.0.md)，发版流程见 [RELEASING.md](RELEASING.md)。
+当前仓库源码版本为 **0.2.1**：核心包与 Web 包同步，Web 精确依赖同版本核心包；独立的 `dsh-cpa` 保持 0.1.0。两个主包声明支持 DSH **0.2.0-rc.1 或 0.2.1-rc.2**，Cordis 为 **~4.0.4**。本次实际宿主验收使用 0.2.1-rc.2 / Cordis 4.0.5，锁定的开发依赖仍为 0.2.0-rc.1。本版本提高了最低宿主要求，旧版 DSH 需要先升级；其他宿主版本需另行验收。版本与升级说明见 [v0.2.1](docs/releases/v0.2.1.md)，发版流程见 [RELEASING.md](RELEASING.md)。
 
 快速导航：[安装核心包](#安装核心包) · [可选 Web 工作台](#可选-web-工作台) · [使用方式](#两种使用方式) · [workflow](#minimal-与-legacy完整workflow) · [实验协议](#实验工程与科学协议) · [恢复](#产物与断点恢复) · [排错](#常见问题) · [目录说明](docs/project-layout.md) · [设计文档](docs/README.md)
 
@@ -22,7 +22,7 @@ idea → plan → work → evidence → decide → paper | failure report
 
 核心包不依赖 Web 或 CPA。Web 也不复制 DSH 的 Models/credentials 页面；provider、CPA 地址和凭据仍由 DSH 管理。CPA 的示例模型名不是官方或已验证模型，真实端点、协议能力、工具调用与计费必须由用户在自己的环境中单独验收。
 
-本次发布已通过核心 typecheck、核心 `781/781` 和 Web `91/91` 测试。浏览器与隔离宿主验收范围见 [v0.3.0 验证记录](docs/verification/2026-10-18-release-v0.3.0.md)。这些检查不代表真实模型请求或科研结论已经通过验证。
+v0.2.1 按用户要求将产品版本主体对齐 DSH，保留 v0.3.0 的全部功能。相同源码的功能基线已通过核心 `781/781`、Web `91/91` 及浏览器和隔离宿主验收；本次重新执行类型检查、构建和 Web `91/91` 测试。编号纠正范围和复用的验证记录见 [v0.2.1 验证记录](docs/verification/2026-10-19-version-alignment-v0.2.1.md)。这些检查不代表真实模型请求或科研结论已经通过验证。
 
 ## 界面预览
 

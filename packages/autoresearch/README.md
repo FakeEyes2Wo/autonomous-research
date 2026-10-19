@@ -4,9 +4,9 @@
 
 基于 DSH 的 Agent/Subagent 系统实现，不依赖 Athena，不引入旧版 RunSpec/PipelineRunner/EventBus。
 
-仓库源码版本 **0.3.0**，与 Web 包同步；本次不发布到 npm。DSH peer 和引擎声明为 **0.2.0-rc.1 或 0.2.1-rc.2**，Cordis 为 **~4.0.4**；旧宿主需先升级。独立的 `dsh-cpa` 仍为 0.1.0。见[版本说明](../../docs/releases/v0.3.0.md)。
+仓库源码版本 **0.2.1**，与 Web 包同步；本次不发布到 npm。DSH peer 和引擎声明为 **0.2.0-rc.1 或 0.2.1-rc.2**，Cordis 为 **~4.0.4**；旧宿主需先升级。独立的 `dsh-cpa` 仍为 0.1.0。见[版本说明](../../docs/releases/v0.2.1.md)。
 
-本次核心测试 **781/781**、typecheck 和 Web **91/91** 通过。完整范围见[发布验证记录](../../docs/verification/2026-10-18-release-v0.3.0.md)；测试使用受控模型响应，不等于真实模型研究结论验收。
+本次为版本编号纠正，功能源码与 v0.3.0 相同；重新运行 typecheck、构建和 Web **91/91** 测试，复用相同源码的核心 **781/781** 功能基线。完整范围见[发布验证记录](../../docs/verification/2026-10-19-version-alignment-v0.2.1.md)；测试使用受控模型响应，不等于真实模型研究结论验收。
 
 ## 快速开始
 

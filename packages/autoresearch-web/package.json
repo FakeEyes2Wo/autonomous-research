@@ -1,6 +1,6 @@
 {
   "name": "@athena/autoresearch-web",
-  "version": "0.3.0",
+  "version": "0.2.1",
   "description": "Portable AutoResearch settings and LaTeX/PDF research workbench for DSH",
   "type": "module",
   "main": "dist/index.js",
@@ -58,7 +58,7 @@
     "dsh": "0.2.0-rc.1 || 0.2.1-rc.2"
   },
   "peerDependencies": {
-    "@athena/autoresearch": "0.3.0",
+    "@athena/autoresearch": "0.2.1",
     "@deepseek-ai/cordis": "~4.0.4",
     "@deepseek-ai/dsh-client-locale": "0.2.0-rc.1 || 0.2.1-rc.2",
     "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.1 || 0.2.1-rc.2",

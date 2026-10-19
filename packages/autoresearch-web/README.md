@@ -2,11 +2,11 @@
 
 Optional DSH Web surface for simple AutoResearch settings and a LaTeX/PDF research workbench.
 
-Source release **0.3.0**, paired with core **0.3.0**. Supported DSH versions are
+Source release **0.2.1**, paired with core **0.2.1**. Supported DSH versions are
 **0.2.0-rc.1** and **0.2.1-rc.2**, with Cordis **~4.0.4**; older hosts must be upgraded first.
 The independent CPA package stays at **0.1.0**. See the
-[release notes](../../docs/releases/v0.3.0.md) and
-[verification record](../../docs/verification/2026-10-18-release-v0.3.0.md).
+[release notes](../../docs/releases/v0.2.1.md) and
+[verification record](../../docs/verification/2026-10-19-version-alignment-v0.2.1.md).
 
 Settings show model source, orchestration budget, paper output, workflow mode
 and paper improvement rounds. Low-call and full research workflows both require
